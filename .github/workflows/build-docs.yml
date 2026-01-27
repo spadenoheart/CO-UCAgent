@@ -1,0 +1,98 @@
+name: Build Docs and Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/build-docs.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/build-docs.yml"
+  workflow_call: # workflow_call 不使用 paths 过滤，确保 release 时能正常调用
+
+permissions:
+  contents: write
+
+concurrency:
+  # PR 使用独立的并发组，部署使用 pages 组
+  group: ${{ github.event_name == 'pull_request' && format('{0}-pr-{1}', github.workflow, github.event.pull_request.number) || 'pages' }}
+  # PR 可以取消旧的构建，部署不取消
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # PR 时只构建测试，不部署
+  build-only:
+    name: Build MkDocs site (PR check)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('docs/requirements-docs.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install docs dependencies
+        run: |
+          pip install -r docs/requirements-docs.txt
+
+      - name: Build MkDocs site
+        run: |
+          mkdocs build -f docs/mkdocs.yml --strict
+
+  deploy:
+    name: Build and Deploy to gh-pages
+    runs-on: ubuntu-latest
+    # PR 时跳过，其他情况（push/workflow_dispatch/workflow_call）都部署
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('docs/requirements-docs.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install docs dependencies
+        run: |
+          pip install -r docs/requirements-docs.txt
+
+      - name: Build MkDocs site
+        run: |
+          mkdocs build -f docs/mkdocs.yml --strict
+
+      - name: Deploy to gh-pages
+        run: |
+          cd site
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Deploy docs from ${{ github.sha }}"
+          git push -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:gh-pages

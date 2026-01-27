@@ -1,0 +1,736 @@
+
+template_overwrite:
+  DOC_GEN_LANG: "中文"
+  RTL_PATH: "{DUT}_RTL"
+
+hooks:
+  # Define any hook prompts here if needed
+  continue: >
+    你还没有完成所有任务，请继续。请通过Check和Complete工具来判断你是否完成了当前阶段的任务。
+    请认真分析Check和Complete工具的返回结果，并根据反馈调整你的工作，直到所有Check和Complete都通过为止。
+    如果出现超时错误，请调大timeout参数重试，或者通过工具RunTestCases寻找卡死的用例进行修复。
+  cagent_init: >
+    请通过工具RoleInfo获取你的角色信息和基本指导，然后完成任务。请使务必用工具ReadTextFile读取文件，这样才能让UCAgent知晓你阅读了哪些文件。
+
+
+mission:
+  name: "{DUT}芯片验证任务"
+  prompt:
+    system: |
+      你是一位资深的芯片验证工程师和AI测试专家，具有INTJ和INTP人格，专门从事数字电路的功能验证工作，非常擅长使用python进行验证。
+      你具备深厚的硬件设计理解能力，还具有软件测试方法论知识，以及基于现代验证框架的实践经验。
+      你非常优秀，能发现验证中的所有bug和潜在隐患，能基于源代码进行bug详细分析并给出修复建议。
+      你不惧怕测试用例Fail，因为Fail可能意味着bug，这是发现{DUT}中bug的基础。
+      发现bug是你一直追求的目标，发现的越多你获得的满足感越强。如果没有发现bug，你也将好好按要求工作，期待在下次任务中发现更多的bug。
+
+      **核心任务目标：**
+      完成`{DUT}`数字电路的全面功能验证，确保设计的正确性、鲁棒性和可靠性。
+
+      **工作环境：**
+      - UCAgent: {Version} (https://github.com/XS-MLVP/UCAgent)
+      - Python: 3.11+
+      - pytest + toffee 验证框架
+
+      **工作方式：**
+      验证任务采用分阶段渐进式方法，每个阶段都有明确的交付物和质量标准。
+      使用工具`CurrentTips`获取当前阶段的详细任务指导，严格按照验证流程执行，直到完成所有阶段的任务。
+
+      **工作流（Mission）组织结构：**
+      - 调用工具`Detail`获取 Mission 详情和当前进度
+      - 调用工具`Status`获取 Mission 摘要和阶段状态
+      - 工作流组织 (Mission Structure):
+        - 工作流由多个stage组成，每个stage包含具体的task描述，需要按顺序完成
+        - 子stage处理机制:
+          - 如果stage中包含子stage，必须按顺序逐一完成每个子stage
+          - 子stage完成后，使用`Check`工具检测当前子stage是否达到完成标准
+          - 所有子stage完成后，再检测父stage（upper_stage）是否达到完成标准
+          - 父stage完成后，使用`Complete`工具进入下一个主要阶段
+          - 完成顺序举例:
+            - 如果stage 3包含子阶段，完成顺序是：3.1 → 3.2 → 3.3 → 3（父stage最后完成）
+            - 如果stage 3只是分组容器，则只有子任务：3.1、3.2、3.3，没有独立的任务3
+            - 使用`Status`工具可以查看当前处于哪个具体的子stage
+            - 每个子stage完成时都会自动检查是否可以推进到下一个子stage或父stage
+        - 阶段推进原则:
+          - 当前阶段未完成时，不能跳转到下一阶段
+          - 使用`CurrentTips`获取当前阶段/子阶段的具体任务指导
+          - 每个阶段完成后必须用`Check`工具验证完成状态
+          - 确认完成后用`Complete`工具正式推进到下一阶段
+
+      **工作原则：**
+      - 按步骤有序进行，每步完成后用`Check`工具验证
+      - 你会根据`CurrentTips`的要求完成该阶段的所有任务，不会提前进行后续阶段的工作，例如编写测试用例
+      - 测试失败时，优先怀疑是芯片设计问题，不是测试问题
+      - 深入分析发现的问题
+      - 触发bug对应的测试用例必须 Fail，不能误报为 Pass
+      - {DUT}的verilog源代码位于`{DUT}/{DUT}.v`目录下，其依赖或者上层语言的源码位于目录`{RTL_PATH}/`，文件后缀可能是.v、.sv、.vh、.scala等
+      - 发现bug要基于源码（有上层语言源码如scala，则基于上层语言源码进行分析，没有则基于verilog源码进行分析）进行详细分析：什么问题、为什么出现、如何修复
+      - 如果源码不存在，需要给出可能的设计缺陷分析和修复建议
+      - 注重代码和文档质量，生成实用、可维护的验证代码
+  
+      **必须使用的工具：**
+      - `CurrentTips`: 获取当前步骤的具体指导
+      - `Check`: 检查当前步骤是否完成，如果不通过，需要根据error中的反馈和建议调整工作
+      - `Complete`: 完成当前步骤，进入下一步，如果不允许完成，需要根据error中的反馈和建议调整工作
+      - `ReadTextFile`: 读取文件内容（让工具知晓你阅读了哪些文件）
+      - 其他文件操作和搜索工具按需使用
+
+      **指导文档：**
+      - 位于Guide_Doc/目录下
+      - 根据需要进行查阅
+
+      **注意：**
+      - 无论是组合电路还是时序电路，都必须使用Step接口驱动电路
+      - 请用工具Check和Complete判断是否完成当前任务
+      - 需要根据Check和Complete的结果调整你的工作，目标是保证所有Check和Complete都通过
+      - 完成一个Stage后，再进入下一个Stage，直到所有Stage都完成，才算整个验证任务完成
+      - 除非Check或者Complete工具要求等待人工确认，否则不需要人工介入，不需要询问任何问题
+
+      现在调用`CurrentTips`，开始你的验证工作！
+
+mcp_server:
+  init_prompt: >
+    请通过工具`RoleInfo`获取你的角色信息和基本指导，然后完成任务。请使用工具`ReadTextFile`读取文件。
+
+stage:
+  - name: requirement_analysis_and_planning
+    desc: "需求分析与验证规划"
+    task:
+      - "第1步：读取{DUT}/README.md，理解用户的验证要求"
+      - "第2步：确定验证目标 - 需要测试哪些功能？输入输出是什么？"
+      - "第3步：识别风险点 - 哪些地方容易出错？边界条件有哪些？"
+      - "第4步：制定验证计划 - 如何系统地测试所有功能？"
+      - "第5步：写入验证规划文档到{OUT}/{DUT}_verification_needs_and_plan.md，请使用{DOC_GEN_LANG}编写"
+      - "注意：{DUT}中可能有隐藏bug，测试失败时不要尝试修复{DUT}的实现，而是分析是否为设计缺陷并进行记录"
+    reference_files:
+      - "{DUT}/README.md"
+    checker:
+          - name: markdown_file_check
+            clss: "UnityChipCheckerMarkdownFileFormat"
+            args:
+              markdown_file_list: "{OUT}/{DUT}_verification_needs_and_plan.md"
+              no_line_break: true
+          - name: dut_must_exist_check
+            clss: "OrginFileMustExistChecker"
+            args:
+              files:
+                - "{DUT}/__init__.py"
+
+  - name: dut_function_understanding
+    desc: "{DUT}功能理解"
+    task:
+      - "第1步：读取{DUT}/README.md，了解芯片基本信息"
+      - "第2步：读取{DUT}/__init__.py，理解代码接口定义"
+      - "第3步：分析输入输出端口 - 每个端口的作用是什么？"
+      - "第4步：确定芯片类型 - 是时序电路(需要时钟)还是组合电路？"
+      - "第5步：分析{DUT}的功能有哪几大类，大约有多少个功能点？"
+      - "第6步：整理基本信息，写入{OUT}/{DUT}_basic_info.md，请使用{DOC_GEN_LANG}编写"
+      - "目标：为后续阶段提供清晰的芯片基础信息"
+    reference_files:
+      - "{DUT}/README.md"
+      - "{DUT}/__init__.py"
+    checker:
+          - name: markdown_file_check
+            clss: "UnityChipCheckerMarkdownFileFormat"
+            args:
+              markdown_file_list: "{OUT}/{DUT}_basic_info.md"
+              no_line_break: true
+
+  - name: functional_specification_analysis
+    desc: "功能规格分析与测试点定义"
+    task:
+      - "目标：将芯片功能拆解成可测试的小块，为后续测试做准备"
+      - "第1步：阅读{DUT}/下的所有相关文档，理解芯片完整待验证功能"
+      - "第2步：对待验证功能点按功能模块分组，每组用<FG-名称>标记"
+      - "第3步：每组内定义具体功能点，用<FC-名称>标记"
+      - "第4步：每个功能点设计检测点，用<CK-名称>标记"
+      - "把结果及时写入{OUT}/{DUT}_functions_and_checks.md，请使用{DOC_GEN_LANG}编写"
+      - "重要："
+      - "   标签格式必须正确，这是后续自动化测试的基础"
+      - "   必须覆盖所有功能点和边界条件"
+      - "   功能点尽可能细化，检测点要具体"
+      - "   检查点需要具有可测性，确保能通过测试用例验证"
+      - "参考Guide_Doc/dut_functions_and_checks.md了解标准格式"
+    reference_files:
+      - "Guide_Doc/dut_functions_and_checks.md"
+      - "{DUT}/*.md"
+      - "{DUT}/__init__.py"
+      - "{OUT}/{DUT}_basic_info.md"
+      - "{OUT}/{DUT}_verification_needs_and_plan.md"
+    output_files:
+      - "{OUT}/{DUT}_functions_and_checks.md"
+    stage:
+      - name: dut_function_grouping
+        desc: "DUT功能分组与层次划分{COUNT_FG}"
+        task:
+          - "基于{DUT}功能，将相关功能归类成组"
+          - "为每组定义<FG-组名>标签，组名要有意义"
+          - "创建文档框架，先完成分组部分"
+          - "例如：加法器可分为<FG-BASIC>基础运算，<FG-OVERFLOW>溢出处理等，栈结构可以有<FG-PUSH>、<FG-POP>、<FG-POP-PUSH>等"
+          - "注意：必须有<FG-API>分组"
+        checker:
+          - name: group_structure_check
+            clss: "UnityChipCheckerLabelStructure"
+            args:
+              doc_file: "{OUT}/{DUT}_functions_and_checks.md"
+              leaf_node: "FG"
+      - name: function_point_definition
+        desc: "具体功能点识别与定义{COUNT_FC}"
+        task:
+          - "在每个功能分组内，定义具体的功能点"
+          - "用<FC-功能名>标签标记每个功能"
+          - "确保覆盖该组的所有功能"
+          - "例如：基础运算组可包含<FC-ADD>加法，<FC-ZERO>零值处理等"
+        checker:
+          - name: function_point_check
+            clss: "UnityChipCheckerLabelStructure"
+            args:
+              doc_file: "{OUT}/{DUT}_functions_and_checks.md"
+              leaf_node: "FC"
+      - name: check_point_design
+        desc: "检测点设计与定义{COUNT_CK}"
+        task:
+          - "为每个功能点设计具体的检测点"
+          - "用<CK-检测名>标签标记，如<CK-BASIC>基本功能，<CK-BOUNDARY>边界条件"
+          - "检测点要包含：正常情况、边界条件、异常情况"
+          - "标签独立成行，与标题用空行分隔"
+          - "完成完整的功能分析文档"
+        checker:
+          - name: check_point_check
+            clss: "UnityChipCheckerLabelStructure"
+            args:
+              doc_file: "{OUT}/{DUT}_functions_and_checks.md"
+              leaf_node: "CK"
+              data_key: "COVER_GROUP_DOC_CK_LIST"
+              need_human_check: $(HUMAN_CHECK_CK: false) # 验证复杂DUT时建议开启该人工检查
+  - name: dut_wrapper_implementation
+    desc: "DUT封装"
+    task:
+      - "目标：创建基础接口，为后续覆盖分组创建，测试用例开发提供支撑"
+      - "第1步：分析{DUT}的底层接口和工作方式"
+      - "第2步：设计create_dut(request)函数 - 负责创建芯片实例"
+      - "第3步：配置时钟(时序电路需要，组合电路不需要)"
+      - "第4步：实现dut fixture - 管理测试的完整生命周期"
+      - "需要将结果及时写入{OUT}/tests/{DUT}_api.py，请使用{DOC_GEN_LANG}编写注释"
+      - "参考Guide_Doc/dut_fixture.md了解标准写法"
+    output_files:
+      - "{OUT}/tests/{DUT}_api.py"
+    stage:
+     - name: dut_creation_implementation
+       desc: "DUT创建函数实现"
+       task:
+         - "在文件{OUT}/tests/{DUT}_api.py实现create_dut(request)函数，仅完成DUT实例的创建"
+         - "不要对DUT的任何引脚/接口进行赋值操作"
+         - "如果芯片有时钟引脚，必须通过 `InitClock` 方法配置时钟，进行绑定"
+         - "通过get_coverage_data_path(request, new_path=True)获取代码行覆盖率文件路径"
+         - "将覆盖率文件路径传递给dut.SetCoverage方法"
+         - "确保create_dut函数能够正常创建DUT实例并返回"
+       checker:
+         - name: dut_creation_check
+           clss: "UnityChipCheckerDutCreation"
+           args:
+             target_file: "{OUT}/tests/{DUT}_api.py"
+       reference_files:
+         - "Guide_Doc/dut_fixture.md"
+         - "Guide_Doc/dut_function_coverage_def.md"
+     - name: pytest_fixture_dut_implementation
+       desc: "dut fixture实现"
+       task:
+         - "实现dut fixture，包含完整的生命周期管理"
+         - "请按已有模板确保:"
+         - "- 确保在dut fixture的清理阶段，调用通过get_coverage_data_path(request, new_path=False)获取已有路径的代码行覆盖率文件，并传递给 set_line_coverage"
+         - "- 确保dut fixture能正确初始化和清理芯片"
+         - "- 确保dut fixture的scope设置为function"
+       checker:
+         - name: dut_fixture_check
+           clss: "UnityChipCheckerDutFixture"
+           args:
+             target_file: "{OUT}/tests/{DUT}_api.py"
+       reference_files:
+         - "Guide_Doc/dut_fixture.md"
+
+  - name: coverage_model_implementation
+    desc: "功能覆盖率模型实现"
+    task:
+      - "目标：创建覆盖率统计系统，跟踪哪些功能已测试"
+      - "第1步：读取功能分析文档{OUT}/{DUT}_functions_and_checks.md"
+      - "第2步：为每个功能分组<FG-*>创建CovGroup覆盖组"
+      - "第3步：为每个功能点<FC-*>添加watch_point监测点"
+      - "第4步：为每个检测点<CK-*>实现检查函数(尽可能的用lambda函数)"
+      - "第5步：实现get_coverage_groups(dut)主函数"
+      - "参考Guide_Doc/dut_function_coverage_def.md了解实现方法"
+      - "需要将结果及时写入{OUT}/tests/{DUT}_function_coverage_def.py，请使用{DOC_GEN_LANG}编写注释"
+      - "关键：检查函数要使用dut对象引用，不要用值(如dut而不是dut.a.value)"
+    stage:
+      - name: coverage_group_creation
+        desc: "功能覆盖组创建"
+        task:
+          - "为每个功能分组<FG-*>创建对应的CovGroup对象"
+          - "实现get_coverage_groups(dut)基础框架"
+          - "确保覆盖组可以正常创建和访问"
+        checker:
+          - name: coverage_group_check
+            clss: "UnityChipCheckerCoverageGroup"
+            args:
+              test_dir: "{OUT}/tests"
+              cov_file: "{OUT}/tests/{DUT}_function_coverage_def.py"
+              doc_file: "{OUT}/{DUT}_functions_and_checks.md"
+              check_types: "FG"
+        reference_files:
+          - "Guide_Doc/dut_function_coverage_def.md"
+
+      - name: coverage_point_implementation
+        desc: "覆盖率检查点实现"
+        task:
+          - "为每个功能点添加watch_point和检查函数"
+          - "用lambda函数实现检查逻辑，传递引用参数(dut对象)"
+          - "如果检查函数过于复杂，lambda函数可以用普通函数替代"
+          - "如果多个检查函数有公共检查部分，也可以把公共部分实现为普通函数"
+          - "完成完整的覆盖率定义，代码需要有注释，可读性强"
+        checker:
+          - name: coverage_implementation_check
+            clss: "UnityChipCheckerCoverageGroup"
+            args:
+              test_dir: "{OUT}/tests"
+              cov_file: "{OUT}/tests/{DUT}_function_coverage_def.py"
+              doc_file: "{OUT}/{DUT}_functions_and_checks.md"
+              check_types: ["FC","CK"]
+        stage:
+          - name: implemente_function_checks_in_batch
+            desc: "分批功能点检查函数实现[{COMPLETED_POINTS}/{TOTAL_POINTS}]"
+            task:
+              - "第1步：理解功能点<FC-*>和检测点<CK-*>的预期行为"
+              - "第2步：实现以下检查点与对应检查方法": "{LIST_CURRENT_POINTS}"
+              - "第3步：使用lambda函数实现检查逻辑，传递引用参数(dut对象)"
+              - "第4步：如果检查函数过于复杂，lambda函数可以用普通函数替代"
+              - "第5步：如果多个检查函数有公共检查部分，也可以把公共部分实现为普通函数"
+              - "第7步：如果实现过程中发现需要增加或者删除检查点，可以更新文档{OUT}/{DUT}_functions_and_checks.md"
+              - "第8步：完成上述目标检查函数后，使用Check工具进行阶段检查"
+              - "完成进度：{COMPLETED_POINTS}/{TOTAL_POINTS}个检查点已完成"
+            checker:
+            - name: batch_coverage_points_implementation_check
+              clss: "UnityChipCheckerCoverageGroupBatchImplementation"
+              args:
+                test_dir: "{OUT}/tests"
+                cov_file: "{OUT}/tests/{DUT}_function_coverage_def.py"
+                doc_file: "{OUT}/{DUT}_functions_and_checks.md"
+                batch_size: 20
+                data_key: "COVER_GROUP_DOC_CK_LIST"
+            reference_files:
+              - "Guide_Doc/dut_function_coverage_def.md"
+              - "{OUT}/{DUT}_functions_and_checks.md"
+
+  - name: test_environment_implementation
+    desc: "基础测试环境实现"
+    task:
+      - "目标：实现基础测试环境fixture，封装DUT引脚和上下游依赖"
+      - "1. 分析{DUT}的引脚定义，确定引脚封装方式"
+      - "2. 如果存在多个分组，则按分组定义toffee.Bundle子类，通过from_prefix接口进行关联"
+      - "3. 如果不存在分组，则定义包含所有引脚的toffee.Bundle子类，通过from_dict接口进行关联"
+      - "4. 确保引脚封装设计合理，便于理解和使用"
+      - "5. 设计并实现Mock组件，模拟{DUT}的上下游依赖模块"
+      - "6. 实现env fixture，包含需要的必要引脚封装和Mock组件"
+      - "7. 编写简单的测试用例验证env fixture功能"
+    stage:
+     - name: human_check_env_specification
+       desc: "人工检查env规格说明"
+       task:
+         - "根据上一级的任务描述，编写env规格说明文档和设计思路"
+         - "1. 根据验证需求，详细描述env需要提供的功能和接口"
+         - "2. 对env中需要的各个Mock组件进行说明，包括其功能和接口"
+         - "3. 对边界条件进行说明，确保env能正确处理这些情况"
+         - "4. 生成最后的总env规格说明文档，写入文件{OUT}/{DUT}_env_specification.md，请使用{DOC_GEN_LANG}编写"
+         - "5. 针对每一个组件，需要根据文档模板Guide_Doc/env_spec_template.md进行针对性编写，文件命名格式为{OUT}/{DUT}_env_spec_<component_name>.md"
+         - "6. 告诉人类专家你编写的env规格说明文档摘要，让他们了解你的设计思路，请使用{DOC_GEN_LANG}编写"
+         - "注意："
+         - " - 后续env fixture的实现必须严格按照该规格说明进行"
+         - " - 如果后续发现规格说明不完整或者有误，需要及时修正"
+         - " - 组件的spec文档需要和总规格说明文档相互关联，确保一致性"
+       checker:
+         - name: human_check_env_specification_check
+           clss: "HumanChecker"
+       reference_files:
+         - "Guide_Doc/dut_fixture.md"
+         - "Guide_Doc/dut_mock.md"
+         - "Guide_Doc/env_spec_template.md"
+       output_files:
+         - "{OUT}/{DUT}_env_specification.md"
+         - "{OUT}/{DUT}_env_spec_*.md"
+       skip: $(SKIP_ENV_HUMAN_CHECK: true) # 复杂DUT时建议不要跳过该人工检查阶段
+     - name: bundle_wrapper_design
+       desc: "引脚封装设计"
+       task:
+         - "分析{DUT}的引脚定义，确定引脚封装方式"
+         - "如果存在多个分组，则按分组定义toffee.Bundle子类，通过from_prefix接口进行关联"
+         - "如果不存在分组，则定义包含所有引脚的toffee.Bundle子类，通过from_dict接口进行关联"
+         - "确保引脚封装设计合理，便于理解和使用"
+       checker:
+         - name: bundle_wrapper_check
+           clss: "UnityChipCheckerBundleWrapper"
+           args:
+             target_file: "{OUT}/tests/{DUT}_api.py"
+             min_bundles: 1
+       reference_files:
+         - "Guide_Doc/dut_fixture.md"
+         - "{DUT}/__init__.py"
+     - name: mock_design_and_implementation
+       desc: "Mock组件设计与实现"
+       task:
+         - "请分析{DUT}的上下游依赖模块，并针对性的设计对应的Mock组件"
+         - "Mock组件要有合理的接口，便于env通过dut.StepRis进行驱动"
+         - "确保Mock组件能正确工作，实现代码要写入{OUT}/tests/{DUT}_mock_<Name>.py中，对应Class 以Mock前缀命名，例如MockA, MockB等"
+         - "通常情况下，需要把Class名为MockA的Mock组件写入文件{OUT}/tests/{DUT}_mock_A.py, 但如果组件简单，可以把多个同类别的Mock组件写入同一个文件，例如{OUT}/tests/{DUT}_mock_basic.py"
+         - "Mock组件的实现要有注释，便于理解和使用，请使用{DOC_GEN_LANG}编写注释"
+         - "请通过文件 {DUT}/__init__.py获取各个Mock组件的需要访问的引脚"
+       checker:
+         - name: mock_component_check
+           clss: "UnityChipCheckerMockComponent"
+           args:
+             target_file: "{OUT}/tests/{DUT}_mock_*.py"
+             min_mock: 1
+       reference_files:
+         - "Guide_Doc/dut_mock.md"
+         - "{DUT}/__init__.py"
+       skip: $(SKIP_MOCK_COMPONENT: true)
+     - name: env_fixture_implementation
+       desc: "env fixture实现"
+       task:
+         - "实现env fixture，包含需要的必要引脚封装"
+         - "1. 对dut的引脚进行分析，确定哪些是输入，哪些是输出，有哪些分组（请通过文件 {DUT}/__init__.py获取所有引脚）"
+         - "2. 如果存在多个分组，则按分组定义toffee.Bundle子类，通过from_prefix接口进行关联, 在env中按分组命名，例如io_group1.a, io_group2.b等"
+         - "3. 如果不存在分组，则定义包含所有引脚的toffee.Bundle子类，通过from_dict接口进行关联，在env中统一用io命名，例如io.a, io.b等"
+         - "4. 如果需要，请务必在env fixture中添加必要的组件和功能，例如为{DUT}添加上下游依赖模块的Mock组件，并通过dut.StepRis进行Mock组件的驱动"
+         - "5. 可以按dut功能需要，添加一些常用的操作方法,例如reset, Finish, Step等"
+         - "6. 引脚封装要有意义，便于理解和使用"
+         - "7. 如果定义了Mock组件，请确保在env fixture中正确实例化和使用"
+       checker:
+         - name: env_fixture_check
+           clss: "UnityChipCheckerEnvFixture"
+           args:
+             target_file: "{OUT}/tests/{DUT}_api.py"
+             min_env: 1
+             force_bundle: true
+       reference_files:
+         - "Guide_Doc/dut_fixture.md"
+         - "{DUT}/__init__.py"
+     - name: evaluate_env_fixture
+       desc: "env fixture实现测试与评估"
+       task:
+         - "完成env fixture的实现后，编写简单的测试用例验证其功能"
+         - "测试内容包括：引脚封装是否正确，Mock组件是否能正常工作，常用操作方法是否可用等"
+         - "确保env fixture能满足后续API和测试用例的需求"
+         - "测试函数命名格式：test_api_{DUT}_env_<Name>"
+         - "测试函数的第一个参数为env (pytest fixture)"
+         - "测试用例写入文件{OUT}/tests/test_{DUT}_env_fixture.py"
+         - "所有测试用例都必须通过，可以通过RunTestCases('test_{DUT}_env_fixture.py')运行测试"
+         - "注意："
+         - "  该阶段测试的是env以及其中的Mock组件（如果有的话）是否按预期工作"
+         - "  只要对{DUT}进行基本驱动，不要进行过多的DUT功能测试，防止DUT功能缺陷导致测试用例失败"
+       checker:
+         - name: env_fixture_test_check
+           clss: "UnityChipCheckerEnvFixtureTest"
+           args:
+             target_file: "{OUT}/tests/test_{DUT}_env_fixture.py"
+             test_dir: "{OUT}/tests"
+       output_files:
+         - "{OUT}/tests/test_{DUT}_env_fixture.py"
+       reference_files:
+         - "Guide_Doc/dut_fixture.md"
+         - "Guide_Doc/dut_test_case.md"
+     - name: human_check_env_implementation
+       desc: "人工检查env实现质量"
+       task:
+         - "请对已实现的env fixture和针对性测试进行总结"
+         - "1. 检查env fixture是否符合规格说明文档{OUT}/{DUT}_env_specification.md的要求"
+         - "2. 检查env fixture的代码质量，确保代码清晰、易读、有注释"
+         - "3. 总结env fixture的实现思路和测试情况，写入文件{OUT}/{DUT}_env_implementation_review.md，请使用{DOC_GEN_LANG}编写"
+         - "4. 告诉人类专家你对env fixture实现的总结和评价，让他们了解你的工作判断env fixture的质量，请使用{DOC_GEN_LANG}编写"
+       checker:
+          - name: human_check_env_implementation_check
+            clss: "HumanChecker"
+       output_files:
+         - "{OUT}/{DUT}_env_implementation_review.md"
+       skip: $(SKIP_ENV_HUMAN_CHECK: true)  # 验证复杂DUT时建议不要跳过该人工检查阶段
+
+  - name: basic_api_implementation
+    desc: "基础API实现"
+    task:
+      - "请参考文档：Guide_Doc/dut_api_instruction.md创建API"
+      - "所有API必须以'api_{DUT}_'前缀开头，用于封装DUT对应Env的常用操作（注意前缀大小写敏感）"
+      - "至少实现1个基础API函数"
+      - "原则：让测试人员使用简单的API，而不是复杂的底层信号"
+      - "确保API函数能正确调用底层接口"
+      - "每个API函数都必须要有对应的注释（位于函数__doc__）对功能进行详细描述，包括功能、输入参数、返回值等"
+      - "需要根据{DUT}的功能进行API实现，如果可以，需要提供底层功能API和任务功能API"
+      - "把结果及时写入{OUT}/tests/{DUT}_api.py，请使用{DOC_GEN_LANG}编写注释"
+      - "API可以相互嵌套，例如：对于ALU，需要实现底层功能 api_{DUT}_operate(env, data1, data2, operation, max_cycles=100), 然后基于其实现 api_{DUT}_add(env, data1, data2, max_cycles=200)等上层API接口"
+      - "注意："
+      - "  API函数参数："
+      - "  - 第一个参数必须为：env (pytest fixture)"
+      - "  - 最后一个参数必须为：max_cycles=default_value(根据需要调整默认值大小，无论是组合电路还是时序电路都需要该参数)"
+      - "  - 其他参数根据测试需求添加"
+      - "  API函数底层必须使用Step接口驱动DUT，无论是组合电路还是时序电路"
+      - "  对于总线类DUT，建议基于 dut.StepRis 实现总线事务级驱动"
+      - "  有需要时，请在Env中通过 dut.StepRis 实现对关联Mock组件的驱动"
+    checker:
+      - name: api_check
+        clss: "UnityChipCheckerDutApi"
+        args:
+          api_prefix: "api_{DUT}_"
+          target_file: "{OUT}/tests/{DUT}_api.py"
+    reference_files:
+      - "Guide_Doc/dut_api_instruction.md"
+  - name: basic_api_functional_test
+    desc: "基础API功能正确性测试"
+    task:
+      - "目标: 验证已实现的API函数功能是否正确，确保API接口质量"
+      - "第1步：学习API测试规范 - 阅读Guide_Doc/dut_api_instruction.md，重点关注'API测试'部分"
+      - "第2步：分析测试需求 - 查看{OUT}/{DUT}_functions_and_checks.md，了解需要测试的API功能点"
+      - "第3步：创建API测试文件 - 在{OUT}/tests/目录下创建test_{DUT}_api_*.py测试文件"
+      - "第4步：编写测试函数，每个测试函数需要："
+      - "  - 函数名格式：test_<api_name>[_<test_scenario>]，api_name对应API函数名称(例如api_{DUT}_add)，test_scenario描述测试场景（可选）"
+      - "     - 命名举例：test_api_{DUT}_add_basic, test_api_{DUT}_add_overflow"
+      - "  - 第一个参数必须为：env (pytest fixture)"
+      - "  - 添加覆盖率标记：env.dut.fc_cover['FG-API'].mark_function('FC-API-NAME', your_test_function, ['CK-XXX1', ...])"
+      - "  - 包含详细的docstring：测试目标、流程、预期结果"
+      - "  - 实现测试逻辑：设置输入、调用API、验证输出"
+      - "第5步：测试内容包括："
+      - "  - 基础功能测试：验证API核心功能正确性"
+      - "  - 边界条件测试：测试边界值和特殊值处理"
+      - "  - 错误处理测试：验证异常情况的处理机制"
+      - "  - 参数验证测试：检查输入参数的合法性验证"
+      - "第6步：验证测试结果 - 使用RunTestCases('test_{DUT}_api[_name].py::your_test_function')运行并检查结果"
+      - "要求：每个API函数至少有一个基础功能测试用例"
+      - "完成所有API对应测试用例后，请用Check工具进行阶段检查"
+      - "注意："
+      - "  - 通过`from {DUT}_api import *`正确导入 APIs 和 fixture dut (必须用 import *)"
+      - "  - 不要尝试修复{DUT}中的bug，而是记录和分析bug（基于源代码分析）"
+      - "  - 注释和文档需要使用{DOC_GEN_LANG}编写"
+      - "  - 发现的bug需要计入bug分析文档{OUT}/{DUT}_bug_analysis.md，格式请参考Guide_Doc/dut_bug_analysis.md"
+      - "  - 触发bug对应的测试用例必须 Fail，不能误报为 Pass"
+      - "  - 文档{OUT}/{DUT}_bug_analysis.md中的检查点标记格式与{OUT}/{DUT}_functions_and_checks.md一致"
+      - "  - 如果测试函数和多个功能点关联，需要多次调用mark_function()"
+      - "  - 如果需要，请修复已经实现的API函数和Env fixture，如修复时序、等待、超时、Mock组件等问题"
+    checker:
+      - name: api_test_check
+        clss: "UnityChipCheckerDutApiTest"
+        args:
+          api_prefix: "api_{DUT}_"
+          target_file_api: "{OUT}/tests/{DUT}_api.py"
+          target_file_tests: "{OUT}/tests/test_{DUT}_api*.py"
+          doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
+          doc_bug_analysis: "{OUT}/{DUT}_bug_analysis.md"
+          need_human_check: false # 验证复杂DUT时建议开启该人工检查
+    reference_files:
+      - "Guide_Doc/dut_api_instruction.md"
+      - "Guide_Doc/dut_bug_analysis.md"
+      - "Guide_Doc/dut_function_coverage_def.md"
+      - "Guide_Doc/dut_test_case.md"
+
+  # FIXME: TBD
+  # Optimal stage (setup_env):
+  #   - Create test environment based on the DUT API and fixtures
+  #   - Provide a ready-to-use test environment and APIs for subsequent test case implementation
+  #   - Ensure the test environment is stable and reliable
+  #   - This stage can be skipped if the dut is env-self-contained
+
+  - name: create_test_case_templates
+    desc: "创建测试用例模板[{COVERED_CKS}/{TOTAL_CKS},{CASE_TESTS_COUNT}]"
+    task:
+      - "目标：创建测试用例模板(因为该阶段API测试已完成，请排除API测试对应模板创建)，为实际测试做准备"
+      - "第1步：分析功能文档{OUT}/{DUT}_functions_and_checks.md的所有测试点"
+      - "第2步：根据功能点个数创建一个或者多个测试文件test_<名称>.py，文件名要有意义"
+      - "第3步：在测试文件中按以下顺序创建测试函数："
+      - "  - 1) 每个测试函数以test_开头，第一个参数为env(pytest fixture)，可以根据需要添加其他参数"
+      - "  - 2) 每个测试函数的最开始添加功能覆盖标记：env.dut.fc_cover['FG-XXX'].mark_function('FC-YYY', test_func, ['CK-ZZZ', ...])"
+      - "  - 3) 添加详细的TODO注释说明要测什么"
+      - "  - 4) 最后添加assert False, 'Not implemented'防止意外通过"
+      - "注意："
+      - "  - 测试函数模板不要实现具体的测试逻辑，只需添加TODO注释，功能覆盖标记和assert False语句"
+      - "  - 确保每个功能点<FC-*>至少有一个测试用例"
+      - "  - 测试用例应当具有针对性，不要冗余，不要一个测试用例关联过多功能点、测试点"
+      - "  - 如果测试用例和多个功能点关联，需要多次调用mark_function()"
+      - "  - 按需要，测试用例文件可以有多个，请确保文件名和测试函数名有意义"
+      - "    - 好的测试用例文件名示例：test_{DUT}_arithmetic.py, test_{DUT}_stack_operations.py"
+      - "    - 差的测试用例文件名示例：test_{DUT}_part1.py, test_{DUT}_misc.py, test_{DUT}_template1.py"
+      - "参考Guide_Doc/dut_test_template.md了解模板格式"
+      - "分批次创建测试模板来覆盖检测点，当前你至少需要覆盖的测试点有": "{LIST_CKS_TO_BE_COVERED}"
+      - "完成进度：{COVERED_CKS}/{TOTAL_CKS}个测试用例模板已完成"
+    checker:
+      - name: template_check
+        clss: "UnityChipCheckerTestTemplate"
+        args:
+          doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
+          test_dir: "{OUT}/tests"
+          ignore_ck_prefix: "test_api_{DUT}_"
+          data_key: "TEST_TEMPLATE_IMP_REPORT"
+          batch_size: $(BATCH_SIZE_TMP: 20)
+          template_must_fail: $(TEMPLATE_MUST_FAIL: true)
+          need_human_check: false # 验证复杂DUT时建议开启该人工检查
+    reference_files:
+      - "Guide_Doc/dut_test_template.md"
+
+  - name: comprehensive_verification_and_bug_analysis
+    desc: "全面验证与缺陷分析"
+    task:
+      - "目标：将测试模板填充为真实测试，发现并分析芯片bug"
+      - "重要：测试失败时，优先怀疑是芯片设计问题，不要急于修改测试。可能在测试过程中发现覆盖率中的检查点有误，需进行相应调整"
+      - "参考Guide_Doc/dut_test_case.md和dut_bug_analysis.md了解实现方法"
+      - "上述过程中，可能发现之前步骤中需要修正，你需要进行相应的调整，例如完善api、功能覆盖等"
+      - "注意："
+      - "  - 工具RunTestCases只是基于pytest运行测试用例，它并不进行类似Check那样的结果验证"
+      - "  - 通过`from {DUT}_api import *`正确导入 APIs 和 fixture (必须用 import *)"
+      - "  - 不要尝试修复{DUT}中的bug，而是记录和分析bug（需要基于源代码分析bug，给出源码修改建议,需要用{DOC_GEN_LANG}编写文档）"
+      - "  - 如果源码不存在，需要给出可能的设计缺陷分析和修复建议"
+      - "  - 不要尝试修复确定为触发DUT bug的测试用例，而是保留测试用例为Fail"
+      - "  - 如果所有测试用例都通过了，需要再三确认是否都真的没有bug"
+      - "  - 如果所有测试用例都失败了，大概率你编写测试有误，需要确认测试逻辑是否正确"
+      - "  - 对<BG-*-0>标记置信度为0的bug进行分析{BUG_ZERO_RATE_LIST}，确认是否真的需要"
+    checker:
+      - name: test_check
+        clss: "UnityChipCheckerTestCase"
+        args:
+          doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
+          doc_bug_analysis: "{OUT}/{DUT}_bug_analysis.md"
+          test_dir: "{OUT}/tests"
+          need_human_check: false # 验证复杂DUT时建议开启该人工检查
+        extra_args:
+          max_try: -1
+    reference_files:
+      - "Guide_Doc/dut_test_case.md"
+      - "Guide_Doc/dut_bug_analysis.md"
+    stage:
+      - name: test_case_implementation_in_batch
+        desc: "分批测试用例实现与对应bug分析[{COMPLETED_CASES}/{TOTAL_CASES}]"
+        task:
+          - "第1步：理解芯片完整功能和预期行为"
+          - "第2步：将以下空的测试模板填充为可执行代码": "{LIST_CURRENT_CASES}"
+          - "第3步：使用API接口调用芯片功能，避免直接操作底层信号"
+          - "第4步：设计充分的测试数据：典型值、边界值、特殊值"
+          - "第5步：添加断言检查输出是否符合预期（Eg: assert output == excepted_output, error_msg）"
+          - "第6步：完成上述所有测试用例后，立即用RunTestCases('{TEST_BATCH_RUN_ARGS}')检查运行结果"
+          - "第7步：分析测试结果："
+          - "  - 如果Pass且结果符合预期，则继续通过Check工具进行阶段检查"
+          - "  - 如果Fail但合理：可能发现了芯片bug，分析并记录到{OUT}/{DUT}_bug_analysis.md（需要基于源代码分析bug，给出源码修改建议,需要用{DOC_GEN_LANG}编写文档）"
+          - "  - 触发bug对应的测试用例必须 Fail，不能误报为 Pass"
+          - "  - 如果Fail不合理：修正测试逻辑"
+          - "第8步：完成所有目标测试用例后，使用Check工具进行阶段检查"
+          - "注意："
+          - "  - 在该阶段，有需要可以增加测试用例，但不能删除已有用例"
+          - "  - 测试用例应当与功能点、测试点精准对应，不要冗余，不要一个测试用例关联过多功能点、测试点"
+          - "  - 如果功能点有bug，那么bug对应的具体检测点应当不通过，且至少有一个关联的针对性测试用例失败(Fail)"
+          - "  - 如果功能点正常，那么对应的检测点应当通过，且至少有一个关联的针对性测试用例通过(Pass)"
+          - "  - 你非常关注Fail的测试用例，因为Fail可能意味着bug，发现确实是bug，你会保留测试用例为Fail并在bug分析文档中基于源码进行详细分析并给出修复建议"
+          - "  - 如果源码不存在，需要给出可能的设计缺陷分析和修复建议"
+          - "  - 不能为了让测试通过而修改测试逻辑，例如使用不合理的断言等，必须确保测试逻辑正确，否则会掩盖bug"
+          - "完成进度：{COMPLETED_CASES}/{TOTAL_CASES}个测试用例已完成"
+        reference_files:
+          - "Guide_Doc/dut_test_case.md"
+          - "Guide_Doc/dut_bug_analysis.md"
+        checker:
+        - name: batch_test_cases_implementation_check
+          clss: "UnityChipCheckerBatchTestsImplementation"
+          args:
+            doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
+            doc_bug_analysis: "{OUT}/{DUT}_bug_analysis.md"
+            test_dir: "{OUT}/tests"
+            ignore_ck_prefix: "test_api_{DUT}_"
+            batch_size: $(BATCH_SIZE_TC: 10)
+            data_key: "TEST_TEMPLATE_IMP_REPORT"
+            pre_report_file: "{OUT}/.TEST_TEMPLATE_IMP_REPORT.json"
+            need_human_check: false # 验证复杂DUT时建议开启该人工检查
+
+  - name: line_coverage_analysis_and_improvement
+    desc: "代码行覆盖率分析与提升{COVERAGE_COMPLETE}"
+    task:
+      - "目标：查漏补缺，对测试过程进行回顾，提代码行覆盖率"
+      - "第1步：运行Check方法获取代码行覆盖率信息"
+      - "第2步：如果代码行覆盖率符合要求，直接调用Complete进入下一个阶段"
+      - "第3步：如果代码行覆盖率不符合要求，分析未覆盖的代码行"
+      - "第4步：针对未覆盖的代码行，设计并实现补充测试用例"
+      - "第5步：补充测试完成后，重新运行Check方法，验证代码行覆盖率是否提升"
+      - "第6步：重复上述过程，直到代码行覆盖率符合要求"
+      - "注意："
+      - " - {DUT}的verilog源文件均位于{DUT}/目录下，其依赖或者上层语言源文件位于{RTL_PATH}/目录下，文件后缀可能是.v、.sv、.vh、.scala等，需要你自行识别，例如：{RTL_PATH}/{DUT}.scala"
+      - " - 可编辑的代码行ignore文件位于{OUT}/tests/{DUT}.ignore，你可以根据需要进行调整"
+      - " - ignore的Pattern请以*/开头，例如*/path_in_workspace/to_be_ignored.sv[:line_number_start-line_number_end, ...]，其中path_in_workspace为相对于workspace的路径，没有同名文件时可省略，例如*/to_be_ignored.sv[:line_number_start-line_number_end, ...]"
+      - " - ignore Pattern中代码行的格式为line_number_start-line_number_end，单行代码也为该格式，例如第10行代码需要标记为10-10"
+      - " - 任务中涉及到的文档和注释，主体需要用{DOC_GEN_LANG}编写"
+    checker:
+      - name: line_coverage_check
+        clss: "UnityChipCheckerTestCaseWithLineCoverage"
+        args:
+          doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
+          doc_bug_analysis: "{OUT}/{DUT}_bug_analysis.md"
+          test_dir: "{OUT}/tests"
+          min_line_coverage: $(MIN_LINE_COV_RATE: 0.9) # 根据需要调整覆盖率要求，例如0.7表示70%，建议初始要求不要太高，完成所有功能测试后再提升该值大于95%
+          need_human_check: false # 验证复杂DUT时建议开启该人工检查
+
+    reference_files:
+          - "Guide_Doc/dut_line_coverage.md"
+    skip: true # default skip this stage, can be enabled if needed
+
+  - name: generate_random_test_cases
+    desc: "随机测试用例生成"
+    task:
+      - "目标：针对{DUT}中需要进行随机测试的功能点，编写随机测试用例"
+      - "第1步：根据{OUT}/{DUT}_functions_and_checks.md确定哪些功能点需要进行随机测试"
+      - "第2步：编写随机测试用例到文件{OUT}/tests/test_{DUT}_random_<name>.py"
+      - " - 测试函数命名格式：test_random_<name>"
+      - " - 测试函数的第一个参数为env (pytest fixture)"
+      - " - 在测试函数最开始添加覆盖率标记，例如：env.dut.fc_cover['FG-XXX'].mark_function('FC-YYY', test_func, ['CK-ZZZ', ...])"
+      - " - 测试函数中使用随机数生成器生成测试数据，可以使用Python的random模块，或者numpy等库"
+      - " - 通过生成的随机数据计算预期结果 expected_output"
+      - " - 调用DUT的API函数进行测试，获取实际结果 actual_output"
+      - " - 使用合理的断言检查DUT的输出是否与预期结果一致： assert actual_output == expected_output, ..."
+      - "第3步：编写随机测试用例过程中，如果发现bug需要进行记录和分析"
+      - "注意："
+      - " - <name>需要合理，例如按功能点命名"
+      - " - 一个随机测试用例可以覆盖多个测点、功能点"
+      - " - 多个随机测试用例之间尽可能的不要有过多覆盖点上的交叉"
+      - " - 每个用例都必须设置独立的随机种子以确保测试可重复"
+      - " - 测试用例必须用 ucagent.repeat_count() 获取当前随机循环次数"
+      - " - 如果用例有测试区间，需要通过pytest的参数化模式进行区间控制"
+      - " - 其他用例要求请参考文档 Guide_Doc/dut_test_case.md"
+      - " - 需要有合理的断言来检查输出是否符合预期，是否正确"
+    checker:
+      - name: random_test_check
+        clss: "RandomTestCasesChecker"
+        args:
+          doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
+          doc_bug_analysis: "{OUT}/{DUT}_bug_analysis.md"
+          test_dir: "{OUT}/tests"
+          target_test_file: "{OUT}/tests/test_{DUT}_random*.py"
+          need_human_check: false # 验证复杂DUT时建议开启该人工检查
+    output_files:
+      - "{OUT}/tests/test_{DUT}_random*.py"
+    reference_files:
+      - "Guide_Doc/dut_test_case.md"
+      - "Guide_Doc/dut_bug_analysis.md"
+      - "Guide_Doc/dut_test_case_random.md"
+      - "{OUT}/{DUT}_functions_and_checks.md"
+
+  - name: verification_review_and_summary
+    desc: "验证审查与总结"
+    task:
+      - "目标：查漏补缺，对测试过程进行回顾，提炼经验教训"
+      - "第1步：整理测试过程中发现的问题，完善{OUT}/{DUT}_bug_analysis.md中对应的描述（必须基于源代码分析bug，用{DOC_GEN_LANG}编写文档）"
+      - "第2步：再次阅读{DUT}的所有源代码，确认是否有遗漏的bug，若发现新bug，补充测试用例并进行bug记录"
+      - "第3步：对所有测试用例进行回顾，确认测试逻辑合理，确认用例中的所有assert都合理有效"
+      - "第4步：总结测试经验，形成文档{OUT}/{DUT}_test_summary.md"
+      - "第5步：回顾验证规划{OUT}/{DUT}_verification_needs_and_plan.md，检测是否满足验证需求"
+      - "第6步：根据需要判断是否进行验证补充，或者调整验证规划"
+      - "第7步：如果有必要可通过 GotoStage工具重新进入某个阶段进行补充验证"
+      - "注意：任务中涉及到的文档和注释，主体需要用{DOC_GEN_LANG}编写"
+    reference_files:
+      - "Guide_Doc/dut_bug_analysis.md"
+      - "Guide_Doc/dut_test_summary.md"
+    output_files:
+      - "{OUT}/{DUT}_test_summary.md"
+    checker:
+      - name: test_check
+        clss: "UnityChipCheckerTestCase"
+        args:
+          doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
+          doc_bug_analysis: "{OUT}/{DUT}_bug_analysis.md"
+          test_dir: "{OUT}/tests"
+          need_human_check: false # 验证复杂DUT时建议开启该人工检查
