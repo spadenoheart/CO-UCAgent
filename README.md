@@ -1,6 +1,6 @@
 # CO-UCAgent (Context Optimized-UCAgent)
 
-CO-UCAgent 是在原始 UCAgent 基础上，围绕“上下文利用效率与验证效率”做的增强版本，重点优化了检索、摘要与长期记忆等上下文管理流程，并提供可复现实验数据的汇总。
+CO-UCAgent 是在原始 [UCAgent](https://github.com/XS-MLVP/UCAgent) 基础上，围绕“上下文利用效率与验证效率”做的增强版本，重点优化了检索、摘要与长期记忆等上下文管理流程，并提供可复现实验数据的汇总。
 
 ## 主要改进（逐项说明）
 
