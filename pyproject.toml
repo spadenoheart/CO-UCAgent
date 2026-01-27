@@ -38,7 +38,7 @@ dynamic = ["version"]
 ucagent = "ucagent.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/XS-MLVP/UCAgent"
+Homepage = "https://github.com/spadenoheart/CO-UCAgent"
 
 [tool.setuptools_scm]
 fallback_version = "0.9.1"
