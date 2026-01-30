@@ -103,33 +103,13 @@ CO-UCAgent 的技术路线强调以可解释的上下文处理策略替代单纯
 
 ### 数据集与用例
 
-本报告基于 `res_public.csv` 的公开结果，包含 17 次运行记录，覆盖以下 DUT：
+实验基于 `res_public.csv` 的31 次公开运行记录，覆盖以下 DUT 与配置：
 
-- Adder（origin/improved 对比）
-- uart_tx（origin/improved 对比，含多次 improved 重复运行）
-- IntegerDivider（仅 improved，多次重复运行）
+- Adder：origin、`+summary`、`+long_term_memory`、improved  
+- uart_tx：origin、improved（多次重复运行）  
+- IntegerDivider：improved（多次重复运行）
 
-**单次运行记录表**
-
-| Run | Model | DUT | Time | token_in | token_out |
-| --- | --- | --- | --- | --- | --- |
-| R1 | origin | Adder | 40min | - | - |
-| R2 | origin | Adder | 39min | 1.04M | 16.6K |
-| R3 | origin | uart_tx | 1h14min | - | - |
-| R4 | origin | uart_tx | 1h7min | 1.49M | 90.2K |
-| R5 | improved | Adder | 27min | - | - |
-| R6 | improved | Adder | 30min | 647.2K | 19.8K |
-| R7 | improved | uart_tx | 34min | - | - |
-| R8 | improved | uart_tx | 38min | 1.27M | 53.0K |
-| R9 | improved | uart_tx | 57min | 1.36M | 37.6K |
-| R10 | improved | uart_tx | 1h10min | 1.22M | 43.2K |
-| R11 | improved | uart_tx | 1h16min | 981.9K | 27.5K |
-| R12 | improved | IntegerDivider | 1h18min | - | - |
-| R13 | improved | IntegerDivider | 52min | 1.57M | 34.1K |
-| R14 | improved | IntegerDivider | 1h5min | 1.48M | 21.8K |
-| R15 | improved | IntegerDivider | 1h11min | 1.49M | 47.5K |
-| R16 | improved | IntegerDivider | 1h33min | 2.38M | 79.1K |
-| R17 | improved | IntegerDivider | 1h34min | 2.85M | 36.3K |
+其中，Adder 用于完整对比与消融实验分析；uart_tx 与 IntegerDivider 用于评估在更复杂验证流程下的整体稳定性与可扩展性。
 
 ### 指标定义
 
@@ -139,15 +119,57 @@ CO-UCAgent 的技术路线强调以可解释的上下文处理策略替代单纯
 - **token_in/out**：模型统计的输入/输出 token 数量
 - **token_in/min**：`token_in / time`，衡量 token 消耗速率
 
+### 实验数据总表
+
+<details>
+<summary>点击展开</summary>
+
+| Run | Model | DUT | Time | token_in | token_out |
+| --- | --- | --- | --- | --- | --- |
+| R1 | origin | Adder | 40min | - | - |
+| R2 | origin | Adder | 31min | 711.6K | 13.4K |
+| R3 | origin | Adder | 39min | 1.04M | 16.6K |
+| R4 | origin | Adder | 41min | 764.5K | 12.0K |
+| R5 | origin | Adder | 54min | 696.0K | 18.0K |
+| R6 | origin | Adder | 1h28min | 1.49M | 39.9K |
+| R7 | origin | uart_tx | 1h14min | - | - |
+| R8 | origin | uart_tx | 1h7min | 1.49M | 90.2K |
+| R9 | origin | uart_tx | 1h23min | 1.24M | 24.9K |
+| R10 | +summary | Adder | 31min | 402.8K | 10.2K |
+| R11 | +summary | Adder | 36min | 610.0K | 14.2K |
+| R12 | +summary | Adder | 1h19min | 1.61M | 37.7K |
+| R13 | +long_term_memory | Adder | 40min | 649.1K | 10.2K |
+| R14 | +long_term_memory | Adder | 1h12min | 1.27M | 30.2K |
+| R15 | +long_term_memory | Adder | 1h32min | 1.22M | 29.2K |
+| R16 | improved | Adder | 27min | - | - |
+| R17 | improved | Adder | 30min | 647.2K | 19.8K |
+| R18 | improved | Adder | 33min | 849.6K | 15.0K |
+| R19 | improved | uart_tx | 34min | - | - |
+| R20 | improved | uart_tx | 38min | 1.27M | 53.0K |
+| R21 | improved | uart_tx | 57min | 1.36M | 37.6K |
+| R22 | improved | uart_tx | 1h10min | 1.22M | 43.2K |
+| R23 | improved | uart_tx | 1h16min | 981.9K | 27.5K |
+| R24 | improved | IntegerDivider | 1h18min | - | - |
+| R25 | improved | IntegerDivider | 52min | 1.57M | 34.1K |
+| R26 | improved | IntegerDivider | 1h5min | 1.48M | 21.8K |
+| R27 | improved | IntegerDivider | 1h11min | 1.49M | 47.5K |
+| R28 | improved | IntegerDivider | 1h33min | 2.38M | 79.1K |
+| R29 | improved | IntegerDivider | 1h34min | 2.85M | 36.3K |
+
+</details>
+
+
 ### 汇总指标
 
 **运行时间统计**
 
 | DUT | Variant | N | mean(min) | min | max | std | CV |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Adder | origin | 2 | 39.50 | 39.00 | 40.00 | 0.50 | 0.01 |
-| uart_tx | origin | 2 | 70.50 | 67.00 | 74.00 | 3.50 | 0.05 |
-| Adder | improved | 2 | 28.50 | 27.00 | 30.00 | 1.50 | 0.05 |
+| Adder | origin | 6 | 48.83 | 31.00 | 88.00 | 18.77 | 0.38 |
+| uart_tx | origin | 3 | 74.67 | 67.00 | 83.00 | 6.55 | 0.09 |
+| Adder | +summary | 3 | 48.67 | 31.00 | 79.00 | 21.55 | 0.44 |
+| Adder | +long_term_memory | 3 | 68.00 | 40.00 | 92.00 | 21.42 | 0.31 |
+| Adder | improved | 3 | 30.00 | 27.00 | 33.00 | 2.45 | 0.08 |
 | uart_tx | improved | 5 | 55.00 | 34.00 | 76.00 | 16.73 | 0.30 |
 | IntegerDivider | improved | 6 | 75.50 | 52.00 | 94.00 | 14.93 | 0.20 |
 
@@ -155,21 +177,13 @@ CO-UCAgent 的技术路线强调以可解释的上下文处理策略替代单纯
 
 | DUT | Variant | N | token_in mean | token_in min | token_in max | token_out mean | token_out min | token_out max |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Adder | origin | 1 | 1040000 | 1040000 | 1040000 | 16600 | 16600 | 16600 |
-| uart_tx | origin | 1 | 1490000 | 1490000 | 1490000 | 90200 | 90200 | 90200 |
-| Adder | improved | 1 | 647200 | 647200 | 647200 | 19800 | 19800 | 19800 |
+| Adder | origin | 5 | 940420 | 696000 | 1490000 | 19980 | 12000 | 39900 |
+| uart_tx | origin | 2 | 1365000 | 1240000 | 1490000 | 57550 | 24900 | 90200 |
+| Adder | +summary | 3 | 874267 | 402800 | 1610000 | 20700 | 10200 | 37700 |
+| Adder | +long_term_memory | 3 | 1046367 | 649100 | 1270000 | 23200 | 10200 | 30200 |
+| Adder | improved | 2 | 748400 | 647200 | 849600 | 17400 | 15000 | 19800 |
 | uart_tx | improved | 4 | 1207975 | 981900 | 1360000 | 40325 | 27500 | 53000 |
 | IntegerDivider | improved | 5 | 1954000 | 1480000 | 2850000 | 43760 | 21800 | 79100 |
-
-**Token 速率**
-
-| DUT | Variant | N | token_in/min mean | min | max |
-| --- | --- | --- | --- | --- | --- |
-| Adder | improved | 1 | 21573 | 21573 | 21573 |
-| Adder | origin | 1 | 26667 | 26667 | 26667 |
-| uart_tx | improved | 4 | 21907 | 12920 | 33421 |
-| uart_tx | origin | 1 | 22239 | 22239 | 22239 |
-| IntegerDivider | improved | 5 | 25972 | 20986 | 30319 |
 
 ### 关键结果与分析
 
@@ -195,7 +209,40 @@ CO-UCAgent 的技术路线强调以可解释的上下文处理策略替代单纯
 
 在仅包含 improved 版本、且执行多次运行的 DUT 上，token 使用呈现出受控但非恒定的分布特征，上述波动主要来源于测试路径差异、失败点位置变化及阶段性回填信息的不同组合，而非上下文机制本身的不稳定。从工程角度看，更重要的是 token 未出现不可控膨胀，且输入规模始终维持在可预测范围内，这为在更复杂 DUT 上扩展提供了可行性基础。
 
-综合来看，本项目的上下文优化并不仅体现为运行时间的缩短，更重要的是改变了验证型 Agent 对上下文的使用方式：输入侧由被动累积转为受控组织，输出侧由冗余生成转为与任务相关的推理表达。在保持模型与工具链不变的前提下，这种上下文结构的调整同时带来了效率提升、token 成本下降以及行为稳定性的改善，使得长任务验证流程更具工程可控性与可复现性。因此，运行时间、token 使用与多次运行行为应被视为相互关联的观测维度，共同反映上下文管理策略在真实工程场景中的实际价值。
+### 消融实验分析
+
+为分析不同上下文管理组件的独立贡献与协同效应，我们在 **Adder DUT** 上进一步进行了消融实验，对比以下配置：
+
+- **origin**：无上下文优化  
+- **+summary**：仅启用摘要压缩策略  
+- **+long_term_memory**：仅启用长期记忆  
+- **improved**：完整上下文优化（摘要 + 分层摘要 + 长期记忆）
+
+#### 消融实验运行时间对比
+
+| Variant | N | mean(min) | min | max | std | CV |
+| --- | --- | --- | --- | --- | --- | --- |
+| origin | 6 | 48.83 | 31.00 | 88.00 | 18.77 | 0.38 |
+| +summary | 3 | 48.67 | 31.00 | 79.00 | 21.55 | 0.44 |
+| +long_term_memory | 3 | 68.00 | 40.00 | 92.00 | 21.42 | 0.31 |
+| improved | 3 | 30.00 | 27.00 | 33.00 | 2.45 | 0.08 |
+
+实验结果表明，仅引入摘要压缩（+summary）并未带来稳定的性能提升，其平均运行时间与 origin 基本持平，且运行稳定性显著下降（CV 达到 0.44）。仅启用长期记忆（+long_term_memory）在当前配置下反而引入了明显的时间开销，平均运行时间高于 origin。
+
+相比之下，当结构化摘要、分层摘要与长期记忆机制协同启用（improved）时，系统性能才出现显著且稳定的提升，不仅平均运行时间最低，同时在稳定性指标（CV）上也表现最佳。
+
+#### 消融实验 Token 使用对比
+
+| Variant | N | token_in mean | min | max | token_out mean | min | max |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| origin | 5 | 940420 | 696000 | 1490000 | 19980 | 12000 | 39900 |
+| +summary | 3 | 874267 | 402800 | 1610000 | 20700 | 10200 | 37700 |
+| +long_term_memory | 3 | 1046367 | 649100 | 1270000 | 23200 | 10200 | 30200 |
+| improved | 2 | 748400 | 647200 | 849600 | 17400 | 15000 | 19800 |
+
+可以看到，+summary 在部分运行中显著降低了 token_in，但其最大值反而高于 origin，说明在缺乏跨阶段约束时，摘要策略可能引入不稳定的上下文增长；+long_term_memory 的 token_in 均值高于 origin，反映出长期记忆在缺乏有效裁剪与摘要支撑时可能放大上下文回填成本。仅当多种策略协同启用时，token 使用与运行时间才能同时收敛到稳定区间。
+
+综合来看，综合整体结果与消融实验可以得出结论：CO-UCAgent 的性能提升并非来源于单一上下文管理组件，而是多种策略之间的协同效应。摘要机制为长期记忆提供稳定的信息表示，长期记忆为摘要提供跨阶段一致性锚点，而分层与裁剪机制则保证上下文规模的可控性。上述协同设计使验证型 Agent 从被动上下文累积转向主动上下文组织，在保持模型与工具链不变的前提下，同时实现了效率提升、成本收敛与运行稳定性的改善。
 
 
 ### 大规模/复杂测试扩展计划（待补充结果）
@@ -218,7 +265,7 @@ CO-UCAgent 的技术路线强调以可解释的上下文处理策略替代单纯
 
 ## Future Work
 
-未来工作可在摘要压缩与长期记忆两个方向继续深入推进。在摘要与裁剪方面，有必要探索由小模型承担上下文压缩职责、由大模型执行推理的双系统架构，以降低推理负担并提升上下文一致性。相关研究已经展示了轻量长程模型构建全局记忆的可行性，以及基于困惑度的提示压缩与分段软压缩在工程上的效率优势 [8–10]，这些结果为独立压缩器的设计提供了方法学基础。在长期记忆方面，仍需建立更系统的结构化存储与评测体系，以确保跨阶段信息复用的稳定性与可解释性；现有工作提出了分层记忆组织机制与面向记忆能力的评测基准，可作为后续改进的理论与评估依据 [6][11]。
+本项目后续工作将在摘要压缩与长期记忆两个方向继续深入推进。在摘要与裁剪方面，将会探索由小模型承担上下文压缩职责、由大模型执行推理的双系统架构，以降低推理负担并提升上下文一致性。相关研究已经展示了轻量长程模型构建全局记忆的可行性，以及基于困惑度的提示压缩与分段软压缩在工程上的效率优势 [8–10]，这些结果为独立压缩器的设计提供了方法学基础。在长期记忆方面，后续可能需要建立更系统的结构化存储与评测体系，以确保跨阶段信息复用的稳定性与可解释性；现有工作提出了分层记忆组织机制与面向记忆能力的评测基准，可作为后续改进的理论与评估依据 [6][11]。
 
 ## 上游项目与部署
 
@@ -233,6 +280,19 @@ https://github.com/XS-MLVP/UCAgent
 
 - `res_public.csv`：公开实验结果
 - `ucagent/setting.yaml`：上下文优化与模型配置入口
+
+## 作者信息
+
+- **Jiabao Wang**（北京邮电大学，Beijing University of Posts and Telecommunications）
+- **Yuzhong Sun**（中国科学院计算技术研究所，Institute of Computing Technology, Chinese Academy of Sciences）  
+  ResearchGate: https://www.researchgate.net/profile/Yuzhong-Sun/research
+
+## 联系方式
+
+如有问题或合作意向，请联系：
+
+- Email：**yuzhongsun@ict.ac.cn**
+
 
 ## 参考文献
 
