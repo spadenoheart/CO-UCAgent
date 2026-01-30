@@ -1,5 +1,7 @@
 # CO-UCAgent (Context Optimized-UCAgent)
 
+Version: v0.1.0(Last update: 2026-01-30)
+
 ## 作者信息
 - Jiabao Wang（北京邮电大学，Beijing University of Posts and Telecommunications）
 - Yuzhong Sun（中国科学院计算技术研究所，Institute of Computing Technology, Chinese Academy of Sciences）  
@@ -143,27 +145,30 @@ CO-UCAgent 的技术路线强调以可解释的上下文处理策略替代单纯
 | R6 | origin | Adder | 1h28min | 1.49M | 39.9K |
 | R7 | origin | uart_tx | 1h14min | - | - |
 | R8 | origin | uart_tx | 1h7min | 1.49M | 90.2K |
-| R9 | origin | uart_tx | 1h23min | 1.24M | 24.9K |
-| R10 | +summary | Adder | 31min | 402.8K | 10.2K |
-| R11 | +summary | Adder | 36min | 610.0K | 14.2K |
-| R12 | +summary | Adder | 1h19min | 1.61M | 37.7K |
-| R13 | +long_term_memory | Adder | 40min | 649.1K | 10.2K |
-| R14 | +long_term_memory | Adder | 1h12min | 1.27M | 30.2K |
-| R15 | +long_term_memory | Adder | 1h32min | 1.22M | 29.2K |
-| R16 | improved | Adder | 27min | - | - |
-| R17 | improved | Adder | 30min | 647.2K | 19.8K |
-| R18 | improved | Adder | 33min | 849.6K | 15.0K |
-| R19 | improved | uart_tx | 34min | - | - |
-| R20 | improved | uart_tx | 38min | 1.27M | 53.0K |
-| R21 | improved | uart_tx | 57min | 1.36M | 37.6K |
-| R22 | improved | uart_tx | 1h10min | 1.22M | 43.2K |
-| R23 | improved | uart_tx | 1h16min | 981.9K | 27.5K |
-| R24 | improved | IntegerDivider | 1h18min | - | - |
-| R25 | improved | IntegerDivider | 52min | 1.57M | 34.1K |
-| R26 | improved | IntegerDivider | 1h5min | 1.48M | 21.8K |
-| R27 | improved | IntegerDivider | 1h11min | 1.49M | 47.5K |
-| R28 | improved | IntegerDivider | 1h33min | 2.38M | 79.1K |
-| R29 | improved | IntegerDivider | 1h34min | 2.85M | 36.3K |
+| R9 | origin | uart_tx | 1h10min | 1.65M | 88.8K |
+| R10 | origin | uart_tx | 1h23min | 1.24M | 24.9K |
+| R11 | origin | uart_tx | 1h40min | 2.02M | 83.5K |
+| R12 | +summary | Adder | 31min | 402.8K | 10.2K |
+| R13 | +summary | Adder | 36min | 610.0K | 14.2K |
+| R14 | +summary | Adder | 1h19min | 1.61M | 37.7K |
+| R15 | +long_term_memory | Adder | 40min | 649.1K | 10.2K |
+| R16 | +long_term_memory | Adder | 1h12min | 1.27M | 30.2K |
+| R17 | +long_term_memory | Adder | 1h32min | 1.22M | 29.2K |
+| R18 | improved | Adder | 27min | - | - |
+| R19 | improved | Adder | 30min | 647.2K | 19.8K |
+| R20 | improved | Adder | 33min | 849.6K | 15.0K |
+| R21 | improved | Adder | 41min | 652.9K | 11.8K |
+| R22 | improved | uart_tx | 34min | - | - |
+| R23 | improved | uart_tx | 38min | 1.27M | 53.0K |
+| R24 | improved | uart_tx | 57min | 1.36M | 37.6K |
+| R25 | improved | uart_tx | 1h10min | 1.22M | 43.2K |
+| R26 | improved | uart_tx | 1h16min | 981.9K | 27.5K |
+| R27 | improved | IntegerDivider | 1h18min | - | - |
+| R28 | improved | IntegerDivider | 52min | 1.57M | 34.1K |
+| R29 | improved | IntegerDivider | 1h5min | 1.48M | 21.8K |
+| R30 | improved | IntegerDivider | 1h11min | 1.49M | 47.5K |
+| R31 | improved | IntegerDivider | 1h33min | 2.38M | 79.1K |
+| R32 | improved | IntegerDivider | 1h34min | 2.85M | 36.3K |
 
 </details>
 
@@ -175,10 +180,10 @@ CO-UCAgent 的技术路线强调以可解释的上下文处理策略替代单纯
 | DUT | Variant | N | mean(min) | min | max | std | CV |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Adder | origin | 6 | 48.83 | 31.00 | 88.00 | 18.77 | 0.38 |
-| uart_tx | origin | 3 | 74.67 | 67.00 | 83.00 | 6.55 | 0.09 |
+| uart_tx | origin | 5 | 78.80 | 67.00 | 100.00 | 11.89 | 0.15 |
 | Adder | +summary | 3 | 48.67 | 31.00 | 79.00 | 21.55 | 0.44 |
 | Adder | +long_term_memory | 3 | 68.00 | 40.00 | 92.00 | 21.42 | 0.31 |
-| Adder | improved | 3 | 30.00 | 27.00 | 33.00 | 2.45 | 0.08 |
+| Adder | improved | 4 | 32.75 | 27.00 | 41.00 | 5.21 | 0.16 |
 | uart_tx | improved | 5 | 55.00 | 34.00 | 76.00 | 16.73 | 0.30 |
 | IntegerDivider | improved | 6 | 75.50 | 52.00 | 94.00 | 14.93 | 0.20 |
 
