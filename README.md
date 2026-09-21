@@ -814,18 +814,22 @@ Prompt 中的经验条目由 85 减少至 42，下降 50.6%。该结果说明适
 > 相同 30-Stage 任务口径内比较，不与 6.1 节的绝对数值交叉比较。
 
 下表以 2026-09-14 已冻结的统计表为主口径，并追加截至 2026-09-18 已确认的新结果。
-`Base (h)` 与 `CO-UCAgent (h) ` 均为 active time；`—` 表示缺少同口径的可比计量。时间变化只在 baseline 与 CO-UCAgent均形成可追溯结果时计算。
+`Base (h)` 与 `CO-UCAgent (h)` 均为 active time；`—` 表示缺少同口径的可比计量。
+对于 patched resume，时间和 Prompt Token 均按最终有效完成链重建：保留已推动阶段的前缀
+与最终成功后缀，排除被后续重跑替代的同阶段请求。该口径不同于把所有失败尝试相加的
+resume aggregate，也不等同于 clean end-to-end。
 
-| DUT | Base (h) | CO-UCAgent (h) | Δtime | Base→CO Prompt | ΔToken | CO 状态 |
+| DUT / 运行口径 | Base (h) | CO-UCAgent (h) | Δtime | Base→CO Prompt | ΔToken | CO 状态 |
 |---|---:|---:|---:|---:|---:|---|
-| FSM | 9.91 | 3.19 | **-67.8%** | — | — | 完成 |
-| ShiftRegister | 12.90 | 4.06 | **-68.5%** | — | — | 完成 |
-| Adder | 12.98 | 5.62 | **-56.7%** | — → 11.63M | — | 完成 |
-| Mux | 12.72 | 5.21 | **-59.0%** | — | — | 完成 |
-| DualPort | 11.21 | 6.67 | **-40.5%** | 29.90M → 39.92M | **+33.5%** | 完成 |
-| HPerfCounter | 15.33 | 11.18 | **-27.0%** | 38.42M → 24.03M | **-37.4%** | 完成 |
+| FSM（有效完成链） | 9.91 | 9.65 | **-2.6%** | 25.76M → 22.60M | **-12.3%** | patched 完成 |
+| ShiftRegister（有效完成链） | 12.90 | 8.09 | **-37.3%** | 34.44M → 16.72M | **-51.4%** | patched 完成 |
+| Adder（clean，seed `20260721`） | 12.98 | 5.62 | **-56.7%** | 未采集 → 11.63M | — | clean 完成 |
+| Adder（有效完成链，seed `20260827`） | 11.65 | 11.75 | +0.9% | 25.83M → 24.47M | **-5.3%** | patched 完成 |
+| Mux（有效完成链） | 12.72 | 8.80 | **-30.8%** | 30.69M → 18.64M | **-39.3%** | patched 完成 |
+| DualPort（有效完成链） | 11.21 | 14.68 | +31.0% | 29.90M → 33.52M | +12.1% | patched 完成 |
+| HPerfCounter（clean） | 15.33 | 11.18 | **-27.1%** | 38.42M → 24.03M | **-37.4%** | clean 完成 |
 | uart_tx | 16.51 | — | — | 42.07M → — | — | 未完成 |
-| ALU754 | 12.86 | 15.72 | **+22.2%** | 26.61M → 33.57M | **+26.2%** | 完成 |
+| ALU754（检查点组合完成链） | 12.86 | 15.72 | +22.2% | 26.61M → 33.57M | +26.2% | patched 完成 |
 | IntegerDivider | baseline 未完成 | — | — | 首次 50.88M；后续 79.997M | — | 未完成 |
 
 #### 6.4.1 Clean 结果
@@ -835,23 +839,32 @@ Adder 和 HPerfCounter 构成当前最严格的正向证据。Adder 在相同 se
 Stage 23 从 7h04min 降至 46min，Stage 24 从 1h21min 降至 6min57s，最终 Checker
 通过并识别到与 baseline 一致的 RTL 位宽根因。HPerfCounter 从 15.33h 降至 11.18h，
 同时 Prompt token 从 38.42M 降至 24.03M。两项 clean 结果累计耗时由 28.31h 降至
-16.80h，描述性降幅为 40.7%。
+16.80h，描述性降幅为 40.7%。Adder clean baseline 当时未记录 request-level Token，
+因此不计算该组的 ΔToken；独立的 seed `20260827` 完成链显示 Prompt Token 从 25.83M
+降至 24.47M（-5.3%），但 active time 基本持平（+0.9%）。
 
-FSM、ShiftRegister 和 Mux 的已完成恢复链均显示较大 active-time 降幅，分别为 67.8%、
-68.5% 和 59.0%。三项 baseline 累计为 35.53h，CO 完成链累计为 12.46h，描述性降幅
-为 64.9%。这些结果用于说明中间状态上的策略与上下文机制具有明显潜力，并为后续 clean
-复现实验确定优先 DUT。
+FSM、ShiftRegister 和 Mux 的有效完成链排除了被后续重跑替代的阶段请求。三项 baseline
+累计为 35.53h，CO-UCAgent 完成链累计为 26.54h，active time 下降 25.3%；Prompt Token
+由 90.89M 降至 57.96M，下降 36.2%。其中 ShiftRegister 和 Mux 同时取得明显时间与
+Token 收益；FSM 的时间接近 baseline，但 Prompt Token 下降 12.3%。这些 patched-chain
+结果用于定位机制潜力，证据等级低于 clean end-to-end。
 
-DualPort 的累计有效运行时间为 6.67h，相比 11.21h baseline 下降 40.5%，但 Prompt
-token 从 29.90M 增至 39.92M。该结果表明墙钟收益与模型流量可能分离：恢复点和测试
-执行路径能够缩短 active time，同时仍可能产生更多模型输入。DualPort 因此不能作为
-Token 优化的正向证据。
+DualPort 重新审计后，原 `39.92M` 被确认是包含废弃 Stage 28 尝试的 resume aggregate，
+不能与筛选后的完成链时间并列。按同一有效链口径重建后，其 active time 为 14.68h，
+Prompt Token 为 33.52M，分别较 baseline 增加 31.0% 和 12.1%。因此 DualPort 是当前
+明确的负向结果，瓶颈集中在后期随机测试与完成检查，而非性能提升证据。
+
+在七个具有同 seed、同任务口径且 Token 可比的完成链上（Adder `20260827`、FSM、
+ShiftRegister、Mux、DualPort、HPerfCounter 和 ALU754），累计 active time 从 86.58h
+降至 79.87h（-7.8%），Prompt Token 从 211.65M 降至 173.55M（-18.0%）。该汇总保留
+DualPort 与 ALU754 的负收益，避免只报告正向 DUT。
 
 #### 6.4.2 新增完成链与未完成任务
 
 ALU754 已由三个可追溯片段形成完整验证链：Stage 0–22 的有效前缀、独立通过的 Stage 23
-回放，以及连续完成的 Stage 24–30。总 active time 为 15.72h，Prompt token 为 33.57M，
-分别高于 baseline 22.2% 和 26.2%。该结果证明复杂 DUT 可以借助检查点恢复完成全部阶段，
+回放，以及连续完成的 Stage 24–30。复核后的 33.57M 仅累加这三个被采用片段，未计入
+被替代的 Stage 23/24 失败尝试。总 active time 为 15.72h，时间和 Prompt Token 分别
+高于 baseline 22.2% 和 26.2%。该结果证明复杂 DUT 可以借助检查点恢复完成全部阶段，
 同时也定位出 Stage 23 与后半程的显著成本，当前版本尚未在 ALU754 上取得性能优势。
 
 uart_tx 的近期 clean 尝试分别在 Stage 24 和 Stage 25 停滞，尚无可用于主表的 CO 完成
