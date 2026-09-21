@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "experiment_baseline": "20260716_episode_credit_v21_validation_candidate",
+  "created_at": "2026-07-17T09:31:24+08:00",
+  "repo_root": "<REPO_ROOT>",
+  "git_head": "b9c259b35d048e70cf4d0429d3b20a0077fed15d",
+  "git_branch": "main",
+  "worktree_dirty": true,
+  "python_version": "3.11.14 (main, Oct 21 2025, 18:31:21) [GCC 11.2.0]",
+  "files": [
+    {
+      "path": "ucagent/setting.yaml",
+      "source_sha256": "b03f399d73e22ce285ddc0a08991e36843e978eab82e2d98b62995f1c2b9f62b",
+      "snapshot_sha256": "9cfc046028800f27a5dfdcaf68065fdbd90638bb3a59fa68045b428aadfdd5b8",
+      "bytes": 16321,
+      "redacted_snapshot": true
+    },
+    {
+      "path": "ucagent/stage/vmanager.py",
+      "source_sha256": "9eb45d1648237e2400e8d35f2a6c9d23ab532aa0a275bbbd73a06fc2b746f712",
+      "snapshot_sha256": "9eb45d1648237e2400e8d35f2a6c9d23ab532aa0a275bbbd73a06fc2b746f712",
+      "bytes": 82426,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/memory/context_reuse.py",
+      "source_sha256": "376d5bac32c26b0546d0c1d82c4067f4835967bb3e9f47a48a66c63946f6327b",
+      "snapshot_sha256": "376d5bac32c26b0546d0c1d82c4067f4835967bb3e9f47a48a66c63946f6327b",
+      "bytes": 31995,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/build_trace_tree.py",
+      "source_sha256": "d864d9188ac3e9b3ce820109d4cb2c74ddde5581b6b0b45d2db1586c97c3ef65",
+      "snapshot_sha256": "d864d9188ac3e9b3ce820109d4cb2c74ddde5581b6b0b45d2db1586c97c3ef65",
+      "bytes": 12814,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/build_context_reuse_pack.py",
+      "source_sha256": "924b5562e6cf56e2206a6e856d76dac78cb204845475e49ce76679450013d4fd",
+      "snapshot_sha256": "924b5562e6cf56e2206a6e856d76dac78cb204845475e49ce76679450013d4fd",
+      "bytes": 40794,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/evaluate_episode_credit_annotations.py",
+      "source_sha256": "eb4bba6364c04627faf311f750c2fa9a40402e4afe484999a75134e5b3a9c6a3",
+      "snapshot_sha256": "eb4bba6364c04627faf311f750c2fa9a40402e4afe484999a75134e5b3a9c6a3",
+      "bytes": 10125,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/analyze_context_reuse_decisions.py",
+      "source_sha256": "efc7c4f4b2fe1953e4c2d23f75ad92ac1df3564bc77bf2503d310a0912c80dc5",
+      "snapshot_sha256": "efc7c4f4b2fe1953e4c2d23f75ad92ac1df3564bc77bf2503d310a0912c80dc5",
+      "bytes": 7415,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/curate_context_reuse_pack.py",
+      "source_sha256": "16e53ff57b552a63eb072dd4eddf9c5f85a57b45be73327fbf24e1381c6f6317",
+      "snapshot_sha256": "16e53ff57b552a63eb072dd4eddf9c5f85a57b45be73327fbf24e1381c6f6317",
+      "bytes": 18293,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_episode_credit.py",
+      "source_sha256": "ae006cf3028adf972c98d60eaf050a7860fe3718516d9799444648b3afd17354",
+      "snapshot_sha256": "ae006cf3028adf972c98d60eaf050a7860fe3718516d9799444648b3afd17354",
+      "bytes": 17015,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_context_reuse_curation.py",
+      "source_sha256": "6a7d510f9b77b6c7e2303b08b877f624eca082b7f426f3debcdec2f0d81bd760",
+      "snapshot_sha256": "6a7d510f9b77b6c7e2303b08b877f624eca082b7f426f3debcdec2f0d81bd760",
+      "bytes": 5018,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_test_result_classification.py",
+      "source_sha256": "0255978ffda343fda1ea3c2a9dceff7983036da03078c283e71d327e7c455ee8",
+      "snapshot_sha256": "0255978ffda343fda1ea3c2a9dceff7983036da03078c283e71d327e7c455ee8",
+      "bytes": 12553,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v2_research_protocol.md",
+      "source_sha256": "55cf2d7f8e65c962dc88f4e72b82545bc7b66b7b185e9d7dab43aa7a5f31e065",
+      "snapshot_sha256": "55cf2d7f8e65c962dc88f4e72b82545bc7b66b7b185e9d7dab43aa7a5f31e065",
+      "bytes": 8270,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v2_validation_status_20260716.md",
+      "source_sha256": "56cf3844618d7885354e077397636318d0f1a2ed037a090c22ee4d3011a89e7f",
+      "snapshot_sha256": "56cf3844618d7885354e077397636318d0f1a2ed037a090c22ee4d3011a89e7f",
+      "bytes": 2783,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v21_literature_positioning.md",
+      "source_sha256": "268e8f1b5d6788a7d6aa0f87f89ad87d8620c58a6ac7c9482d2cb34878e81a44",
+      "snapshot_sha256": "268e8f1b5d6788a7d6aa0f87f89ad87d8620c58a6ac7c9482d2cb34878e81a44",
+      "bytes": 4581,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v21_holdout_annotation_guide.md",
+      "source_sha256": "b2fa98c977d19167a4510ce1a26f2f03a08c45b059ed02727c2aba27c27c7d7b",
+      "snapshot_sha256": "b2fa98c977d19167a4510ce1a26f2f03a08c45b059ed02727c2aba27c27c7d7b",
+      "bytes": 2932,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v2_rule_v2_annotation_metrics.json",
+      "source_sha256": "5062f86226bdbbc40cafc2c75d8f319f2d01ede1ea7f9b4d572e70b36246eb67",
+      "snapshot_sha256": "5062f86226bdbbc40cafc2c75d8f319f2d01ede1ea7f9b4d572e70b36246eb67",
+      "bytes": 1566,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v2_holdout_adder_20260716_blind_a.jsonl",
+      "source_sha256": "8d8b74cf6b6d6f94b68f7fd97d1a6620a31c08ddf1b5af3da96d5647a3614538",
+      "snapshot_sha256": "8d8b74cf6b6d6f94b68f7fd97d1a6620a31c08ddf1b5af3da96d5647a3614538",
+      "bytes": 101745,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v2_holdout_adder_20260716_blind_b.jsonl",
+      "source_sha256": "8d8b74cf6b6d6f94b68f7fd97d1a6620a31c08ddf1b5af3da96d5647a3614538",
+      "snapshot_sha256": "8d8b74cf6b6d6f94b68f7fd97d1a6620a31c08ddf1b5af3da96d5647a3614538",
+      "bytes": 101745,
+      "redacted_snapshot": false
+    }
+  ],
+  "comparison": {
+    "shared_code_snapshot": "snapshot/",
+    "v0_baseline": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+      "min_quality_score": 0.0,
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0"
+      }
+    },
+    "v1_candidate": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+      "min_quality_score": 0.68,
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68"
+      }
+    },
+    "v2_offline_candidate": {
+      "credit_rule_version": "verifier_grounded_role_typed_v2.1",
+      "candidate_pack": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_candidates.json",
+      "curated_preview": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+      "development_annotations": "benchmark/ucagent_context_reuse/episode_credit_v2_annotation_40_rule_v2.jsonl",
+      "temporal_holdout_blind_a": "benchmark/ucagent_context_reuse/episode_credit_v2_holdout_adder_20260716_blind_a.jsonl",
+      "temporal_holdout_blind_b": "benchmark/ucagent_context_reuse/episode_credit_v2_holdout_adder_20260716_blind_b.jsonl",
+      "decision_credit_instrumentation": true,
+      "runtime_deployed": false,
+      "acceptance_gate": "fresh blind holdout before paired stage-checkpoint A/B"
+    }
+  },
+  "notes": [
+    "The repository worktree was dirty; this snapshot, not git HEAD alone, defines the baseline.",
+    "The setting snapshot is redacted. Its source_sha256 identifies the exact local configuration.",
+    "v0 is retained unchanged; v1 is the curated candidate pack.",
+    "v2.1 is an offline role-typed attribution candidate and is not deployed.",
+    "The 1.0000 development-set score is resubstitution after rule revision, not holdout evidence.",
+    "Blind holdout files exclude all rule-derived intermediate fields as well as final predictions."
+  ]
+}

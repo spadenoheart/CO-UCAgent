@@ -1,68 +1,247 @@
 
+template_overwrite:
+  GUIDE_DOC: "Guide_Doc"
+
 # default basic settings for UCAgent
 lang: "zh"
 
 # init commands to run at the start of the agent
 init_cmds: []
 
+# Idle timeout for VerifyPDB bash commands, in seconds. The timer resets when
+# stdout/stderr output arrives. Set to 0 or "off" to disable.
+cmd_timeout: 300
+
 # backend
 backend:
-  key_name: "langchain"  # options: langchain, claude_code, opencode, copilot_cli, etc.
+  key_name: "langchain"  # options: langchain, claude, opencode, copilot, etc.
   langchain:
     clss: ucagent.abackend.langchain.UCAgentLangChainBackend
-  claude_code:
+  claude:
     clss: ucagent.abackend.UCAgentCmdLineBackend
     args:
-      cli_cmd_new: "claude --dangerously-skip-permissions -p < {MSG_FILE}"
-      cli_cmd_ctx: "claude --dangerously-skip-permissions -c -p < {MSG_FILE}"
-      pre_bash_cmd:
-        - "mkdir -p {CWD}/.claude/"
-        - "cp ~/.claude/.mcp.json {CWD}/.mcp.json" # Add a project-scoped server claude mcp add --scope project ...., then backup the config to ~/.claude/.mcp.json
-        - "sed -i \"s/5000\/mcp/{PORT}\/mcp/\" {CWD}/.mcp.json" # modify the mcp port (5000) to the configured port
+      cli_cmd_new: "claude {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_N} --dangerously-skip-permissions -p < {MSG_FILE}"
+      cli_cmd_ctx: "claude {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_C} --dangerously-skip-permissions -c -p < {MSG_FILE}"
+      render_files:
+        "{ASSETS}/mcp_claude.json": "{CWD}/.mcp.json"
+      cfg_bash_enable: false
+
   opencode:
     clss: ucagent.abackend.UCAgentCmdLineBackend
     args:
-      cli_cmd_new: "opencode run < {MSG_FILE}"
-      cli_cmd_ctx: "opencode run -c < {MSG_FILE}"
-    pre_bash_cmd:
-      - "cp ~/.config/opencode/opencode.json {CWD}/opencode.json" # You need to setup opencode config first
-      - "sed -i \"s/5000\/mcp/{PORT}\/mcp/\" {CWD}/opencode.json" # modify the server port (5000) to the configured port
-  copilot_cli:
+      cli_cmd_new: "opencode run {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_N} < {MSG_FILE}"
+      cli_cmd_ctx: "opencode run {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_C} -c < {MSG_FILE}"
+      render_files:
+        "{ASSETS}/mcp_opencode.json": "{CWD}/opencode.json"
+      cfg_bash_enable: false
+
+  copilot:
     clss: ucagent.abackend.UCAgentCmdLineBackend
     args:
-      cli_cmd_new: "copilot --allow-all-tools -p < {MSG_FILE}"
-      cli_cmd_ctx: "copilot --allow-all-tools --continue -p < {MSG_FILE}"
-    pre_bash_cmd:
-      - "mkdir -p {CWD}/.copilot/"
-      - "cp ~/.copilot/mcp-config.json {CWD}/.copilot/mcp-config.json"
-      - "sed -i \"s/5000\/mcp/{PORT}\/mcp/\" {CWD}/.copilot/mcp-config.json" # modify the mcp port (5000) to the configured port
+      cli_cmd_new: "copilot {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_N} --allow-all-tools < {MSG_FILE}"
+      cli_cmd_ctx: "copilot {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_C} --allow-all-tools --continue < {MSG_FILE}"
+      pre_bash_cmd:
+        - "mkdir -p {CWD}/.copilot/"
+      render_files:
+        "{ASSETS}/mcp_copilot.json": "{CWD}/.copilot/mcp-config.json"
+      cfg_bash_enable: false
+
+  qwen:
+    clss: ucagent.abackend.UCAgentCmdLineBackend
+    args:
+      cli_cmd_new: "qwen {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_N} -y -p < {MSG_FILE}"
+      cli_cmd_ctx: "qwen {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_C} -y -c -p < {MSG_FILE}"
+      pre_bash_cmd:
+        - "mkdir -p {CWD}/.qwen/"
+      render_files:
+        "{ASSETS}/mcp_qwen.json": "{CWD}/.qwen/settings.json"
+      cfg_bash_enable: false
+
+  iflow:
+    clss: ucagent.abackend.UCAgentCmdLineBackend
+    args:
+      cli_cmd_new: "iflow {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_N} -y < {MSG_FILE}"
+      cli_cmd_ctx: "iflow {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_C} -y < {MSG_FILE}"
+      pre_bash_cmd:
+        - "mkdir -p {CWD}/.iflow/"
+      render_files:
+        "{ASSETS}/mcp_iflow.json": "{CWD}/.iflow/settings.json"
+      cfg_bash_enable: false
+
+  kilo:
+    clss: ucagent.abackend.UCAgentCmdLineBackend
+    args:
+      cli_cmd_new: "kilo run {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_N} < {MSG_FILE}"
+      cli_cmd_ctx: "kilo run {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_C} -c < {MSG_FILE}"
+      pre_bash_cmd:
+        - "mkdir -p {CWD}/.kilo/"
+      render_files:
+        "{ASSETS}/mcp_kilo.json": "{CWD}/.kilo/kilo.jsonc"
+      cfg_bash_enable: false
+
+  codex:
+    clss: ucagent.abackend.UCAgentCmdLineBackend
+    args:
+      cli_cmd_new: "codex exec {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_N} --yolo < {MSG_FILE}"
+      cli_cmd_ctx: "codex exec {UC_ENV_CMD_BACKEND_EX_ARGS} {UC_ENV_CMD_BACKEND_EX_ARGS_C} resume --last --yolo < {MSG_FILE}"
+      pre_bash_cmd:
+        - "mkdir -p {CWD}/.codex/"
+      render_files:
+        "{ASSETS}/mcp_codex.toml": "{CWD}/.codex/config.toml"
+      cfg_bash_cmd:
+        - "mkdir -p ~/.codex"
+        - "cp {CWD}/.codex/config.toml ~/.codex/config.toml"
+      cfg_bash_enable: false
 
 mcp_server:
   host: 127.0.0.1
   port: 5000
 
+cmd_api:
+  host: 127.0.0.1
+  port: 8765
+
+master_api:
+  host: 0.0.0.0
+  port: 8800
+  sync_workspace:
+    on_stage_complete: true  # client uploads workspace back to master after each completed stage when supported
+    on_exit: true            # client uploads zipped workspace back to master on exit when supported
+    ignore_patterns:         # file patterns to ignore when syncing/downloading workspace archives (glob patterns, relative to workspace root)
+      - "*.pyc"
+      - "*.pyd"
+      - "*.dat"
+      - "*.vdb"
+      - "*.fst"
+      - "*.fdb"
+      - "*.vcd"
+      - "__pycache__"
+      - ".pytest_cache"
+      - "{OUT}/tests/data/"
+      - "uc_test_report/"
+      - ".gitignore"
+      - ".git/"
+
+launch:
+  file_browser_roots: []              # empty means fallback to <cli.py parent>/examples
+  default_args:
+    launch_mode: ["process"]          # full support: ["process", "docker", "docker_swarm", "k8s"]
+    output: "unity_test"              # output directory name
+    stream_output: true               # -s flag
+    human: true                       # -hm flag
+    tui: true                         # --tui flag
+    backend: "langchain"              # --backend flag, options: langchain, claude, opencode, copilot, qwen, iflow, kilo, codex
+    mcp_server_no_file_tools: false
+    force_stage_index: 0              # stage index to start
+    exit_on_completion: true          # --exit-on-completion flag
+    web_console: "0.0.0.0:-1"         # --web-console flag
+    loop: true                        # -l flag
+    use_skill: false
+    extra_skill_path: ""
+    use_zip_workspace: true           # if true, launch task with a master-hosted workspace .tar.gz URL
+    picker_args: []                   # additional picker export arguments used by Compile DUT
+    workspace_base:                   # default --workspace-base for launched tasks using zipped workspace
+      "process": "/tmp/ucagent_workspace_base"
+      "*": "{WORKSPACE}"
+    extra_args: []                    # additional CLI arguments
+    configs:                          # predefined config options for dropdown
+      UT:
+        cfg: "default.yaml"
+      Formal:
+        cfg: "formal.yaml"
+        use_skill: true
+      Vibe:
+        cfg: "vibe.yaml"
+        tui: false
+        exit_on_completion: false
+        use_skill: true
+        loop: false
+      Increment:
+        cfg: "inc.yaml"
+  cluster:
+    image: "ghcr.nju.edu.cn/xs-mlvp/ucagent:latest" # container image used by docker, docker_swarm, and k8s launch modes
+    container_command: "ucagent"                    # command inside the image; local python/cli prefix is replaced with this command
+    master_ip:                                      # master address used by launched tasks for each launch mode
+      - process: "127.0.0.1"
+      - docker: "host.docker.internal"
+      - docker_swarm: "ucagent_master"
+      - k8s: "ucagent_master"
+    docker_network: "ucagent_net"
+    docker_extra_args: ["--rm"]
+    swarm_extra_args: []
+    k8s_namespace: "default"
+    k8s_image_pull_policy: "IfNotPresent"
+    k8s_service_account: ""
+    k8s_node_selector: {}
+    k8s_tolerations: []
+    k8s_resources: {}
+    extra_mounts: []                  # optional bind mounts, e.g. [{source: /host/path, target: /container/path}]
+  default_env:
+    - "OPENAI_MODEL"
+    - "OPENAI_API_KEY"
+    - "OPENAI_API_BASE"
+    - "ENABLE_LLM_SUGGESTION": true
+    - "NEED_REF_MODEL": false
+    - "IGNORE_MOCK_COMPONENT": true
+    - "ENABLE_LLM_FAIL_SUGGESTION": "$ENABLE_LLM_SUGGESTION"
+    - "FAIL_SUGGESTION_MODEL": "$OPENAI_MODEL"
+    - "FAIL_SUGGESTION_API_BASE": "$OPENAI_API_BASE"
+    - "FAIL_SUGGESTION_API_KEY": "$OPENAI_API_KEY"
+    - "ENABLE_LLM_PASS_SUGGESTION": "$ENABLE_LLM_SUGGESTION"
+    - "PASS_SUGGESTION_MODEL": "$OPENAI_MODEL"
+    - "PASS_SUGGESTION_API_BASE": "$OPENAI_API_BASE"
+    - "PASS_SUGGESTION_API_KEY": "$OPENAI_API_KEY"
+    - "CLAUDE_CODE_ENABLE_TELEMETRY": "0"
+    - "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
+    - "CLAUDE_CODE_ATTRIBUTION_HEADER": "0"
+    - "ANTHROPIC_BASE_URL": "$OPENAI_API_BASE"
+    - "ANTHROPIC_AUTH_TOKEN": "$OPENAI_API_KEY"
+    - "ANTHROPIC_BIG_MODEL": "$OPENAI_MODEL"
+    - "ANTHROPIC_SML_MODEL": "$OPENAI_MODEL"
+    - "ANTHROPIC_MODEL": "$ANTHROPIC_BIG_MODEL"
+    - "ANTHROPIC_DEFAULT_OPUS_MODEL": "$ANTHROPIC_BIG_MODEL"
+    - "ANTHROPIC_DEFAULT_SONNET_MODEL": "$ANTHROPIC_BIG_MODEL"
+    - "ANTHROPIC_DEFAULT_HAIKU_MODEL": "$ANTHROPIC_SML_MODEL"
+    - "CLAUDE_CODE_SUBAGENT_MODEL": "$ANTHROPIC_SML_MODEL"
+    - "CLAUDE_CODE_EFFORT_LEVEL": "max"
+
 # Model support: openai, anthropic, google_genai
-model_type: openai
+model_type: $(UC_MODEL_TYPE: openai)
 
 openai:
-  model_name: "$(OPENAI_MODEL: <your_chat_model_name>)"
-  openai_api_key: "$(OPENAI_API_KEY: [your_api_key])"
-  openai_api_base: "$(OPENAI_API_BASE: http://<your_chat_model_url>/v1)"
-  model_kwargs:
-    stop: ["."]
+  model_name: "$(OPENAI_MODEL: mdq100/qwen3.5-coder:122b)"
+  openai_api_key: "$(OPENAI_API_KEY: ollama)"
+  openai_api_base: "$(OPENAI_API_BASE: http://127.0.0.1:11434/v1)"
+  temperature: $(OPENAI_TEMPERATURE: null)
+  top_p: $(OPENAI_TOP_P: null)
+  model_kwargs: {}
+
+summary_model:
+  enabled: false
+  model_type: openai
+  openai:
+    model_name: "$(SUMMARY_MODEL: mdq100/qwen3.5-coder:122b)"
+    openai_api_key: "$(SUMMARY_OPENAI_API_KEY: EMPTY)"
+    openai_api_base: "$(SUMMARY_OPENAI_API_BASE: http://127.0.0.1:11434/v1)"
+  max_context_tokens: 131072
+  fallback_to_main: true
 
 # export ANTHROPIC_API_KEY="your-api-key"
 anthropic:
-  model: "$(ANTHROPIC_MODEL: claude-3-7-sonnet-20250219)"
+  model_name: "$(ANTHROPIC_MODEL: claude-3-7-sonnet-20250219)"
+  base_url: "$(ANTHROPIC_BASE_URL: http://<your_anthropic_model_url>/v1)"
+  api_key: "$(ANTHROPIC_AUTH_TOKEN: [your_api_key])"
 
 # export GOOGLE_GENAI_API_KEY="your-api-key"
 google_genai:
-  model: "$(GOOGLE_GENAI_MODEL: gemini-2.5-pro)"
+  model_name: "$(GOOGLE_GENAI_MODEL: gemini-2.5-pro)"
+  api_key: "$(GOOGLE_GENAI_API_KEY: [your_api_key])"
 
 embed:
-  model_name: "$(EMBED_MODEL: <your_embedding_model_name>)"
-  openai_api_key: "$(EMBED_OPENAI_API_KEY: [your_api_key])"
-  openai_api_base: "$(EMBED_OPENAI_API_BASE: http://<your_embedding_model_url>/v1)"
+  # Embedding is only used for semantic retrieval; it does not summarize conversations.
+  model_name: "$(EMBED_MODEL: Qwen/Qwen3-Embedding-0.6B)"
+  openai_api_key: "$(EMBED_OPENAI_API_KEY: EMPTY)"
+  openai_api_base: "$(EMBED_OPENAI_API_BASE: http://localhost:5000/v1)"
   dims: 1024
 
 langfuse:
@@ -71,27 +250,33 @@ langfuse:
   secret_key: $(LANGFUSE_SECRET_KEY, <YOUR_LANGFUSE_SECRET_KEY>)
   base_url: $(LANGFUSE_URL, http://localhost:3000)
 
+skill:
+  use_skill: false # Enable SKILL
+  extra_skill_path: "" # path for additional skills, only works when use_skill is True
+  max_skill_list_count: 15  # max number of skills to list
+  enable_skill_list: [] # skills can be used, if empty, all skills are enabled
+  disable_skill_list: [] # skills that are not able to use, if empty, all skills are enabled
+  general_skill_list: [] # skills that are general to use for all stage
+
 # This is the setting for conversation summary
 # Adjust the max_tokens and max_summary_tokens according to your needs and model capabilities
 # Reference doc: https://langchain-ai.lang.chat/langmem/reference/short_term/#langmem.short_term.SummarizationNode
-# if use_uc_mode is false (summarization mode):
-#   Param: max_tokens, suggested 50% of the model's context length
-# if use_uc_mode is true (unity chip summarization and trim mode):
-#   Param: max_tokens is not used
-#   Param: max_summary_tokens, suggested 10% of the model's context length
 conversation_summary:
-  max_tokens: 128000    # default 50k tokens for 128k context model
-  max_summary_tokens: 1024
-  max_keep_msgs: 200   # max messages to keep in memory, older messages will be removed (not the messages to LLM)
-  use_uc_mode: true    # default use uc mode to manage conversation history
-  tail_keep_msgs: 10   # when use_uc_mode is true, keep the last N messages to the LLM no matter what
+  context_management_strategy: TrimAndSummaryMiddleware
+  # High-watermark summary plus a deterministic final cap for the 64K model.
+  max_tokens: $(SUMMARY_MAX_CTX_TOKEN: 57344)
+  hard_max_tokens: $(SUMMARY_HARD_MAX_CTX_TOKEN: 61440)
+  max_summary_tokens: $(SUMMARY_MAX_SUM_TOKEN: 1024)
+  max_keep_msgs: $(SUMMARY_MAX_KEEP_MSG: 100)
+  tail_keep_msgs: $(SUMMARY_TAIL_KEEP_MSG: 10)
 
 # Context upgrade switches
 
 
 context_upgrade:
-  enable_all: &context_upgrade_all false
-  enable_data_collection: *context_upgrade_all # when true, log stage token usage and write run summary to res.csv
+  enable_all: &context_upgrade_all true
+  # Also logs per-request LLM latency, TTFT, and estimated prefill/decode throughput.
+  enable_data_collection: true # when true, log stage token usage and write run summary to res.csv
   enable_rerank: *context_upgrade_all         # when true, apply lightweight re-ranking on semantic search results
   enable_structured_summary: *context_upgrade_all # when true, use structured schema-oriented summaries instead of free-form
   enable_hierarchical_summary: *context_upgrade_all # when true, add Batch/Stage summaries (no long-term storage)
@@ -99,12 +284,243 @@ context_upgrade:
   enable_long_term_memory: *context_upgrade_all # when true, persist long-term memory to disk (jsonl)
   enable_long_term_memory_embed: *context_upgrade_all # when true, use embeddings for long-term memory search
   enable_failure_aware_context: *context_upgrade_all # when true, label failure vs non-failure context in prompt
-  
+  enable_context_reuse: *context_upgrade_all # when true, inject compact repair episodes from structured traces
+  enable_progress_controller: "$(UCAGENT_PROGRESS_CONTROLLER: false)" # opt-in for controlled stage replay
+  enable_stage_state_package: "$(UCAGENT_STAGE_STATE_PACKAGE: false)"
+  enable_observation_masking: "$(UCAGENT_OBSERVATION_MASKING: false)"
+  progress_controller:
+    enabled: true
+    hard_enforce_mutation_budget: true
+    no_progress_patience: 2
+    max_mutations_progress: 3
+    max_mutations_diagnostic: 2
+    max_mutations_pivot: 1
+    max_mutations_regression: 1
+    # Invalid execution often needs coordinated import/fixture/invocation fixes.
+    max_mutations_invalid: 3
+    # A template batch can legitimately create/fix several test skeletons.
+    max_mutations_template_contract: 8
+    # Checker lists are atomic repair batches; these limits count tool calls,
+    # not affected functions, and prevent one-item-per-round repair loops.
+    max_mutations_marking_contract: 16
+    max_mutations_checkpoint_evidence: 12
+    max_mutations_documentable_failure: 3
+  stage_state_package:
+    max_chars: 6000
+  observation_masking:
+    tool_names: [RunTestCases, Check, Complete]
+    keep_recent_verifier_observations: 2
+    min_chars: 400
+    # Prevent one latest PathList/read/custom-tool response from consuming 64K context.
+    max_tool_observation_chars: 24000
+  long_term_memory:
+    max_entries: 256
+    prompt_limit: 3
+    prefetch_limit: 3
+    prefetch_inject_limit: 2
+    prefetch_min_score: 0.22
+    prefetch_min_title_match: 0.12
+    prefetch_max_stage_delta: 3
+    prefetch_inject_min_score: 0.25
+    prefetch_relative_score: 0.82
+    prefetch_max_per_source_stage: 1
+    recent_fallback_limit: 2
+    preload_from_completed: true
+    preload_keep: 64
+    min_write_score: 0.58
+    episode_support: 2
+    semantic_support: 4
+    max_candidate_entries: 2000
+    keep_candidates: true
+    stage_cache: true
+    cache_prompt_per_stage: true
+    enable_stage_prefetch: true
+    skip_passed_singleton: true
+  failure_aware_context:
+    buffer_limit: 12
+    max_failure_items: 2
+    max_success_items: 1
+    prefer_same_stage: true
+    track_checkpoints: true
+  context_reuse:
+    # Override with v0 for the frozen baseline comparison:
+    # UCAGENT_CONTEXT_REUSE_PACK=benchmark/ucagent_context_reuse/context_reuse_v0.json
+    pack_path: "$(UCAGENT_CONTEXT_REUSE_PACK: benchmark/ucagent_context_reuse/context_reuse_v1.json)"
+    prompt_limit: 2
+    compression_hint_limit: 1
+    min_score: 0.95
+    min_quality_score: "$(UCAGENT_CONTEXT_REUSE_MIN_QUALITY: 0.68)"
+    include_cross_dut: true
+    prefer_same_dut: true
+    prefer_same_stage: true
+    strict_stage_role_match: true
+    enable_failure_pattern_match: true
+    strict_failure_pattern_match: true
+    prefer_action_category_match: true
+    penalize_action_mismatch: 0.7
+    # Semantic hard gates. Keep these individually switchable for ablation.
+    strict_action_category_match: "$(UCAGENT_CONTEXT_REUSE_STRICT_ACTION_MATCH: true)"
+    strict_exact_pattern_groups: "$(UCAGENT_CONTEXT_REUSE_EXACT_PATTERN_GROUPS: true)"
+    generic_requires_signature: "$(UCAGENT_CONTEXT_REUSE_GENERIC_SIGNATURE: true)"
+    skip_non_reusable_failures: "$(UCAGENT_CONTEXT_REUSE_SKIP_NON_REUSABLE: true)"
+    strict_compression_hint_match: "$(UCAGENT_CONTEXT_REUSE_STRICT_HINT_MATCH: true)"
+    allow_hints_only: "$(UCAGENT_CONTEXT_REUSE_ALLOW_HINTS_ONLY: false)"
+    destructive_requires_support: "$(UCAGENT_CONTEXT_REUSE_DESTRUCTIVE_SUPPORT_GATE: true)"
+    min_destructive_support: "$(UCAGENT_CONTEXT_REUSE_MIN_DESTRUCTIVE_SUPPORT: 2)"
+    # Experimental v2.1 gate. Keep disabled for the frozen v1 baseline.
+    enable_utility_gate: "$(UCAGENT_CONTEXT_REUSE_UTILITY_GATE: false)"
+    min_utility_score: "$(UCAGENT_CONTEXT_REUSE_MIN_UTILITY: 0.0)"
+    utility_unknown_policy: "reject"
+    utility_prompt_token_reference: 512
+    utility_prompt_token_weight: 0.05
+    # v0 records contract applicability without changing retrieval or Prompt.
+    # Use "enforce" only after the shadow audit reaches the target precision.
+    contract_policy_mode: "$(UCAGENT_CONTEXT_REUSE_CONTRACT_MODE: shadow)"
+    min_contract_applicability: "$(UCAGENT_CONTEXT_REUSE_CONTRACT_MIN_SCORE: 0.55)"
+    inject_once_per_failure: true
+    inject_once_scope: "signature"
+    same_signature_inject_limit: 1
+    max_injections_per_stage_pattern: 2
+
+llm_input_dump:
+  # Disabled by default. Enable for exact Prompt vs Prompt v1 latency cases:
+  #   UCAGENT_LLM_INPUT_DUMP=true
+  enabled: "$(UCAGENT_LLM_INPUT_DUMP: true)"
+  output_dir: "{OUT}/llm_input_dumps"
+  include_content: true
+  max_content_chars: 0
+  max_messages: 0
+
+prompt_variant:
+  # Keep v0 as the default path. Set UCAGENT_PROMPT_VARIANT=v1 for A/B runs.
+  name: "$(UCAGENT_PROMPT_VARIANT: v1)"
+  stage_guidance:
+    enabled: true
+    stage_indices: []
+    stage_names:
+      - dut_function_grouping
+      - function_point_definition
+      - check_point_design
+      - static_bug_analysis
+      - coverage_group_creation
+      - implemente_function_checks_in_batch
+      - bundle_wrapper_design
+      - env_fixture_implementation
+      - evaluate_env_fixture
+      - basic_api_implementation
+      - basic_api_functional_test
+      - create_test_case_templates
+      - test_case_implementation_in_batch
+      - comprehensive_verification_and_bug_analysis
+      - refine_test_cases_based_on_functional_points
+      - static_bug_validation
+      - line_coverage_analysis_and_improvement
+      - generate_random_test_cases
+      - verification_review_and_summary
+    common_rules:
+      - "修复前先把最近一次RunTestCases/Check/Complete失败归类为：接口/API错误、测试实现错误、DUT设计bug、文档/schema错误、覆盖率未标记；不同类别不要混用修复策略。"
+      - "保持证据链一致：{OUT}/{DUT}_functions_and_checks.md定义FG/FC/CK，coverage实现只使用这些标签，测试mark_function只引用这些标签，bug文档只记录最新测试报告中真实FAILED且已确认指向DUT bug的<TC-*>。"
+      - "所有端口、env属性、API函数名必须来自已读取的{OUT}/tests/{DUT}_api.py、{DUT}/__init__.py或RTL端口定义；不要猜测类似env.TXD、env.result这类未定义快捷属性。"
+      - "发现同类错误时先全局搜索并一次性修复同根因位置；不要围绕同一个AttributeError、assert False、重复标签或未覆盖CK逐个测试反复尝试。"
+      - "每次修复后先运行最小目标RunTestCases('file.py::test_name')、当前batch目标或checker要求的最小目标；通过后再调用Check/Complete。"
+      - "所有可执行测试函数必须包含pytest支持的assert或with pytest.raises；不要使用self.assertEqual等unittest断言。"
+      - "除create_test_case_templates模板阶段外，Checker只接受PASSED或普通FAILED断言；ERROR、XFAIL、SKIP、timeout、crash和零收集都不是可记录的DUT缺陷证据。"
+    stages:
+      dut_function_grouping:
+        - "每个<FG-*>只能定义一次；已有分组需要扩展时在原分组下追加内容，不要在文档后面重新创建同名FG。"
+        - "<FG-API>必须存在，但只能有一个；不要为了失败场景额外创建<FG-API-FAILED>之类的结果型分组。"
+      function_point_definition:
+        - "每个<FC-*>必须挂在唯一父<FG-*>下；不要把同名FC复制到多个FG中。"
+        - "FC/CK名称描述被验证的功能或行为，不要包含FAILED、TIMEOUT、BUG、NO-BUG等测试结果词。"
+      check_point_design:
+        - "每个<CK-*>必须可由测试中的mark_function直接标记；避免过大、含糊或需要多个无关接口共同证明的CK。"
+        - "检查完成前先确认FG/FC/CK层级没有重复标签、半截标签或动态生成内容。"
+      static_bug_analysis:
+        - "本阶段只做RTL源码审查和文档/schema验证，禁止运行pytest或创建临时测试；修复后直接调用Check/Complete。"
+        - "保留{OUT}/{DUT}_static_bug_analysis.md并做最小增量编辑，禁止DeleteFile、先删后建或整份重写。严格使用FG→FC→CK→BG-STATIC→LINK-BUG→FILE逐行层级，FG/FC/CK必须原样来自{OUT}/{DUT}_functions_and_checks.md。"
+        - "每个真实<BG-STATIC-*>在本阶段必须且只能含<LINK-BUG-[BG-TBD]>，不要提前写实际动态BG；其下至少有一个<FILE-relative/path:L1-L2>。"
+        - "文档末尾必须用小写<file>relative/path</file>精确记录CurrentFileTips列出的每个已分析RTL文件；<file>是批次进度标记，<FILE-*>是Bug源码定位，两者不可混用。"
+      coverage_group_creation:
+        - "覆盖组名称和检查点名称必须是文档中的字面量字符串；不要把运行时对象、dict_keys、repr结果拼进FG/FC/CK路径。"
+      implemente_function_checks_in_batch:
+        - "只实现CurrentTips列出的当前batch CK；每个检查函数应对应明确的信号/API证据。"
+        - "如果Check提示大量unmarked_check_points，优先补齐测试mark_function和覆盖组字面量映射，不要重写功能规格文档。"
+      bundle_wrapper_design:
+        - "先从RTL端口和{DUT}/__init__.py建立端口清单，再设计Bundle；不要创造RTL中不存在的信号名。"
+        - "对后续测试常用的输出/状态信号，必须在env中提供稳定访问路径，或在文档/API注释中明确应使用的属性名。"
+      env_fixture_implementation:
+        - "env类需要形成稳定测试接口：reset/Step、输入驱动、状态读取、事务级helper；后续测试只能使用这些已定义接口。"
+        - "如果使用分组属性如env.uart_status_TXD，也可按需要提供只读别名；关键是避免后续测试猜测不存在的快捷属性。"
+      evaluate_env_fixture:
+        - "env fixture测试必须写成模块顶层函数，名称以test_api_{DUT}_env_开头且第一个参数为env；当前Checker不会把pytest类中的方法计入env测试函数。"
+        - "env fixture测试失败若是AttributeError、ImportError或接口绑定错误，优先修env/API；不要把这类失败写成DUT设计bug。"
+        - "通过前至少验证一个输入驱动、一个状态读取、一个时序推进和一个事务级helper。"
+      basic_api_implementation:
+        - "先写一个简短API映射：可调用helper、可直接访问的env属性、禁止直接访问的内部信号；后续测试必须遵守。"
+        - "API/helper应封装常见时序操作，避免每个测试手写复杂Step序列后产生不一致。"
+      basic_api_functional_test:
+        - "API测试阶段先区分：API/fixture实现错误、测试断言错误、DUT设计bug；AttributeError、ImportError、assert False/Not implemented默认属于测试或API错误。"
+        - "每个API测试函数必须from {DUT}_api import *，第一个参数为env，并至少包含一个有效assert。"
+        - "只有最小复现测试通过API正确驱动后仍稳定失败，且源码分析支持DUT缺陷时，才写入{OUT}/{DUT}_bug_analysis.md。"
+        - "把已经PASSED的API测试nodeid视为单调稳定集合：修复其他失败时不得删除、改名、整文件重写或使其回退；优先只编辑当前FAILED函数或共用API根因。"
+        - "如果已正常收集测试且结果为PASSED/FAILED混合，不要把pytest非零退出误判为基础设施故障；确认的DUT失败保留为FAILED并完善bug证据链，测试/API错误才修改代码。"
+        - "工具层禁止删除或从文件开头到EOF重写已存在的test_{DUT}_api*.py；只局部修复当前失败函数或共用API，保持已锁定PASSED node id不变。"
+        - "若Checker报告多个函数缺少或使用了错误的mark_function，先读取完整函数列表和FG/FC/CK定义，在同一轮中批量补齐全部字面量标记；不要每轮只修1至2个，也不要创建_fixed、_new、_backup等测试副本。"
+        - "mark_function的第二个参数必须传当前测试函数对象（例如test_api_{DUT}_case），禁止传test_api_{DUT}_case.__name__或任何函数名字符串；后者不会建立coverage到pytest函数的有效关联。"
+        - "若Checker报告API mark_function contract，必须在规范test_{DUT}_api*.py中一次性修复列出的全部位置：模块函数传test_case，类方法传self.test_case，只删除.__name__后缀；保留所有pytest node id且不要创建_fixed/_new副本。"
+        - "mark_function第二个参数若是'test_name'字符串同样无效；收到完整错误列表后，将所有位置作为一个原子批次修复，并以Checker报告的未标记函数数量下降作为收益，不要逐项Check。"
+      create_test_case_templates:
+        - "模板阶段只创建测试骨架：mark_function、TODO说明、assert False；不要提前实现真实测试逻辑。"
+        - "本阶段非零收集且全部因assert False/Not implemented产生预期失败才符合契约；不要为了获得PASSED而实现测试，也不要把零收集、导入错误或崩溃当成预期失败。"
+        - "每个占位测试中的mark_function必须是未注释的活跃调用，第二个参数为当前测试函数对象。若Checker返回Template Source Contract，先一次性修复完整列表；禁止用conftest.py或删除tests/data绕过Reporter。"
+        - "每个模板测试应精准覆盖少量相关CK，避免一个测试函数绑定过多功能点导致后续bug归因困难。"
+        - "不要为已经由API测试覆盖且被ignore_ck_prefix排除的API检查点重复创建模板。"
+      test_case_implementation_in_batch:
+        - "只实现CurrentTips列出的当前batch测试；不要顺手大范围新增无关测试，避免扩大Check失败面。"
+        - "批次文件与API契约读取完成后，先为当前batch全部测试形成一次实现计划，再按文件合并编辑：同一文件中相邻的待实现函数使用一次有行界的局部替换，不同文件可在同一响应中各发出一个编辑调用。不要每实现一个测试就重新分析和等待下一轮；禁止整文件重写。"
+        - "当前batch的所有测试实现完成前，不要重复读取已读取的完整API、覆盖率或指导文档；需要定位既有实现时优先SearchText或分段读取。整批编辑完成后只运行任务给出的TEST_BATCH_RUN_ARGS。"
+        - "运行前先搜索当前batch涉及文件中的assert False/Not implemented，确保当前batch的可执行测试已真正实现。"
+        - "如果失败是AttributeError/ImportError/NameError/未定义env属性，先读取{OUT}/tests/{DUT}_api.py并全局修正同类错误，再考虑测试逻辑或DUT bug。"
+        - "实现后立即运行RunTestCases('{TEST_BATCH_RUN_ARGS}')；根据结果把失败分成测试错误、API错误和DUT bug三类。"
+        - "确认是DUT bug的测试必须保留为Fail，并在{OUT}/{DUT}_bug_analysis.md中记录源码根因和修复建议；不是DUT bug的失败必须修正测试或API。"
+        - "bug文档格式必须逐级完整：<FG-*> -> <FC-*> -> <CK-*> -> <BG-NAME-0..100> -> <TC-test_file.py::test_name>。不要留下没有<TC-*>子节点的CK/BG条目。"
+        - "不要在标题、说明、示例或占位文本中写字面量<TC->，它会被Checker当作非法标签；每个TC标签只能是BG下的叶节点，并精确引用最新报告中的FAILED pytest node id。"
+        - "如果Check提示PASSED测试被写入bug文档，删除该<TC-*>；不要把通过用例硬改成失败，也不要留下没有失败TC证据的BG。"
+        - "删除PASSED的bug证据必须调用RunSkillScript/prunebug.py；禁止用recordbug.py追加‘已修复’、‘测试错误’或置信度0的BG，因为recordbug只会增加证据，无法解除Checker状态冲突。"
+        - "本阶段bug文档只能通过RunSkillScript调用recordbug.py更新；通用文件工具直接修改{OUT}/{DUT}_bug_analysis.md会被阻止。"
+        - "RunSkillScript的commands必须直接传JSON二维数组，每项严格为[skill_name, 'recordbug.py', args]三个字符串，不能把数组编码成字符串；args只允许-BG -TC -BD -ROOT -FILE -FIX，不存在-CONFIRM。每条命令只记录一个TC和一个FILE位置，多条证据拆成多条命令。"
+      comprehensive_verification_and_bug_analysis:
+        - "把bug文档视为一棵规范化树，不要按失败测试逐段复制祖先标签；同一FG/FC/CK只能出现一次，同一RTL根因只建立一个BG，并把所有真实FAILED的TC追加到该BG下。"
+        - "若Checker报Bug文档Parse Error或重复FG/FC/CK，先定位报错行和所属祖先，合并重复节点、把误挂在其他FG下的FC移回正确FG；文档结构通过前不要继续追加BG/TC或改测试。"
+        - "若Checker报Undocumented Failed Cases，先从本次完整报告逐一列出被点名的pytest node id，按各测试实际mark_function映射到现有FG/FC/CK/BG，只补缺失的TC叶节点；一次处理整份点名列表后再Complete，不要重写已通过测试。"
+        - "调用Complete前先检查每个<BG-*>至少包含一个最新报告中的FAILED <TC-*>，且每个<TC-*>使用test_file.py::[ClassName::]test_name格式；发现父节点缺失时移动到已有合法链路，不要重写整份文档。"
+        - "确认的DUT缺陷必须保留为普通FAILED；禁止添加pytest.xfail/skip或改弱断言。若报告含XFAIL/SKIP，先移除标记并恢复显式断言，再让Checker核对bug文档。"
+        - "保留已PASSED测试的名称和逻辑；只增量修复被Checker点名的测试/API或bug文档节点，禁止反复重写整个测试集合。"
+      refine_test_cases_based_on_functional_points:
+        - "新增或调整测试后只增量更新受影响的bug文档节点；同一RTL根因产生的多个失败测试继续归并到已有BG，不要复制FG/FC/CK/BG链路。"
+        - "若完整报告仅包含PASSED和真实FAILED，且FAILED用例已与bug文档中的FG/FC/CK/BG/TC精确对应，Checker可接受该非零pytest结果；不要把DUT缺陷改成Pass、XFAIL或删除。"
+        - "当前批次只增量加强关联CK的测试；保留其他已通过用例的名称和行为，禁止通过重写整个测试文件或缩减测试集合绕过Checker。"
+      static_bug_validation:
+        - "静态Bug与动态测试建立关联时复用bug文档中已有BG；一个根因对应一个BG，多个复现测试作为其TC子节点，不要为每个测试创建重复祖先标签。"
+        - "证实静态Bug的动态用例必须为普通FAILED，误报用例必须PASSED；不要用XFAIL/SKIP代替这两类结论。"
+        - "若静态链接Checker已经通过而完整测试Checker报告Checkpoint Not Marked，禁止继续改测试逻辑或新建BG；按其完整TC→FG/FC/CK列表一次性处理：真实相关则补对应mark_function，不相关则只删除该文档分支中的错误TC引用。"
+      line_coverage_analysis_and_improvement:
+        - "提升覆盖率时不得删除、跳过或XFAIL已有失败用例；确认的DUT缺陷继续保持普通FAILED并保留bug证据链。"
+      generate_random_test_cases:
+        - "随机测试必须复用已经通过的API/helper和env属性；不要在随机测试阶段首次引入新的直接信号访问方式。"
+        - "先实现1到3个能快速运行的代表性随机用例并单独运行，通过后再扩展组合空间。"
+        - "随机失败先用固定seed或最小参数复现；若最小复现仍失败且源码分析支持DUT缺陷，再写入bug文档。"
+        - "可复现DUT缺陷保留为普通FAILED并写入bug文档；不要用XFAIL/SKIP隐藏随机测试失败。"
+        - "Checker要求记录当前批次CK时，下一次Check/Complete工具调用必须包含顶层generated对象；SetCurrentStageJournal或文字说明不等价于generated，且不要把generated添加到pytest测试函数参数中。"
+        - "若Checker列出多个随机测试源码契约错误，一次性修复列表中全部缺少ucagent.repeat_count、mark_function或正确env参数的函数，再重新Check/Complete。"
+      verification_review_and_summary:
+        - "最终审查只修复Checker明确指出的不一致；合并重复FG/FC/CK/BG并移除过期TC，不要为了整理措辞重写已经通过结构检查的bug文档。"
+        - "最终报告中的确认缺陷仍须对应普通FAILED用例；不得在审查阶段改成XFAIL/SKIP或删除以换取零退出码。"
 
 rate_limiter:
-  enabled: false
+  enabled: $(ENABLE_LLM_RATE_LIMIT: false)
   # The following settings are used when rate_limiter.enabled is true
-  requests_per_second: 10    # default 10 req/s
+  requests_per_second: $(LLM_MAX_RPS: 10)    # default 10 req/s
   check_every_n_seconds: 0.1 # default 0.1s, wake up every 100 ms to check whether allowed to make a request
   max_bucket_size: 1         # default 1, controls the maximum burst size
 
@@ -112,14 +528,19 @@ template: unity_test
 
 un_write_dirs:
   - "{DUT}"
-  - "Guide_Doc"
+  - "{DUT}_RTL"
+  - "{GUIDE_DOC}"
 write_dirs:
   - "{OUT}"
+
+guide_doc:
+  path: "{GUIDE_DOC}"
+  enable: true
 
 tools:
   RunTestCases:
     test_dir: "{OUT}/tests"
-  ignore_tools: ["WorkDiff", "WorkCommit"] # List of tool names to ignore
+  ignore_tools: ["WorkDiff", "WorkCommit", "RunBashCommand"] # List of tool names to ignore
   selected_tools: []     # List of tool names to enable, if empty, all tools are enabled except those in ignore_tools
 
 # Tool call timeout
@@ -131,6 +552,11 @@ tui:
   console_height: 13
   status_height: 7
 
+loop_settings:
+  max_loop_retry: 10       # maximum number of retries for a loop
+  retry_delay_start: 5     # initial delay time in seconds before retrying
+  retry_delay_end: 10      # maximum delay time in seconds before retrying
+  loop_alive_time: 120     # time in seconds to consider a loop alive before resetting retry count
 
 hooks:
   continue: >
@@ -145,3 +571,92 @@ hooks:
   quit: "/quit"
 
   exit: "/exit"
+
+
+vmanager:
+  llm_suggestion:
+    check_fail_refinement:
+      enable: $(ENABLE_LLM_FAIL_SUGGESTION: false)
+      clss: ucagent.stage.llm_suggestion.OpenAILLMFailSuggestion
+      args:
+        model_name: $(FAIL_SUGGESTION_MODEL: <your_chat_model_name>)
+        openai_api_key: $(FAIL_SUGGESTION_API_KEY: <your_api_key>)
+        openai_api_base: $(FAIL_SUGGESTION_API_BASE: http://<your_chat_model_url>/v1)
+        min_fail_count: $(FAIL_SUGGESTION_MFCOUNT: 3)
+        temperature: $(FAIL_SUGGESTION_TEMPERATURE: null)
+        top_p: $(FAIL_SUGGESTION_TOP_P: null)
+      system_prompt: >
+        You are a professional testing assistant. An LLM expert is testing a Device Under Test (DUT) (Current DUT is `{DUT}`) based on the high-level task requirements.
+        Your job is to analyze the current task fail information, identify the reason
+        why the current stage of 'Check' did not pass, and then provide him precise recommendations to pass it.
+        In your recommendations:
+        1. Key information from the test data must be retained, such as important details from std error.
+        2. The proposed solutions should be clear and actionable.
+        3. Prioritize suggestions that have the most significant impact on passing the Checker.
+        4. Ensure that your suggestions are actionable and easy to understand.
+        5. Avoid suggesting changes that are too complex or require significant refactoring unless absolutely necessary.
+        6. Do not include any thought process or analysis in your final suggestion, only provide the actionable suggestion.
+        Note:
+          Your tool has a limited call quota, so make sure to use them wisely.
+          The goal of the high-level task is to identify and document DUT bugs, not to make reasonable fail cases pass.
+          The tasks and test information is dynamic, you should keep updating your analysis and suggestions based on the latest test information.
+          You are not care about the bugs in the DUT, only focus on helping the LLM expert to pass the 'Check' tasks.
+      suggestion_prompt: >
+        Now, the tasks corresponding 'Check' did not pass.
+        Please analyze the above test information, then provide the precise recommendations to pass it.
+      bypass_stages: []
+      target_stages: []
+      default_apply_all_stages: true
+    check_pass_refinement:
+      enable: $(ENABLE_LLM_PASS_SUGGESTION: false)
+      clss: ucagent.stage.llm_suggestion.OpenAILLMPassSuggestion
+      args:
+        model_name: $(PASS_SUGGESTION_MODEL: <your_chat_model_name>)
+        openai_api_key: $(PASS_SUGGESTION_API_KEY: <your_api_key>)
+        openai_api_base: $(PASS_SUGGESTION_API_BASE: http://<your_chat_model_url>/v1)
+        temperature: $(PASS_SUGGESTION_TEMPERATURE: null)
+        top_p: $(PASS_SUGGESTION_TOP_P: null)
+      system_prompt: >
+        You are a verification expert, highly skilled at identifying issues in others' verification work, with extremely high standards for the quality of verification projects.
+        Another LLM verification expert is currently verifying the DUT ({DUT}). At the end of each critical stage, it requires your evaluation of the results.
+        Only after you confirm that there are no issues can it proceed to subsequent stages. Therefore, your role is crucial.
+        Your specific responsibilities are as follows:
+        (1) Clarify the specific tasks for the current stage and define evaluation criteria based on the stage's requirements.
+        (2) If issues are identified, provide clear and actionable suggestions for improvement.
+        (3) Ensure the verification results align with the requirements outlined in the reference documentation.
+        (4) If no issues are found, call tool `ApproveStagePass` to approve the current stage.
+        (5) You must prevent the LLM verification expert from focusing solely on passing `Checker` inspections at the expense of thoroughly and properly completing the actual verification work.
+        Important Notes:
+        • For verification work, you place great emphasis on ensuring no functional points are missing.
+        • Checkpoints must be clearly described and highly actionable.
+        • Your suggestions should be concise and to the point, avoiding unnecessary length.
+        • You can use tool `StageDiff` to help you analyze the differences in the work results before and after the current stage.
+        • You can use tool `StageCommit` to help you commit the current stage's work results for better analysis.
+      suggestion_prompt: >
+        Now, the LLM verification expert has completed the tasks for the current stage.
+        Please evaluate whether the tasks have been completed properly based on the above requirements.
+        If you find any issues, please provide clear and actionable suggestions for improvement.
+        You Must use `ApproveStagePass` to approve or not approve the current stage to be passed.
+      bypass_stages: []
+      target_stages: []
+      default_apply_all_stages: true
+
+
+# history version control settings
+hist_ignore_pattern:
+  - ".pytest_cache"
+  - "__pycache__"
+  - "*.pyc"
+  - ".*"
+  - "data"
+  - ".git"
+
+
+vibe_coding:
+  short_prompts:
+    continue: "Please continue until all stage-tasks are completed."
+    review: |
+      Please analyze the error messages in the Check/Complete response,
+      resolve these errors, and avoid being distracted by other information.
+    summarize: |
+      Please summarize your task and your completion status.

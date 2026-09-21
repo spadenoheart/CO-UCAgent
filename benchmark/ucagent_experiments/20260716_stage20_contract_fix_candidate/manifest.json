@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "experiment_baseline": "20260716_stage20_contract_fix_candidate",
+  "created_at": "2026-07-16T17:12:55+08:00",
+  "repo_root": "<REPO_ROOT>",
+  "git_head": "b9c259b35d048e70cf4d0429d3b20a0077fed15d",
+  "git_branch": "main",
+  "worktree_dirty": true,
+  "python_version": "3.11.14 (main, Oct 21 2025, 18:31:21) [GCC 11.2.0]",
+  "files": [
+    {
+      "path": "ucagent/setting.yaml",
+      "source_sha256": "b03f399d73e22ce285ddc0a08991e36843e978eab82e2d98b62995f1c2b9f62b",
+      "snapshot_sha256": "9cfc046028800f27a5dfdcaf68065fdbd90638bb3a59fa68045b428aadfdd5b8",
+      "bytes": 16321,
+      "redacted_snapshot": true
+    },
+    {
+      "path": "ucagent/stage/vmanager.py",
+      "source_sha256": "4d0b33c77b8d1beee6fd21017e2216c411b0b3e6ed0d1184254ec5e72ea3967e",
+      "snapshot_sha256": "4d0b33c77b8d1beee6fd21017e2216c411b0b3e6ed0d1184254ec5e72ea3967e",
+      "bytes": 79122,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/checkers/unity_test.py",
+      "source_sha256": "41e1ae754a6191c42f9e54316e01dc128985eeff0b06c6e143e3bba32ac04e2a",
+      "snapshot_sha256": "41e1ae754a6191c42f9e54316e01dc128985eeff0b06c6e143e3bba32ac04e2a",
+      "bytes": 71229,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/memory/context_reuse.py",
+      "source_sha256": "376d5bac32c26b0546d0c1d82c4067f4835967bb3e9f47a48a66c63946f6327b",
+      "snapshot_sha256": "376d5bac32c26b0546d0c1d82c4067f4835967bb3e9f47a48a66c63946f6327b",
+      "bytes": 31995,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_test_result_classification.py",
+      "source_sha256": "0255978ffda343fda1ea3c2a9dceff7983036da03078c283e71d327e7c455ee8",
+      "snapshot_sha256": "0255978ffda343fda1ea3c2a9dceff7983036da03078c283e71d327e7c455ee8",
+      "bytes": 12553,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_checker.py",
+      "source_sha256": "5e83acc8bc70d39171d366b4ea826d7d2d75d0056a6a8123a7538dafe1baf577",
+      "snapshot_sha256": "5e83acc8bc70d39171d366b4ea826d7d2d75d0056a6a8123a7538dafe1baf577",
+      "bytes": 8046,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_experiments/20260716_adder_stage20_diagnosis.md",
+      "source_sha256": "3752da1da8ce9f72ac9ce9ab325237d5320eb3ebbce4a3b75b844638af1051bb",
+      "snapshot_sha256": "3752da1da8ce9f72ac9ce9ab325237d5320eb3ebbce4a3b75b844638af1051bb",
+      "bytes": 4318,
+      "redacted_snapshot": false
+    }
+  ],
+  "comparison": {
+    "shared_code_snapshot": "snapshot/",
+    "v0_baseline": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+      "min_quality_score": 0.0,
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0"
+      }
+    },
+    "v1_candidate": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+      "min_quality_score": 0.68,
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68"
+      }
+    },
+    "v2_offline_candidate": {
+      "candidate_pack": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_candidates.json",
+      "curated_preview": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_curated_preview.json",
+      "annotation_sample": "benchmark/ucagent_context_reuse/episode_credit_v2_annotation_40.jsonl",
+      "runtime_deployed": false,
+      "acceptance_gate": "manual attribution audit before any runtime A/B"
+    }
+  },
+  "notes": [
+    "The repository worktree was dirty; this snapshot, not git HEAD alone, defines the baseline.",
+    "The setting snapshot is redacted. Its source_sha256 identifies the exact local configuration.",
+    "v0 is retained unchanged; v1 is the curated candidate pack.",
+    "v2 is an offline role-typed attribution candidate and is not deployed."
+  ]
+}

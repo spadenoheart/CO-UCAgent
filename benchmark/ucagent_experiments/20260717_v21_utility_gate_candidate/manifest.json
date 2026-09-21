@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "experiment_baseline": "20260717_v21_utility_gate_candidate",
+  "created_at": "2026-07-17T10:36:02+08:00",
+  "repo_root": "<REPO_ROOT>",
+  "git_head": "b9c259b35d048e70cf4d0429d3b20a0077fed15d",
+  "git_branch": "main",
+  "worktree_dirty": true,
+  "python_version": "3.11.14 (main, Oct 21 2025, 18:31:21) [GCC 11.2.0]",
+  "files": [
+    {
+      "path": "ucagent/setting.yaml",
+      "source_sha256": "6578f3d35ed99bbf41f3f5fa0770590ad7a316dd0c4edb444a00f276bc2d09ab",
+      "snapshot_sha256": "b580f499e93d905c5a8c4efcd012383e29bcedc95dee6d90c740821dcec6427a",
+      "bytes": 16647,
+      "redacted_snapshot": true
+    },
+    {
+      "path": "ucagent/util/test_result.py",
+      "source_sha256": "72f6251faae05f9054f0765c930c6c0a361fd4a343b3f211390db99fa40d83ad",
+      "snapshot_sha256": "72f6251faae05f9054f0765c930c6c0a361fd4a343b3f211390db99fa40d83ad",
+      "bytes": 7403,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/memory/context_reuse.py",
+      "source_sha256": "91d4f75995e519e7c1a3cb53e929c89e1620efa35dadb738f2ebdcd39879fc62",
+      "snapshot_sha256": "91d4f75995e519e7c1a3cb53e929c89e1620efa35dadb738f2ebdcd39879fc62",
+      "bytes": 38321,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/stage/vmanager.py",
+      "source_sha256": "7bc78825bc034c2cf60c11dd6cacb8c11cfe1618e1557a7361874b2223e34c99",
+      "snapshot_sha256": "7bc78825bc034c2cf60c11dd6cacb8c11cfe1618e1557a7361874b2223e34c99",
+      "bytes": 84212,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/verify_agent.py",
+      "source_sha256": "a59850eee729752c8b4dc33deded8d82ba4a0bf027d029b376fbeaa6c2dc21f2",
+      "snapshot_sha256": "a59850eee729752c8b4dc33deded8d82ba4a0bf027d029b376fbeaa6c2dc21f2",
+      "bytes": 67108,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/build_trace_tree.py",
+      "source_sha256": "cd60526b722f8516e66b6cb2d6867a3e2d870dadba458cdf9fa74fd44f8a5ba5",
+      "snapshot_sha256": "cd60526b722f8516e66b6cb2d6867a3e2d870dadba458cdf9fa74fd44f8a5ba5",
+      "bytes": 12877,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/build_context_reuse_pack.py",
+      "source_sha256": "924b5562e6cf56e2206a6e856d76dac78cb204845475e49ce76679450013d4fd",
+      "snapshot_sha256": "924b5562e6cf56e2206a6e856d76dac78cb204845475e49ce76679450013d4fd",
+      "bytes": 40794,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/curate_context_reuse_pack.py",
+      "source_sha256": "b45aadcfdb9106e0fb9301e624afc5379b70efff4758987410ed1207153bdd33",
+      "snapshot_sha256": "b45aadcfdb9106e0fb9301e624afc5379b70efff4758987410ed1207153bdd33",
+      "bytes": 24363,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/analyze_context_reuse_decisions.py",
+      "source_sha256": "59fbe1e5f7fd053c7a657ff563382749dda1bf7758be81f60315b2fdc9a44840",
+      "snapshot_sha256": "59fbe1e5f7fd053c7a657ff563382749dda1bf7758be81f60315b2fdc9a44840",
+      "bytes": 8427,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_context_reuse_curation.py",
+      "source_sha256": "6de43802a8799acaf1b114b3fe420a0ce1a584104f1142cf19d3a6719be9b7df",
+      "snapshot_sha256": "6de43802a8799acaf1b114b3fe420a0ce1a584104f1142cf19d3a6719be9b7df",
+      "bytes": 6440,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_test_result_classification.py",
+      "source_sha256": "e0b2054668494d78a62e6f4e435bc8411e85766ffa2d0a65b5ec5fc83cd0d694",
+      "snapshot_sha256": "e0b2054668494d78a62e6f4e435bc8411e85766ffa2d0a65b5ec5fc83cd0d694",
+      "bytes": 17670,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_episode_credit.py",
+      "source_sha256": "9bcebf588cf099372be5cca2e1e2e51971c94b0710c5202760d649c95b8504d9",
+      "snapshot_sha256": "9bcebf588cf099372be5cca2e1e2e51971c94b0710c5202760d649c95b8504d9",
+      "bytes": 17544,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_candidates.json",
+      "source_sha256": "3c256732198f4b3302e9c84b0226daa4eececdfd1bff5217ca470f48e59ca0ed",
+      "snapshot_sha256": "3c256732198f4b3302e9c84b0226daa4eececdfd1bff5217ca470f48e59ca0ed",
+      "bytes": 4831127,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+      "source_sha256": "f38af26c8354f70ad3d306e3df33f695bac4a11ab06f535f8b7d1e8352ac1997",
+      "snapshot_sha256": "f38af26c8354f70ad3d306e3df33f695bac4a11ab06f535f8b7d1e8352ac1997",
+      "bytes": 877832,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.md",
+      "source_sha256": "bfc997ae01bb96d03d7ace9f89111eb33b71eb558accbd16e48d11f4dedba565",
+      "snapshot_sha256": "bfc997ae01bb96d03d7ace9f89111eb33b71eb558accbd16e48d11f4dedba565",
+      "bytes": 7847,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_v21_utility_gate_run_guide.md",
+      "source_sha256": "e5f02360dd98bc135298819f38355a65b47c06ca0c8ffe6744585838250af190",
+      "snapshot_sha256": "e5f02360dd98bc135298819f38355a65b47c06ca0c8ffe6744585838250af190",
+      "bytes": 3410,
+      "redacted_snapshot": false
+    }
+  ],
+  "comparison": {
+    "shared_code_snapshot": "snapshot/",
+    "v21_gate_off": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68",
+        "UCAGENT_CONTEXT_REUSE_UTILITY_GATE": "false"
+      }
+    },
+    "v21_utility_gate_candidate": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+      "utility_policy_version": "verifier_grounded_utility_v0",
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68",
+        "UCAGENT_CONTEXT_REUSE_UTILITY_GATE": "true",
+        "UCAGENT_CONTEXT_REUSE_MIN_UTILITY": "0.05"
+      },
+      "runtime_default_enabled": false,
+      "single_run_claim": "observational only"
+    }
+  },
+  "notes": [
+    "The repository worktree was dirty; this snapshot, not git HEAD alone, defines the baseline.",
+    "The setting snapshot is redacted. Its source_sha256 identifies the exact local configuration.",
+    "The utility gate is disabled by default, preserving the prior v1 runtime path.",
+    "The 0.05 threshold is a conservative effect-observation margin, not an optimized value.",
+    "A single Adder run can verify decision intervention but cannot establish causal performance uplift."
+  ]
+}

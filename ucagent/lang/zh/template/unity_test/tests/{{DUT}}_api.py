@@ -1,63 +1,16 @@
 #coding=utf-8
 
 import pytest
+import ucagent
 from {{DUT}}_function_coverage_def import get_coverage_groups
 from toffee_test.reporter import set_func_coverage, set_line_coverage, get_file_in_tmp_dir
 from toffee_test.reporter import set_user_info, set_title_info
-import toffee as _toffee
+from toffee import Bundle, Signals, Signal
 
 # import your dut module here
 from {{DUT}} import DUT{{DUT}}  # Replace with the actual DUT class import
 
 import os
-
-# toffee 当前版本中 Signal() 不接收位宽，Signals() 只接收数量。
-# 通过包装函数兼容旧模板里传入位宽/多参数的写法。
-Bundle = _toffee.Bundle
-
-
-def Signal(_width=None):
-    return _toffee.Signal()
-
-
-def Signals(*widths):
-    if len(widths) == 1 and isinstance(widths[0], int):
-        count = widths[0]
-    else:
-        count = len(widths)
-    return _toffee.Signals(count)
-
-
-def _bundle_signal_names(bundle_cls):
-    names = []
-    for name, val in vars(bundle_cls).items():
-        if name.startswith("_"):
-            continue
-        if isinstance(val, _toffee.Signal):
-            names.append(name)
-        elif isinstance(val, list) and val and isinstance(val[0], _toffee.Signal):
-            names.append(name)
-        elif isinstance(val, _toffee.SignalList):
-            names.append(name)
-        elif isinstance(val, _toffee.BundleList):
-            names.append(name)
-    return names
-
-
-def auto_bundle_from_prefix(bundle_cls, dut, prefix="io_"):
-    """
-    自动判断 Bundle 内部信号是否已带前缀，避免出现 io_io_* 这类重复前缀。
-    """
-    signal_names = _bundle_signal_names(bundle_cls)
-    use_prefix = True
-    if any(name.startswith(prefix) for name in signal_names):
-        use_prefix = False
-    chosen_prefix = prefix if use_prefix else ""
-    bundle = bundle_cls.from_prefix(chosen_prefix, dut)
-    # 若前缀模式未匹配到任何信号，则回退为无前缀
-    if chosen_prefix and not getattr(bundle, "current_level_signals", []):
-        bundle = bundle_cls.from_prefix("", dut)
-    return bundle
 
 
 def current_path_file(file_name):
@@ -85,6 +38,10 @@ def create_dut(request):
     Returns:
         dut_instance: An instance of the {{DUT}} class.
     """
+    # 如果是正在生成测试模板，返回fake DUT用于提速（模板中不会真运行DUT）
+    if ucagent.is_imp_test_template():
+        return ucagent.get_fake_dut(DUT{{DUT}})
+
     # Replace with the actual instantiation and initialization of your DUT
     dut = DUT{{DUT}}()
 
@@ -105,7 +62,7 @@ def dut(request):
     # dut.InitClock("clk")
 
     # 上升沿采样，StepRis也适用于组合电路用dut.Step推进时采样.
-    # 必须要有g.sample()采样覆盖组, 如何不在StepRis/StepFail中采样，则需要在test function中手动调用，否则无法统计覆盖率导致失败
+    # 必须要有g.sample()采样覆盖组, 如何不在StepRis/StepFal中采样，则需要在test function中手动调用，否则无法统计覆盖率导致失败
     dut.StepRis(lambda _: [g.sample()
                            for g in
                            func_coverage_group])
@@ -123,7 +80,11 @@ def dut(request):
 
     # 设置需要收集的代码行覆盖率文件(获取已有路径new_path=False) 向toffee_test传代码行递覆盖率数据
     # 代码行覆盖率 ignore 文件的固定路径为当前文件所在目录下的：{{DUT}}.ignore，请不要改变
-    set_line_coverage(request, get_coverage_data_path(request, new_path=False), ignore=current_path_file("{{DUT}}.ignore"))
+    # Template mode uses a fake DUT and intentionally does not generate RTL
+    # line-coverage data. Registering a nonexistent .dat file makes Reporter
+    # fail before the template Checker can validate placeholder failures.
+    if not ucagent.is_imp_test_template():
+        set_line_coverage(request, get_coverage_data_path(request, new_path=False), ignore=current_path_file("{{DUT}}.ignore"))
 
     # 设置用户信息到报告
     set_user_info("UCAgent-{{Version}}", "{{Email}}")
@@ -133,6 +94,9 @@ def dut(request):
         g.clear()                                        # 清空统计
     dut.Finish()                                         # 清理DUT，每个DUT class 都有 Finish 方法
 
+@pytest.fixture(scope="function") # 用scope="function"确保每个测试用例都创建了一个全新的 Mock DUT
+def mock_dut():
+    return ucagent.get_mock_dut_from(DUT{{DUT}})
 
 # 根据需要定义子Bundle
 # class MyPort(Bundle):
@@ -183,8 +147,8 @@ class {{DUT}}Env:
 # 定义env fixture, 请取消下面的注释，并根据需要修改名称
 @pytest.fixture(scope="function") # 用scope="function"确保每个测试用例都创建了一个全新的Env
 def env(dut):
-     # 一般情况下为每个test都创建全新的 env 不需要 yield
-     return {{DUT}}Env(dut)
+    # 一般情况下为每个test都创建全新的 env 不需要 yield
+    return {{DUT}}Env(dut)
 
 
 # 定义其他Env

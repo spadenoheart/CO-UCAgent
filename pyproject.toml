@@ -1,50 +1,82 @@
 [build-system]
-requires = ["setuptools>=80", "setuptools-scm>=8", "wheel"]
+requires = ["setuptools>=80", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "CO-UCAgent"
-description = "Context Optimized UCAgent - enhanced context management for verification"
+name = "co-ucagent"
+version = "0.2.0"
+description = "Evidence-grounded context engineering for local-LLM chip verification agents"
 authors = [
-    {name = "CO-UCAgent Contributors"},
+    {name = "Jiabao Wang"},
+    {name = "XS-MLVP", email = "unitychip@bosc.ac.cn"},
 ]
-license = {text = "Apache-2.0"}
+license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "langchain>=1.2.0",
+    "langchain>=1.2.15",
     "langchain_community>=0.3.31",
     "openai>=1.109.1",
     "langgraph>=1.0.5",
     "langchain_openai>=1.1.6",
     "langmem>=0.0.30",
-    "urwid>=3.0.3",
     "mem0ai>=0.1.118",
     "langchain_mcp_adapters>=0.1.11",
     "psutil>=7.1.0",
     "langfuse>=3.9.1",
     "gitpython>=3.1.43",
-    "pytoffee@git+https://github.com/XS-MLVP/toffee@master",
-    "toffee-test@git+https://github.com/XS-MLVP/toffee-test@master",
+    "pytoffee@git+https://gitlink.org.cn/XS-MLVP/toffee@master",
+    "toffee-test@git+https://gitlink.org.cn/XS-MLVP/toffee-test@master",
+    "textual>=7.3.0",
+    "Jinja2>=3.1.6",
+    "fastapi>=0.135.0",
+    "uvicorn[standard]>=0.42.0",
+    "docker>=7.1.0",
+    "kubernetes>=33.1.0",
 ]
-dynamic = ["version"]
 
 [project.scripts]
+co-ucagent = "ucagent.cli:main"
 ucagent = "ucagent.cli:main"
+co-llm-profiler = "ucagent.toolkit.cli:llm_profiler"
+co-context = "ucagent.toolkit.cli:context"
+co-memory-cache = "ucagent.toolkit.cli:memory_cache"
+co-trace = "ucagent.toolkit.cli:trace"
+co-strategy = "ucagent.toolkit.cli:strategy"
+co-bench = "ucagent.toolkit.cli:bench"
+co-trajectory-data = "ucagent.toolkit.cli:trajectory_data"
 
 [project.urls]
 Homepage = "https://github.com/spadenoheart/CO-UCAgent"
-
-[tool.setuptools_scm]
-fallback_version = "0.9.1"
-version_file = "ucagent/_version.py"
-version_scheme = "guess-next-dev"
-local_scheme = "node-and-date"
+Repository = "https://github.com/spadenoheart/CO-UCAgent.git"
+Issues = "https://github.com/spadenoheart/CO-UCAgent/issues"
+Upstream = "https://github.com/XS-MLVP/UCAgent"
 
 [tool.setuptools]
-packages = ["ucagent"]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["ucagent*", "scripts*"]
+
+[tool.setuptools.package-data]
+ucagent = [
+    "*.yaml",
+    "*.md",
+    "assets/*",
+    "lang/**/*.yaml",
+    "lang/**/*.md",
+    "lang/**/*.json",
+    "lang/**/*.j2",
+    "server/templates/*.html",
+    "server/static/**/*",
+    "tui/styles/*.tcss",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

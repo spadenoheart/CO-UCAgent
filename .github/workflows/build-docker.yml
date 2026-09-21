@@ -1,0 +1,69 @@
+name: Build and Push CO-UCAgent Docker Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: spadenoheart/co-ucagent
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve CO-UCAgent version
+        id: version
+        run: |
+          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            if [[ "${TAG_VERSION}" != "${VERSION}" ]]; then
+              echo "Tag ${GITHUB_REF_NAME} does not match pyproject version ${VERSION}" >&2
+              exit 1
+            fi
+          fi
+          IMAGE_TAG="${VERSION//+/-}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Resolved CO-UCAgent version: ${VERSION}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            UCAGENT_VERSION=${{ steps.version.outputs.version }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.image_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest

@@ -1,8 +1,19 @@
 # -*- coding: utf-8 -*-
 """Diff and version operations utility functions."""
 
+from contextlib import contextmanager
+import difflib
 import git
 import os
+
+
+@contextmanager
+def _open_repo(path: str):
+    repo = git.Repo(path)
+    try:
+        yield repo
+    finally:
+        repo.close()
 
 
 def is_git_repo(path: str) -> bool:
@@ -15,7 +26,8 @@ def is_git_repo(path: str) -> bool:
         bool: True if the path is a Git repository, False otherwise.
     """
     try:
-        _ = git.Repo(path).git_dir
+        with _open_repo(path) as repo:
+            _ = repo.git_dir
         return True
     except git.exc.InvalidGitRepositoryError:
         return False
@@ -61,23 +73,54 @@ def append_ignore_file(path: str, patterns: list[str]) -> None:
             gitignore_file.write(f"{pattern}\n")
 
 
-def git_add_and_commit(path: str, message: str, target_suffix_list: list = ["*"]) -> None:
+def git_add_and_commit(path: str, message: str, target_suffix_list: list = ["*"]) -> str:
     """Add all changes and commit in the Git repository at the given path.
 
     Args:
         path (str): The file system path of the Git repository.
         message (str): The commit message.
         target_suffix_list (list): List of file suffixes to include in the commit.
+
+    Returns:
+        str: The commit hash (new commit if changes were made, current HEAD otherwise).
     """
     try:
-        repo = git.Repo(path)
-        if target_suffix_list == ["*"]:
-            repo.git.add(all=True)
-        else:
-            for suffix in target_suffix_list:
-                repo.git.add(f'*.{suffix}')
-        if repo.is_dirty(untracked_files=True) or repo.untracked_files:
-            repo.index.commit(message)
+        with _open_repo(path) as repo:
+            # Check and set default git user config if not configured
+            config_reader = repo.config_reader()
+            try:
+                try:
+                    user_name = config_reader.get_value("user", "name")
+                except:
+                    user_name = None
+                try:
+                    user_email = config_reader.get_value("user", "email")
+                except:
+                    user_email = None
+            finally:
+                config_reader.release()
+            # Set default values if not configured
+            config_writer = repo.config_writer()
+            try:
+                if not user_name:
+                    config_writer.set_value("user", "name", "UCAgent")
+                if not user_email:
+                    config_writer.set_value("user", "email", "ucagent@localhost")
+            finally:
+                config_writer.release()
+            if target_suffix_list == ["*"]:
+                repo.git.add(all=True)
+            else:
+                for suffix in target_suffix_list:
+                    repo.git.add(f'*.{suffix}')
+            if repo.is_dirty(untracked_files=True) or repo.untracked_files:
+                commit = repo.index.commit(message)
+                return commit.hexsha
+            try:
+                return repo.head.commit.hexsha
+            except ValueError:
+                repo.index.commit("Initial commit")
+                return repo.head.commit.hexsha
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
 
@@ -91,8 +134,8 @@ def has_untracked_files(path: str) -> bool:
         bool: True if there are untracked files, False otherwise.
     """
     try:
-        repo = git.Repo(path)
-        return len(repo.untracked_files) > 0
+        with _open_repo(path) as repo:
+            return len(repo.untracked_files) > 0
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
 
@@ -106,8 +149,8 @@ def is_dirty(path: str) -> bool:
         bool: True if there are uncommitted changes, False otherwise.
     """
     try:
-        repo = git.Repo(path)
-        return repo.is_dirty()
+        with _open_repo(path) as repo:
+            return repo.is_dirty()
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
 
@@ -121,9 +164,133 @@ def get_dirty_files(path: str) -> list[str]:
         list[str]: A list of dirty file paths.
     """
     try:
-        repo = git.Repo(path)
-        dirty_files = [item.a_path for item in repo.index.diff(None)]
-        return dirty_files
+        with _open_repo(path) as repo:
+            dirty_files = [item.a_path for item in repo.index.diff(None)]
+            return dirty_files
+    except git.exc.InvalidGitRepositoryError:
+        raise ValueError(f"The path '{path}' is not a valid Git repository.")
+
+
+def get_worktree_changed_files(path: str) -> list[str]:
+    """Get tracked and untracked files changed in a repository worktree.
+
+    Returned paths are relative to the repository root and use forward slashes.
+    """
+    return list(get_worktree_changed_file_statuses(path).keys())
+
+
+def get_worktree_changed_file_statuses(path: str) -> dict[str, str]:
+    """Get tracked and untracked files changed in a repository worktree.
+
+    Returns a mapping of repository-relative paths to one of ``added``,
+    ``modified``, ``deleted``, or ``renamed``.
+    """
+    try:
+        with _open_repo(path) as repo:
+            raw_status = repo.git.status("--porcelain=v1", "-z", "--untracked-files=all")
+            fields = [field for field in raw_status.split("\0") if field]
+            changed_files = {}
+            i = 0
+            while i < len(fields):
+                entry = fields[i]
+                i += 1
+                if len(entry) < 4:
+                    continue
+                status = entry[:2]
+                repo_path = entry[3:].replace(os.sep, "/")
+                file_status = "modified"
+                if status == "??" or "A" in status:
+                    file_status = "added"
+                if "D" in status:
+                    file_status = "deleted"
+                if "R" in status:
+                    file_status = "renamed"
+                if any(ch in "RC" for ch in status) and i < len(fields):
+                    i += 1
+                if repo_path:
+                    changed_files[repo_path] = file_status
+            return dict(sorted(changed_files.items(), key=lambda item: item[0].lower()))
+    except git.exc.InvalidGitRepositoryError:
+        raise ValueError(f"The path '{path}' is not a valid Git repository.")
+
+
+def get_worktree_file_content_and_diff(path: str, file_path: str) -> dict:
+    """Get current worktree file content and diff compared with HEAD/index.
+
+    This is useful before a stage has produced a commit. Untracked files are
+    represented as an add-only unified diff.
+    """
+    try:
+        with _open_repo(path) as repo:
+            full_file_path = os.path.join(path, file_path)
+            file_exists = os.path.exists(full_file_path)
+            current_content = ""
+            if file_exists:
+                if os.path.isdir(full_file_path):
+                    return {
+                        "is_text": False,
+                        "content": "",
+                        "diff": "",
+                        "error": f"'{file_path}' is a directory, not a file.",
+                        "exists": True,
+                    }
+                with open(full_file_path, "rb") as f:
+                    current_content_bytes = f.read()
+                if not _is_text_file(current_content_bytes):
+                    return {
+                        "is_text": False,
+                        "content": "",
+                        "diff": "",
+                        "error": f"File '{file_path}' is not a text file",
+                        "exists": True,
+                    }
+                current_content = current_content_bytes.decode("utf-8", errors="replace")
+
+            rel_file_path = file_path.replace(os.sep, "/")
+            untracked_files = {p.replace(os.sep, "/") for p in repo.untracked_files}
+            status = "modified"
+            if file_exists and rel_file_path in untracked_files:
+                status = "added"
+                diff = "".join(
+                    difflib.unified_diff(
+                        [],
+                        current_content.splitlines(keepends=True),
+                        fromfile=f"a/{rel_file_path}",
+                        tofile=f"b/{rel_file_path}",
+                    )
+                )
+            else:
+                try:
+                    diff = repo.git.diff("HEAD", "--", rel_file_path)
+                except git.exc.GitCommandError:
+                    diff_parts = []
+                    for args in (("--cached", "--", rel_file_path), ("--", rel_file_path)):
+                        try:
+                            diff_part = repo.git.diff(*args)
+                        except git.exc.GitCommandError:
+                            diff_part = ""
+                        if diff_part:
+                            diff_parts.append(diff_part)
+                    diff = "\n".join(diff_parts)
+
+            if not file_exists and not diff.strip():
+                return {
+                    "is_text": False,
+                    "content": "",
+                    "diff": "",
+                    "error": f"File '{file_path}' not found in working directory or Git diff.",
+                    "exists": False,
+                }
+            if not file_exists and diff.strip():
+                status = "deleted"
+            return {
+                "is_text": True,
+                "content": current_content,
+                "diff": diff,
+                "error": None,
+                "exists": file_exists,
+                "status": status,
+            }
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
 
@@ -136,8 +303,8 @@ def new_branch(path: str, branch_name: str) -> None:
         branch_name (str): The name of the new branch to create.
     """
     try:
-        repo = git.Repo(path)
-        repo.git.checkout('-b', branch_name)
+        with _open_repo(path) as repo:
+            repo.git.checkout('-b', branch_name)
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
 
@@ -155,8 +322,8 @@ def get_current_branch(path: str) -> str:
         ValueError: If the path is not a valid Git repository.
     """
     try:
-        repo = git.Repo(path)
-        return repo.active_branch.name
+        with _open_repo(path) as repo:
+            return repo.active_branch.name
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
     except Exception as e:
@@ -176,8 +343,241 @@ def get_latest_commit_hash(path: str) -> str:
         ValueError: If the path is not a valid Git repository.
     """
     try:
-        repo = git.Repo(path)
-        return repo.head.commit.hexsha
+        with _open_repo(path) as repo:
+            return repo.head.commit.hexsha
+    except git.exc.InvalidGitRepositoryError:
+        raise ValueError(f"The path '{path}' is not a valid Git repository.")
+
+
+def get_commit_message(path: str, commit_hash: str) -> str:
+    """Get the commit message for a specific commit."""
+    try:
+        with _open_repo(path) as repo:
+            return repo.commit(commit_hash).message
+    except git.exc.InvalidGitRepositoryError:
+        raise ValueError(f"The path '{path}' is not a valid Git repository.")
+    except (git.exc.BadName, IndexError) as e:
+        raise ValueError(f"Commit '{commit_hash}' not found in repository: {str(e)}")
+
+
+def get_commit_changed_files(path: str, commit_hash: str) -> list[str]:
+    """Get the list of files changed in a specific commit.
+
+    Args:
+        path (str): The file system path of the Git repository.
+        commit_hash (str): The commit hash to check.
+
+    Returns:
+        list[str]: A list of file paths changed in the commit.
+
+    Raises:
+        ValueError: If the path is not a valid Git repository or commit not found.
+    """
+    return list(get_commit_changed_file_statuses(path, commit_hash).keys())
+
+
+def get_commit_changed_file_statuses(path: str, commit_hash: str) -> dict[str, str]:
+    """Get files changed in a specific commit with their change status."""
+    try:
+        with _open_repo(path) as repo:
+            commit = repo.commit(commit_hash)
+            changed_files = {}
+            def add_item(item):
+                change_type = item.change_type
+                if item.deleted_file or change_type == "D":
+                    file_path = item.a_path
+                    status = "deleted"
+                elif item.new_file or change_type == "A":
+                    file_path = item.b_path or item.a_path
+                    status = "added"
+                elif item.renamed_file or change_type == "R":
+                    file_path = item.b_path or item.a_path
+                    status = "renamed"
+                else:
+                    file_path = item.b_path or item.a_path
+                    status = "modified"
+                if file_path:
+                    changed_files[file_path.replace(os.sep, "/")] = status
+            if commit.parents:
+                for item in commit.parents[0].diff(commit):
+                    add_item(item)
+            else:
+                for item in commit.diff(git.NULL_TREE, r=True):
+                    add_item(item)
+            return changed_files
+    except git.exc.InvalidGitRepositoryError:
+        raise ValueError(f"The path '{path}' is not a valid Git repository.")
+    except (git.exc.BadName, IndexError) as e:
+        raise ValueError(f"Commit '{commit_hash}' not found in repository: {str(e)}")
+
+
+def _is_text_file(content: bytes) -> bool:
+    """Check if the given content is a text file.
+
+    Args:
+        content (bytes): The file content to check.
+
+    Returns:
+        bool: True if the content is likely a text file, False otherwise.
+    """
+    try:
+        content.decode('utf-8')
+        return True
+    except UnicodeDecodeError:
+        pass
+    try:
+        content.decode('latin-1')
+        text_char_ratio = sum(1 for byte in content if 32 <= byte <= 126 or byte in (9, 10, 13)) / len(content)
+        return text_char_ratio > 0.85
+    except:
+        return False
+
+
+def get_commit_file_content_and_diff(path: str, commit_hash: str, file_path: str) -> dict:
+    """Get the content and diff of a file at a specific commit.
+
+    Args:
+        path (str): The file system path of the Git repository.
+        commit_hash (str): The commit hash.
+        file_path (str): The path of the file in the repository.
+
+    Returns:
+        dict: A dictionary with keys:
+            - 'is_text': bool indicating if the file is a text file
+            - 'content': str content of the file (only if is_text is True)
+            - 'diff': str diff between this commit and parent (only if is_text is True)
+            - 'error': str error message (only if is_text is False or file not found)
+
+    Raises:
+        ValueError: If the path is not a valid Git repository or commit not found.
+    """
+    try:
+        with _open_repo(path) as repo:
+            commit = repo.commit(commit_hash)
+            try:
+                blob = commit.tree / file_path
+            except KeyError:
+                diff_content = ""
+                if commit.parents:
+                    parent = commit.parents[0]
+                    try:
+                        diff_content = repo.git.diff(parent.hexsha, commit.hexsha, '--', file_path)
+                    except git.exc.GitCommandError:
+                        diff_content = ""
+                if diff_content.strip():
+                    return {
+                        'is_text': True,
+                        'content': "",
+                        'diff': diff_content,
+                        'error': None,
+                        'exists': False,
+                        'status': 'deleted',
+                    }
+                return {
+                    'is_text': False,
+                    'error': f"File '{file_path}' not found in commit '{commit_hash}'"
+                }
+            content = blob.data_stream.read()
+            if not _is_text_file(content):
+                return {
+                    'is_text': False,
+                    'error': f"File '{file_path}' is not a text file"
+                }
+            text_content = content.decode('utf-8', errors='replace')
+            diff_content = ""
+            if commit.parents:
+                parent = commit.parents[0]
+                try:
+                    diff = repo.git.diff(parent.hexsha, commit.hexsha, '--', file_path)
+                    diff_content = diff
+                except git.exc.GitCommandError:
+                    diff_content = ""
+            return {
+                'is_text': True,
+                'content': text_content,
+                'diff': diff_content,
+                'error': None,
+                'exists': True,
+            }
+    except git.exc.InvalidGitRepositoryError:
+        raise ValueError(f"The path '{path}' is not a valid Git repository.")
+    except (git.exc.BadName, IndexError) as e:
+        raise ValueError(f"Commit '{commit_hash}' not found in repository: {str(e)}")
+
+
+def get_current_file_content_and_diff_from_commit(path: str, commit_hash: str, file_path: str) -> dict:
+    """Get the current file content and diff compared to a specific commit.
+
+    Args:
+        path (str): The file system path of the Git repository.
+        commit_hash (str): The commit hash to compare against (old content).
+        file_path (str): The path of the file in the repository (relative to repo root).
+
+    Returns:
+        dict: A dictionary with keys:
+            - 'is_text': bool indicating if the file is a text file
+            - 'content': str current content of the file (only if is_text is True)
+            - 'diff': str diff (current content as new, commit content as old)
+            - 'error': str error message (only if is_text is False or error occurred)
+    Raises:
+        ValueError: If the path is not a valid Git repository or commit not found.
+    """
+    try:
+        with _open_repo(path) as repo:
+            full_file_path = os.path.join(path, file_path)
+            if not os.path.exists(full_file_path):
+                rel_file_path = file_path.replace(os.sep, "/")
+                try:
+                    diff = repo.git.diff(commit_hash, "--", rel_file_path)
+                except git.exc.GitCommandError:
+                    diff = ""
+                if diff.strip():
+                    return {
+                        'is_text': True,
+                        'content': "",
+                        'diff': diff,
+                        'error': None,
+                        'exists': False,
+                        'status': 'deleted',
+                    }
+                return {
+                    'is_text': False,
+                    'error': f"File '{file_path}' does not exist in working directory"
+                }
+            with open(full_file_path, 'rb') as f:
+                current_content_bytes = f.read()
+            if not _is_text_file(current_content_bytes):
+                return {
+                    'is_text': False,
+                    'error': f"File '{file_path}' is not a text file"
+                }
+            current_content = current_content_bytes.decode('utf-8', errors='replace')
+            rel_file_path = file_path.replace(os.sep, "/")
+            untracked_files = {p.replace(os.sep, "/") for p in repo.untracked_files}
+            status = "modified"
+            if rel_file_path in untracked_files:
+                status = "added"
+                diff = "".join(
+                    difflib.unified_diff(
+                        [],
+                        current_content.splitlines(keepends=True),
+                        fromfile=f"a/{rel_file_path}",
+                        tofile=f"b/{rel_file_path}",
+                    )
+                )
+            else:
+                try:
+                    diff = repo.git.diff(commit_hash, '--', rel_file_path)
+                except git.exc.GitCommandError:
+                    diff = ""
+            return {
+                'is_text': True,
+                'content': current_content,
+                'diff': diff,
+                'error': None,
+                'exists': True,
+                'status': status,
+            }
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
 
@@ -195,9 +595,9 @@ def get_current_status(path: str) -> str:
         ValueError: If the path is not a valid Git repository.
     """
     try:
-        repo = git.Repo(path)
-        status = repo.git.status()
-        return status
+        with _open_repo(path) as repo:
+            status = repo.git.status()
+            return status
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
 
@@ -215,9 +615,9 @@ def get_current_diff(path: str) -> str:
         ValueError: If the path is not a valid Git repository.
     """
     try:
-        repo = git.Repo(path)
-        diff = repo.git.diff()
-        return diff
+        with _open_repo(path) as repo:
+            diff = repo.git.diff()
+            return diff
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
 
@@ -233,8 +633,8 @@ def get_untracked_files(path: str) -> list[str]:
         ValueError: If the path is not a valid Git repository.
     """
     try:
-        repo = git.Repo(path)
-        return repo.untracked_files
+        with _open_repo(path) as repo:
+            return repo.untracked_files
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
 
@@ -250,9 +650,9 @@ def get_changed_files(path: str) -> list[str]:
         ValueError: If the path is not a valid Git repository.
     """
     try:
-        repo = git.Repo(path)
-        changed_files = [item.a_path for item in repo.index.diff(None)]
-        return changed_files
+        with _open_repo(path) as repo:
+            changed_files = [item.a_path for item in repo.index.diff(None)]
+            return changed_files
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
 
@@ -271,7 +671,42 @@ def get_git_log(path: str, max_count: int = 3) -> list[str]:
         ValueError: If the path is not a valid Git repository.
     """
     try:
-        repo = git.Repo(path)
-        return repo.git.log(f'-n {max_count}', '-p')
+        with _open_repo(path) as repo:
+            return repo.git.log(f'-n {max_count}', '-p')
     except git.exc.InvalidGitRepositoryError:
         raise ValueError(f"The path '{path}' is not a valid Git repository.")
+
+
+def get_diff_report(git_path: str, file_path: str = None,
+                    show_diff: bool = False,
+                    start_line = 1, line_count = -1,
+                    max_line_limit = 500) -> str:
+    with _open_repo(git_path) as repo:
+        changed_files = [item.a_path for item in repo.index.diff(None, paths=file_path)]
+        untracked_files = repo.untracked_files
+        if not changed_files and not untracked_files:
+            return "No changes detected in the workspace."
+        result = "Changes detected in the workspace:\n"
+        if changed_files:
+            result += "\nModified files:\n" + "\n".join(changed_files) + "\n"
+        if untracked_files:
+            result += "\nUntracked files:\n" + "\n".join(untracked_files) + "\n"
+        # detail diff output
+        if show_diff and changed_files:
+            result += "\n----------------------- Detailed diff output: -----------------------\n"
+            for dfile in changed_files:
+                file_diff = repo.git.diff(dfile)
+                result += f"\nDiff for {dfile}:\n{file_diff}\n"
+            result += "----------------------- End of Detailed diff  -----------------------\n"
+        # line range
+        if start_line > 1 or line_count >= 0:
+            txt = result.splitlines(keepends=True)
+            pos_start = max(0, start_line-1)
+            pos_end = None if line_count < 0 else pos_start + line_count
+            txt = txt[pos_start:pos_end]
+            if len(txt) > max_line_limit:
+                delta_lines = len(txt) - max_line_limit
+                txt = txt[:max_line_limit]
+                txt.append(f"\n[Output truncated to {max_line_limit} lines ({delta_lines} lines omitted)]\n")
+            result = "".join(txt)
+        return result

@@ -1,0 +1,84 @@
+{
+  "records_total": 40,
+  "records_labeled": 40,
+  "coverage": 1.0,
+  "accuracy": 1.0,
+  "macro_f1_present_roles": 1.0,
+  "per_role": {
+    "progress": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 8
+    },
+    "diagnostic": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 8
+    },
+    "no_progress": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 10
+    },
+    "regression": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 6
+    },
+    "invalid": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 8
+    }
+  },
+  "confusion_matrix": {
+    "progress": {
+      "progress": 8,
+      "diagnostic": 0,
+      "no_progress": 0,
+      "regression": 0,
+      "invalid": 0
+    },
+    "diagnostic": {
+      "progress": 0,
+      "diagnostic": 8,
+      "no_progress": 0,
+      "regression": 0,
+      "invalid": 0
+    },
+    "no_progress": {
+      "progress": 0,
+      "diagnostic": 0,
+      "no_progress": 10,
+      "regression": 0,
+      "invalid": 0
+    },
+    "regression": {
+      "progress": 0,
+      "diagnostic": 0,
+      "no_progress": 0,
+      "regression": 6,
+      "invalid": 0
+    },
+    "invalid": {
+      "progress": 0,
+      "diagnostic": 0,
+      "no_progress": 0,
+      "regression": 0,
+      "invalid": 8
+    }
+  },
+  "double_labeled_records": 0,
+  "cohen_kappa": null,
+  "prediction_refresh": {
+    "records_total": 40,
+    "matched": 40,
+    "missing": 0,
+    "missing_episode_ids": []
+  }
+}

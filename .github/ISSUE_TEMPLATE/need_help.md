@@ -19,7 +19,7 @@ assignees: ""
 
 ## Environment Details
 
-- UCAgent version:
+- CO-UCAgent version:
 - Python version:
 - OS / Platform:
 

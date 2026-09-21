@@ -49,6 +49,8 @@ stage:
             - ["{DUT}/*", "!{DUT}/__init__.py", "!{DUT}/{DUT}.v", "!{DUT}/*.md"]
             - ["data", "uc_test_report", "*.json", "*.ini", "{DUT}.ignore"]
             - ["*.fst", "*.dat", "*.vcd", "*.bin", "*.log", "*.tmp", "*.pyc", ]
+            - [".ucagent/*"]
+          init_msg: "Init increment verification"
 
   - name: update_task_and_plan
     desc: "更新验证计划"
@@ -103,7 +105,7 @@ stage:
           doc_file: "{OUT}/{DUT}_functions_and_checks.md"
           leaf_node: "CK"
           data_key: "COVER_GROUP_DOC_CK_LIST_INC"
-          need_human_check: $(HUMAN_CHECK_CK: false) # 验证复杂DUT时建议开启该人工检查
+    need_human_check: $(HUMAN_CHECK_CK: false) # 验证复杂DUT时建议开启该人工检查
 
 
   - name: update_coverage_group_in_batch
@@ -194,7 +196,7 @@ stage:
           target_file_tests: "{OUT}/tests/test_{DUT}_api*.py"
           doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
           doc_bug_analysis: "{OUT}/{DUT}_bug_analysis.md"
-          need_human_check: false # 验证复杂DUT时建议开启该人工检查
+    need_human_check: false # 验证复杂DUT时建议开启该人工检查
     reference_files:
       - "Guide_Doc/dut_api_instruction.md"
       - "Guide_Doc/dut_bug_analysis.md"
@@ -225,9 +227,10 @@ stage:
           doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
           doc_bug_analysis: "{OUT}/{DUT}_bug_analysis.md"
           test_dir: "{OUT}/tests"
-          need_human_check: false # 验证复杂DUT时建议开启该人工检查
+          ignore_tc_prefix: "test_api_{DUT}_mock_"
         extra_args:
           max_try: -1
+    need_human_check: false # 验证复杂DUT时建议开启该人工检查
     reference_files:
       - "Guide_Doc/dut_test_case.md"
       - "Guide_Doc/dut_bug_analysis.md"
@@ -255,9 +258,10 @@ stage:
           doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
           doc_bug_analysis: "{OUT}/{DUT}_bug_analysis.md"
           test_dir: "{OUT}/tests"
-          need_human_check: false # 验证复杂DUT时建议开启该人工检查
+          ignore_tc_prefix: "test_api_{DUT}_mock_"
         extra_args:
           max_try: -1
+    need_human_check: false # 验证复杂DUT时建议开启该人工检查
     reference_files:
       - "Guide_Doc/dut_test_case.md"
       - "Guide_Doc/dut_bug_analysis.md"
@@ -283,9 +287,10 @@ stage:
           doc_func_check: "{OUT}/{DUT}_functions_and_checks.md"
           doc_bug_analysis: "{OUT}/{DUT}_bug_analysis.md"
           test_dir: "{OUT}/tests"
-          need_human_check: false # 验证复杂DUT时建议开启该人工检查
+          ignore_tc_prefix: "test_api_{DUT}_mock_"
         extra_args:
           max_try: -1
+    need_human_check: false # 验证复杂DUT时建议开启该人工检查
     reference_files:
       - "Guide_Doc/dut_test_summary.md"
     output_files:
@@ -306,6 +311,7 @@ stage:
       - "注意："
       - "  - 必须使用工具`WorkCommit`提交变更，不能直接使用git相关的命令。"
       - "  - 提交信息应简洁明了，便于后续审查与追踪。"
+      - "  - 提示Workspace is clean或者工具`WorkCommit`提示不可用，则表明已经Commit完成。"
     checker:
       - name: commit_check
         clss: "GitNotDirtyChecker"

@@ -1,0 +1,41 @@
+# CO-UCAgent Docker Image
+# Based on picker base image with verification tools
+FROM ghcr.io/xs-mlvp/picker:latest
+
+ARG UCAGENT_VERSION
+
+# The picker base image already provides Node.js, npm, Python 3.11, and pip.
+USER root
+RUN node --version && \
+    npm --version && \
+    python3 --version && \
+    python3 -m pip --version
+
+# Install Code Agent CLIs.
+RUN npm install -g @anthropic-ai/claude-code && claude --version
+RUN npm install -g @openai/codex && codex --version
+RUN npm install -g @kilocode/cli && kilo --version
+RUN npm install -g opencode-ai && opencode --version
+RUN npm install -g @qwen-code/qwen-code@latest && qwen --version
+
+# Set working directory
+WORKDIR /workspace/CO-UCAgent
+
+# Copy project files
+COPY . .
+COPY examples/Formal/requirements.txt ./requirements-formal.txt
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/workspace/CO-UCAgent
+
+# Install CO-UCAgent and dependencies into the image.
+RUN : "${UCAGENT_VERSION:?Pass --build-arg UCAGENT_VERSION=<version> when building the image}" && \
+    rm -f ucagent/_version.py && \
+    python3 -m pip install . && \
+    UCAGENT_VERSION="${UCAGENT_VERSION}" python3 -c "import os; from ucagent.version import __version__; expected = os.environ['UCAGENT_VERSION']; assert __version__ == expected, (__version__, expected)" && \
+    python3 -m pip install -r requirements-formal.txt && \
+    node --version && npm --version && python3 --version && co-ucagent --check
+
+# Default command: interactive shell
+CMD ["/bin/bash"]

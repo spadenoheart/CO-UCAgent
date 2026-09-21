@@ -4,19 +4,51 @@
 from typing import Optional, List, Tuple
 from ucagent.util.log import info, str_info, str_return, str_error, str_data, warning
 from ucagent.util.functions import is_text_file, get_file_size, bytes_to_human_readable, copy_indent_from, rm_workspace_prefix
-from ucagent.util.functions import get_diff
+from ucagent.util.functions import get_diff, match_pattern_list
 from .uctool import UCTool
 
 from langchain_core.callbacks import (
     CallbackManagerForToolRun,
 )
 from langchain_core.tools.base import ArgsSchema
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 import os
 import fnmatch
 import re
 import shutil
+import hashlib
+
+
+def _text_change_stats(text: Optional[str]) -> dict:
+    """Return compact metadata for changed text without logging the text itself."""
+    if text is None:
+        return {
+            "is_none": True,
+            "chars": 0,
+            "lines": 0,
+            "sha256": None,
+        }
+    return {
+        "is_none": False,
+        "chars": len(text),
+        "lines": len(text.splitlines()),
+        "sha256": hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest(),
+    }
+
+
+def _python_syntax_error(path: str, content: str) -> Optional[str]:
+    """Return a compact syntax error for Python edits before committing them."""
+    if not str(path).lower().endswith(".py"):
+        return None
+    try:
+        compile(content, path, "exec")
+    except SyntaxError as exc:
+        location = f"line {exc.lineno}"
+        if exc.offset:
+            location += f", column {exc.offset}"
+        return f"Python syntax validation failed at {location}: {exc.msg}. No changes were written."
+    return None
 
 
 def is_file_writeable(path: str, un_write_dirs: list=None, write_dirs: list=None) -> Tuple[bool, str]:
@@ -128,6 +160,8 @@ class BaseReadWrite:
 
     def check_file(self, path: str) -> Tuple[bool, str]:
         """Check if the file is writable."""
+        if not isinstance(path, str):
+            return False, f"Invalid path: {path}. Path must be a string.", ""
         if path.endswith('/'):
             return False, f"Path '{path}' should not end with a slash. Please provide a file path, not a directory.", ""
         write_able, msg = is_file_writeable(path, self.un_write_able_dirs, self.write_able_dirs)
@@ -200,6 +234,14 @@ class ArgSearchText(BaseModel):
         default=True,
         description="If True, include line numbers in results. If False, show only the matching content."
     )
+    max_line_chars: int = Field(
+        default=1000,
+        description="Maximum characters returned for one matching source line."
+    )
+    max_output_chars: int = Field(
+        default=12000,
+        description="Maximum characters returned by the complete search result."
+    )
 
 class SearchText(UCTool, BaseReadWrite):
     """Search for text in files within the workspace directory with advanced pattern matching."""
@@ -210,18 +252,34 @@ class SearchText(UCTool, BaseReadWrite):
     )
     args_schema: Optional[ArgsSchema] = ArgSearchText
     return_direct: bool = False
+    ignore_hidden: bool = True
+    ignore_pattern_list: list[str] = []
 
     def _run(self, pattern: str, directory: str = "", max_match_lines: int = 20, max_match_files: int = 10,
              use_regex: bool = False, case_sensitive: bool = False, include_line_numbers: bool = True,
+             max_line_chars: int = 1000, max_output_chars: int = 12000,
              run_manager: Optional[CallbackManagerForToolRun] = None) -> str:
         """Search for text in files within a workspace directory."""
         if not pattern:
             self.do_callback(False, directory, "No text pattern provided for search.")
             return str_error("No text pattern provided for search.")
         
+        max_match_lines = max(1, min(int(max_match_lines or 20), 200))
+        max_match_files = max(1, min(int(max_match_files or 10), 100))
+        max_line_chars = max(80, min(int(max_line_chars or 1000), 2000))
+        max_output_chars = max(1000, min(int(max_output_chars or 12000), 24000))
         result = []
         count_files = 0
         count_lines = 0
+
+        def render_result() -> str:
+            text = "\n".join(result)
+            if len(text) <= max_output_chars:
+                return text
+            return (
+                text[:max_output_chars].rstrip()
+                + f"\n... (search output truncated to {max_output_chars} characters)"
+            )
         
         # Compile regex pattern if needed
         regex_pattern = None
@@ -262,10 +320,16 @@ class SearchText(UCTool, BaseReadWrite):
                                     line_matches = txt.lower() in line.lower()
                         
                         if line_matches:
+                            line_text = line.strip()
+                            if len(line_text) > max_line_chars:
+                                line_text = (
+                                    line_text[:max_line_chars].rstrip()
+                                    + f" ... [line truncated to {max_line_chars} characters]"
+                                )
                             if include_line_numbers:
-                                result.append(f"{fname}: Line {i + 1}: {line.strip()}")
+                                result.append(f"{fname}: Line {i + 1}: {line_text}")
                             else:
-                                result.append(f"{fname}: {line.strip()}")
+                                result.append(f"{fname}: {line_text}")
                             count_lines += 1
                             _find = True
                             if count_lines >= max_match_lines:
@@ -282,7 +346,7 @@ class SearchText(UCTool, BaseReadWrite):
             if len(result) > 0:
                 ret_head = str_info(f"\nFound {len(result)} matching lines in file {directory}.\n\n")
                 self.do_callback(True, directory, result)
-                return ret_head + str_return("\n".join(result))
+                return ret_head + str_return(render_result())
         else:
             success, msg, real_path = self.check_dir(directory)
             if not success:
@@ -290,7 +354,17 @@ class SearchText(UCTool, BaseReadWrite):
                 return str_error(msg)
             info(f"Searching for text '{pattern}' in {real_path}")
             for root, _, files in os.walk(real_path):
+                if self.ignore_hidden:
+                    relative_parts = os.path.relpath(root, self.workspace).split(os.sep)
+                    if any(part not in ("", ".") and part.startswith('.') for part in relative_parts):
+                        continue
+                if match_pattern_list(os.path.relpath(root, self.workspace), self.ignore_pattern_list):
+                    continue
                 for file in files:
+                    if self.ignore_hidden and file.startswith('.'):
+                        continue
+                    if match_pattern_list(os.path.join(os.path.relpath(root, self.workspace), file), self.ignore_pattern_list):
+                        continue
                     file_path = os.path.join(root, file)
                     if not is_text_file(file_path):
                         continue
@@ -304,14 +378,23 @@ class SearchText(UCTool, BaseReadWrite):
             if result:
                 ret_head = str_info(f"\nFound {count_files} files with {count_lines} matching lines.\n\n")
                 self.do_callback(True, directory, result)
-                return ret_head + str_return("\n".join(result))
+                return ret_head + str_return(render_result())
             self.do_callback(False, directory, None)
         return str_error(f"No matches found for '{pattern}' in the specified directory({directory if directory else '.'}).")
 
-    def __init__(self, workspace: str, **kwargs):
+    def __init__(self, workspace: str, ignore_hidden: bool = True,
+                 ignore_pattern_list: list[str] = [
+                     ".git/*", "*/data/*", ".ucagent/*", "uc_test_report/*",
+                     "llm_input_dumps/*", "*/llm_input_dumps/*",
+                     "structured_events.jsonl", "*/structured_events.jsonl",
+                     "*.dat", "*.fst",
+                 ],
+                 **kwargs):
         """Initialize the tool."""
         super().__init__(**kwargs)
         self.init_base_rw(workspace)
+        self.ignore_hidden = ignore_hidden
+        self.ignore_pattern_list = ignore_pattern_list
         info(f"SearchText tool initialized with workspace: {self.workspace}")
 
 
@@ -382,9 +465,18 @@ class ArgPathList(BaseModel):
     path: str = Field(
         default=".",
         description="Directory path to list files from, relative to the workspace.")
+    directory: Optional[str] = Field(
+        default=None,
+        description="Compatibility alias for path. Do not provide both with different values.")
     depth: int = Field(
         default=-1,
         description="Subdirectory depth to list. -1: all levels, 0: only current directory."
+    )
+    max_entries: int = Field(
+        default=200,
+        ge=1,
+        le=2000,
+        description="Maximum number of directory/file entries returned."
     )
 
 
@@ -400,7 +492,15 @@ class PathList(UCTool, BaseReadWrite):
 
     # custom variables
     ignore_pattern: list = Field(
-        default=["*__pycache__*"],
+        default=[
+            "*__pycache__*",
+            ".git*",
+            "*/.git*",
+            "llm_input_dumps*",
+            "*/llm_input_dumps*",
+            "toffee_tmp_*",
+            "*/toffee_tmp_*",
+        ],
         description="Patterns to ignore files/directories, e.g., '*.tmp'."
     )
 
@@ -410,9 +510,21 @@ class PathList(UCTool, BaseReadWrite):
     )
 
     def _run(
-        self, path: str = ".", depth: int = -1, run_manager: Optional[CallbackManagerForToolRun] = None
+        self,
+        path: str = ".",
+        directory: Optional[str] = None,
+        depth: int = -1,
+        max_entries: int = 200,
+        run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> str:
         """List all files in a directory of the workspace, including subdirectories."""
+        if directory:
+            if path not in ("", ".") and os.path.normpath(path) != os.path.normpath(directory):
+                msg = "PathList received conflicting 'path' and 'directory' arguments."
+                self.do_callback(False, path, msg)
+                return str_error(msg)
+            path = directory
+        max_entries = max(1, min(int(max_entries or 200), 2000))
         success, msg, real_path = self.check_dir(path)
         if not success:
             self.do_callback(False, path, msg)
@@ -424,26 +536,40 @@ class PathList(UCTool, BaseReadWrite):
         count_directories = 0
         count_files = 0
         index = 0
-        for root, _, files in os.walk(real_path):
+        truncated = False
+
+        def is_ignored(relative_path: str) -> bool:
+            normalized = relative_path.replace(os.sep, "/").lstrip("./")
+            return (
+                any(fnmatch.fnmatch(normalized, pattern) for pattern in self.ignore_pattern)
+                or any(normalized.startswith(str(prefix).replace(os.sep, "/").lstrip("./")) for prefix in self.ignore_dirs_files)
+            )
+
+        for root, dirs, files in os.walk(real_path):
             level = root.replace(real_path, '').count(os.sep)
             if level > depth:
+                dirs[:] = []
                 continue
             directory =  os.path.relpath(root, self.workspace)
-            if any(fnmatch.fnmatch(directory, pattern) for pattern in self.ignore_pattern):
+            if is_ignored(directory):
+                dirs[:] = []
                 continue
-            if any(directory.startswith(p) for p in self.ignore_dirs_files):
-                continue
+            dirs[:] = [
+                name for name in dirs
+                if not is_ignored(os.path.join(directory, name))
+            ]
             if not directory == ".":
                 result.append(f"{index}    {directory}/".strip() + "    (type: directory, size: N/A, bytes: N/A)")
                 index += 1
                 count_directories += 1
+                if index >= max_entries:
+                    truncated = True
+                    break
             for file in files:
                 tfile_path = os.path.join(directory, file)
                 if tfile_path.startswith("./"):
                     tfile_path = tfile_path[2:]
-                if any(fnmatch.fnmatch(tfile_path, pattern) for pattern in self.ignore_pattern):
-                    continue
-                if any(tfile_path.startswith(p) for p in self.ignore_dirs_files):
+                if is_ignored(tfile_path):
                     continue
                 # get the lines of the file
                 # check if the file is a text file
@@ -454,8 +580,20 @@ class PathList(UCTool, BaseReadWrite):
                 result.append(f"{index}    {tfile_path.strip()}" + f"    (type: {file_type}, size: {file_size}, bytes: {bytes_count})")
                 index += 1
                 count_files += 1
+                if index >= max_entries:
+                    truncated = True
+                    break
+            if truncated:
+                break
         if result:
-            ret_head = str_info(f"\nFound {count_directories} directories and {count_files} files in workspace.\n\n")
+            if truncated:
+                result.append(
+                    f"... (truncated at {max_entries} entries; pass a narrower path or depth to inspect more)"
+                )
+            ret_head = str_info(
+                f"\nFound {count_directories} directories and {count_files} files"
+                f" under {path}{' (truncated)' if truncated else ''}.\n\n"
+            )
             result.insert(0, f"Index    Name    (Type, Size, Bytes)")
             self.do_callback(True, path, result)
             return ret_head + str_return("\n".join(result))
@@ -681,6 +819,8 @@ class EditTextFile(UCTool, BaseReadWrite):
     def _run(self, path: str, data: str = None, mode: str = "replace", start: int = 1, count: int = -1, preserve_indent: bool = False,
              run_manager: Optional[CallbackManagerForToolRun] = None) -> str:
         """Edit or create a text file in the workspace with specified mode."""
+        if not path:
+            return str_error("No path is provided, need a valid relative file path.")
         start = start - 1 # Convert to 0-based index
         self.create_file = True  # ensure file is created if not exists
         # Validate mode parameter
@@ -696,7 +836,8 @@ class EditTextFile(UCTool, BaseReadWrite):
             return str_error(emsg)
         if os.path.isfile(rpath):
             if mode in ["write"]:
-                emsg = f"File '{path}' already exists, cannot use 'write' mode on existing files. Please check if this file is a template you need to fill."
+                emsg = f"File '{path}' already exists, cannot use 'write' mode on existing files. " + \
+                        "Please read the file's content to determine whether you need to edit it using the 'replace' mode."
                 self.do_callback(False, path, emsg)
                 return str_error(emsg)
         else:
@@ -720,6 +861,10 @@ class EditTextFile(UCTool, BaseReadWrite):
             if mode == "write":
                 # WriteToFile functionality
                 is_existed_file = os.path.exists(real_path)
+                syntax_error = _python_syntax_error(path, data or "")
+                if syntax_error:
+                    self.do_callback(False, path, syntax_error)
+                    return str_error(syntax_error)
                 with open(real_path, 'w', encoding='utf-8') as f:
                     if data is None:
                         info(f"Clearing file {real_path}.")
@@ -729,11 +874,22 @@ class EditTextFile(UCTool, BaseReadWrite):
                         f.write(data)
                     f.flush()
                 msg = f"Write {len(data) if data else 0} characters to '{path}' complete."
-                self.do_callback(True, path, msg)
+                self.do_callback(True, path, {
+                    "op": "write",
+                    "exists_before": is_existed_file,
+                    "text": _text_change_stats(data),
+                })
                 return str_info(msg)
 
             elif mode == "append":
                 # AppendToFile functionality
+                with open(real_path, 'r', encoding='utf-8') as f:
+                    original_content = f.read()
+                candidate_content = "" if data is None else original_content + data
+                syntax_error = _python_syntax_error(path, candidate_content)
+                if syntax_error:
+                    self.do_callback(False, path, syntax_error)
+                    return str_error(syntax_error)
                 with open(real_path, 'a', encoding='utf-8') as f:
                     if data is None:
                         info(f"Clearing file {real_path}.")
@@ -742,7 +898,10 @@ class EditTextFile(UCTool, BaseReadWrite):
                         info(f"Appending data to file {real_path}.")
                         f.write(data)
                     f.flush()
-                self.do_callback(True, path, data)
+                self.do_callback(True, path, {
+                    "op": "append",
+                    "text": _text_change_stats(data),
+                })
                 return str_info(f"Append {len(data) if data else 0} characters complete." if data else f"File({path}) cleared.")
 
             elif mode == "replace":
@@ -795,6 +954,10 @@ class EditTextFile(UCTool, BaseReadWrite):
 
                 # Construct new file content
                 lines_new = lines_pred + lines_insert + lines_after
+                syntax_error = _python_syntax_error(path, "".join(lines_new))
+                if syntax_error:
+                    self.do_callback(False, path, syntax_error)
+                    return str_error(syntax_error)
                 # Write the new content
                 with open(real_path, 'w', encoding='utf-8') as f:
                     f.writelines(lines_new)
@@ -814,7 +977,22 @@ class EditTextFile(UCTool, BaseReadWrite):
                 if data is not None:
                     data_lines = len(data.split('\n'))
                     operation_desc += f" with {data_lines} new line(s)"
-                self.do_callback(True, path, {"start": start+1, "count": count, "data": data})
+                if count == -1:
+                    removed_lines = max(0, lines_count - start)
+                elif count == 0:
+                    removed_lines = 0
+                else:
+                    removed_lines = min(count, max(0, lines_count - start))
+                changed_text = _text_change_stats(data)
+                self.do_callback(True, path, {
+                    "op": "replace_lines",
+                    "start": start + 1,
+                    "count": count,
+                    "removed_lines": removed_lines,
+                    "inserted_lines": changed_text["lines"],
+                    "preserve_indent": bool(preserve_indent),
+                    "text": changed_text,
+                })
                 # Generate diff for better understanding
                 diff_result = ""
                 if data is not None:
@@ -838,6 +1016,16 @@ class EditTextFile(UCTool, BaseReadWrite):
         """Initialize the tool."""
         super().__init__(**kwargs)
         self.init_base_rw(workspace, write_dirs, un_write_dirs)
+
+
+class EditFileDialogs(EditTextFile):
+    """Compatibility alias for models that hallucinate this editor tool name."""
+    name: str = "EditFileDialogs"
+    description: str = (
+        "Compatibility alias for EditTextFile. Use this only when you need to edit "
+        "or create a text file in the workspace. It accepts the same arguments as "
+        "EditTextFile: path, data, mode, start, count, preserve_indent."
+    )
 
 
 class ArgCopyFile(BaseModel):
@@ -914,7 +1102,14 @@ class CopyFile(UCTool, BaseReadWrite):
             source_size = get_file_size(real_source_path)
             dest_size = get_file_size(dest_real_path)
             
-            self.do_callback(True, dest_path, f"File copied successfully: {source_size} bytes")
+            self.do_callback(True, dest_path, {
+                "op": "copy",
+                "source_path": source_path,
+                "dest_path": dest_path,
+                "bytes": source_size,
+                "overwrite": bool(overwrite),
+                "dest_bytes": dest_size,
+            })
             return str_info(f"File copied successfully from '{source_path}' to '{dest_path}' ({bytes_to_human_readable(source_size)})")
             
         except (IOError, OSError) as e:
@@ -1006,7 +1201,13 @@ class MoveFile(UCTool, BaseReadWrite):
             # Get file size for confirmation
             dest_size = get_file_size(dest_real_path)
             
-            self.do_callback(True, dest_path, f"File moved successfully: {dest_size} bytes")
+            self.do_callback(True, dest_path, {
+                "op": "move",
+                "source_path": source_path,
+                "dest_path": dest_path,
+                "bytes": dest_size,
+                "overwrite": bool(overwrite),
+            })
             return str_info(f"File moved successfully from '{source_path}' to '{dest_path}' ({bytes_to_human_readable(dest_size)})")
             
         except (IOError, OSError) as e:
@@ -1021,8 +1222,11 @@ class MoveFile(UCTool, BaseReadWrite):
 
 
 class ArgDeleteFile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     path: str = Field(
-        default=None,
+        ...,
+        min_length=1,
         description="File path to delete, relative to the workspace."
     )
     is_dir: bool = Field(
@@ -1046,9 +1250,14 @@ class DeleteFile(UCTool, BaseReadWrite):
     args_schema: Optional[ArgsSchema] = ArgDeleteFile
     return_direct: bool = False
 
-    def _run(self, path: str, is_dir: bool = False, recursive: bool = False,
+    def _run(self, path: str = None, is_dir: bool = False, recursive: bool = False,
              run_manager: Optional[CallbackManagerForToolRun] = None) -> str:
         """Delete a file or directory in the workspace."""
+        if not isinstance(path, str) or not path.strip():
+            emsg = "DeleteFile requires a non-empty string 'path' argument."
+            self.do_callback(False, path or "", emsg)
+            return str_error(emsg)
+        path = path.strip()
         target_path = os.path.abspath(os.path.join(self.workspace, path))
         if not os.path.exists(target_path):
             emsg = f"Path {path} does not exist in workspace"
@@ -1076,12 +1285,18 @@ class DeleteFile(UCTool, BaseReadWrite):
                 if recursive:
                     info(f"Recursively deleting directory {target_path} and all its contents.")
                     shutil.rmtree(target_path)
-                    self.do_callback(True, path, f"Directory {path} and all contents deleted recursively.")
+                    self.do_callback(True, path, {
+                        "op": "delete_directory",
+                        "recursive": True,
+                    })
                     return str_info(f"Directory {path} and all its contents deleted successfully.")
                 else:
                     info(f"Deleting empty directory {target_path}.")
                     os.rmdir(target_path)
-                    self.do_callback(True, path, f"Empty directory {path} deleted.")
+                    self.do_callback(True, path, {
+                        "op": "delete_directory",
+                        "recursive": False,
+                    })
                     return str_info(f"Empty directory {path} deleted successfully.")
             else:
                 if is_dir:
@@ -1091,7 +1306,9 @@ class DeleteFile(UCTool, BaseReadWrite):
                 
                 info(f"Deleting file {target_path}.")
                 os.remove(target_path)
-                self.do_callback(True, path, f"File {path} deleted.")
+                self.do_callback(True, path, {
+                    "op": "delete_file",
+                })
                 return str_info(f"File {path} deleted successfully.")
         
         except (IOError, OSError) as e:
@@ -1155,7 +1372,12 @@ class CreateDirectory(UCTool, BaseReadWrite):
                 return str_error(error_msg)
             elif os.path.isdir(target_path):
                 if exist_ok:
-                    self.do_callback(True, path, f"Directory {path} already exists.")
+                    self.do_callback(True, path, {
+                        "op": "create_directory",
+                        "already_exists": True,
+                        "parents": bool(parents),
+                        "exist_ok": bool(exist_ok),
+                    })
                     return str_info(f"Directory {path} already exists.")
                 else:
                     error_msg = f"Directory {path} already exists. Use exist_ok=True to ignore this error."
@@ -1171,7 +1393,12 @@ class CreateDirectory(UCTool, BaseReadWrite):
                 os.mkdir(target_path)
                 info(f"Created directory {target_path}.")
             
-            self.do_callback(True, path, f"Directory {path} created successfully.")
+            self.do_callback(True, path, {
+                "op": "create_directory",
+                "already_exists": False,
+                "parents": bool(parents),
+                "exist_ok": bool(exist_ok),
+            })
             return str_info(f"Directory {path} created successfully.")
         
         except FileExistsError:
@@ -1273,6 +1500,11 @@ class ReplaceStringInFile(UCTool, BaseReadWrite):
                 # Perform the replacement
                 new_content = original_content.replace(old_string, new_string, 1)
 
+            syntax_error = _python_syntax_error(path, new_content)
+            if syntax_error:
+                self.do_callback(False, path, syntax_error)
+                return str_error(syntax_error)
+
             # Write the new content back to the file
             with open(real_path, 'w', encoding='utf-8') as f:
                 f.write(new_content)
@@ -1284,7 +1516,12 @@ class ReplaceStringInFile(UCTool, BaseReadWrite):
             diff_result = get_diff(original_lines, new_lines, path)
 
             success_msg = f"Successfully replaced 1 occurrence of the specified string in {path}."
-            self.do_callback(True, path, {"old_string": old_string, "new_string": new_string})
+            self.do_callback(True, path, {
+                "op": "replace_string",
+                "full_rewrite": not bool(old_string),
+                "old_text": _text_change_stats(old_string),
+                "new_text": _text_change_stats(new_string),
+            })
 
             return str_info(success_msg) + diff_result
 

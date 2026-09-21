@@ -6,6 +6,7 @@ import sys
 import tempfile
 import shutil
 import unittest
+from langchain_core.messages import ToolMessage
 
 # Add project root to path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -103,6 +104,23 @@ class TestFileOpsTools(unittest.TestCase):
         result = tool._run(pattern="line 1", case_sensitive=True)
         self.assertIn("No matches found", result)
 
+    def test_search_text_bounds_large_lines_and_ignores_runtime_traces(self):
+        tool = SearchText(workspace=self.workspace)
+        with open(os.path.join(self.workspace, "large.txt"), "w", encoding="utf-8") as handle:
+            handle.write("needle " + ("x" * 10000) + "\n")
+        os.makedirs(os.path.join(self.workspace, "llm_input_dumps"), exist_ok=True)
+        with open(os.path.join(self.workspace, "llm_input_dumps", "req.json"), "w", encoding="utf-8") as handle:
+            handle.write("runtime-trace-only " + ("y" * 10000) + "\n")
+        with open(os.path.join(self.workspace, "structured_events.jsonl"), "w", encoding="utf-8") as handle:
+            handle.write("runtime-trace-only\n")
+
+        bounded = tool._run(pattern="needle", max_line_chars=100, max_output_chars=1000)
+        ignored = tool._run(pattern="runtime-trace-only")
+
+        self.assertIn("line truncated to 100 characters", bounded)
+        self.assertLess(len(bounded), 1400)
+        self.assertIn("No matches found", ignored)
+
     def test_find_files(self):
         """Test file finding functionality"""
         tool = FindFiles(workspace=self.workspace)
@@ -132,20 +150,55 @@ class TestFileOpsTools(unittest.TestCase):
         self.assertIn("simple.txt", result)
         self.assertNotIn("nested/deep/deep.txt", result)
 
+    def test_path_list_accepts_directory_alias(self):
+        """Model-emitted `directory` must not silently fall back to workspace root."""
+        tool = PathList(workspace=self.workspace)
+
+        result = tool.invoke({"directory": "subdir", "depth": 0})
+
+        self.assertIn("subdir/nested.txt", result)
+        self.assertNotIn("simple.txt", result)
+
+    def test_path_list_caps_output_and_prunes_generated_directories(self):
+        tool = PathList(workspace=self.workspace)
+        os.makedirs(os.path.join(self.workspace, ".git"), exist_ok=True)
+        os.makedirs(os.path.join(self.workspace, "llm_input_dumps"), exist_ok=True)
+        os.makedirs(os.path.join(self.workspace, "data", "toffee_tmp_001"), exist_ok=True)
+        with open(os.path.join(self.workspace, ".git", "hidden"), "w") as file:
+            file.write("hidden")
+        with open(os.path.join(self.workspace, "llm_input_dumps", "huge.json"), "w") as file:
+            file.write("hidden")
+        with open(os.path.join(self.workspace, "data", "toffee_tmp_001", "wave.fst"), "w") as file:
+            file.write("hidden")
+
+        result = tool._run(path=".", depth=-1, max_entries=4)
+
+        self.assertIn("truncated at 4 entries", result)
+        self.assertNotIn("huge.json", result)
+        self.assertNotIn("wave.fst", result)
+        self.assertNotIn(".git/hidden", result)
+
+    def test_path_list_rejects_conflicting_path_aliases(self):
+        tool = PathList(workspace=self.workspace)
+
+        result = tool._run(path="subdir", directory="nested")
+
+        self.assertIn("conflicting 'path' and 'directory'", result)
+
     def test_read_text_file_basic(self):
         """Test basic text file reading"""
         tool = ReadTextFile(workspace=self.workspace)
         
         # Read entire file
-        result = tool._run(path="simple.txt", start=0, count=-1)
+        result = tool._run(path="simple.txt", start=1, count=-1)
         self.assertIn("Read 3/3 lines", result)
-        self.assertIn("0: Line 1", result)
-        self.assertIn("2: Line 3", result)
+        self.assertIn("1: Line 1", result)
+        self.assertIn("3: Line 3", result)
         
         # Read partial file
-        result = tool._run(path="simple.txt", start=1, count=1)
+        result = tool._run(path="simple.txt", start=2, count=1)
         self.assertIn("Read 1/3 lines", result)
-        self.assertIn("1: Line 2", result)
+        self.assertIn("2: Line 2", result)
 
     def test_read_text_file_edge_cases(self):
         """Test edge cases for text file reading"""
@@ -159,9 +212,9 @@ class TestFileOpsTools(unittest.TestCase):
         result = tool._run(path="simple.txt", start=10, count=1)
         self.assertIn("out of range", result)
         
-        # Negative indexing
+        # Non-positive starts are normalized to the first 1-based line.
         result = tool._run(path="simple.txt", start=-1, count=1)
-        self.assertIn("2: Line 3", result)
+        self.assertIn("1: Line 1", result)
 
     def test_read_bin_file(self):
         """Test binary file reading"""
@@ -232,6 +285,30 @@ class TestFileOpsTools(unittest.TestCase):
         
         # Verify deletion
         self.assertFalse(os.path.exists(temp_file))
+
+    def test_delete_file_rejects_malformed_langgraph_arguments(self):
+        """Malformed model arguments must not abort the LangGraph run."""
+        tool = DeleteFile(workspace=self.workspace)
+
+        result = tool.invoke({
+            "name": tool.name,
+            "args": {"false": "current_progress.md"},
+            "id": "call-delete-invalid-1",
+            "type": "tool_call",
+        })
+
+        self.assertIsInstance(result, ToolMessage)
+        self.assertEqual(result.tool_call_id, "call-delete-invalid-1")
+        self.assertEqual(result.status, "error")
+        self.assertIn("invalid arguments", result.content)
+        self.assertIn("path", result.content)
+
+    def test_delete_file_defensively_rejects_none_path(self):
+        tool = DeleteFile(workspace=self.workspace)
+
+        result = tool._run(path=None)
+
+        self.assertIn("requires a non-empty string 'path'", result)
 
     def test_delete_directory(self):
         """Test directory deletion functionality"""
@@ -364,6 +441,77 @@ class TestFileOpsTools(unittest.TestCase):
         # Verify callback was called
         self.assertTrue(len(callback_results) > 0)
         self.assertTrue(callback_results[0][0])  # success should be True
+
+    def test_call_guard_blocks_edit_before_file_side_effect(self):
+        tool = EditTextFile(workspace=self.workspace)
+        tool.append_call_guard(lambda _input: "[MUTATION_BUDGET_BLOCKED]")
+
+        result = tool.invoke({
+            "path": "simple.txt",
+            "data": "changed\n",
+            "mode": "replace",
+            "start": 1,
+            "count": 1,
+        })
+
+        self.assertIn("MUTATION_BUDGET_BLOCKED", result)
+        with open(os.path.join(self.workspace, "simple.txt"), encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), self.test_files["simple.txt"])
+
+    def test_call_guard_returns_tool_message_for_langgraph_tool_call(self):
+        tool = EditTextFile(workspace=self.workspace)
+        tool.append_call_guard(lambda _input: "[MUTATION_BUDGET_BLOCKED]")
+
+        result = tool.invoke({
+            "name": tool.name,
+            "args": {
+                "path": "simple.txt",
+                "data": "changed\n",
+                "mode": "replace",
+                "start": 1,
+                "count": 1,
+            },
+            "id": "call-budget-1",
+            "type": "tool_call",
+        })
+
+        self.assertIsInstance(result, ToolMessage)
+        self.assertEqual(result.tool_call_id, "call-budget-1")
+        self.assertEqual(result.status, "error")
+        self.assertIn("MUTATION_BUDGET_BLOCKED", result.content)
+        with open(os.path.join(self.workspace, "simple.txt"), encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), self.test_files["simple.txt"])
+
+    def test_python_line_edit_rejects_syntax_error_without_side_effect(self):
+        tool = EditTextFile(workspace=self.workspace)
+        original = self.test_files["indented.py"]
+
+        result = tool._run(
+            path="indented.py",
+            data="    def broken(:\n        return 0",
+            mode="replace",
+            start=2,
+            count=2,
+            preserve_indent=True,
+        )
+
+        self.assertIn("Python syntax validation failed", result)
+        with open(os.path.join(self.workspace, "indented.py"), encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), original)
+
+    def test_replace_string_rejects_invalid_python_without_side_effect(self):
+        tool = ReplaceStringInFile(workspace=self.workspace)
+        original = self.test_files["indented.py"]
+
+        result = tool._run(
+            path="indented.py",
+            old_string="        return 42",
+            new_string="return 42",
+        )
+
+        self.assertIn("Python syntax validation failed", result)
+        with open(os.path.join(self.workspace, "indented.py"), encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), original)
 
 
 class TestBaseReadWrite(unittest.TestCase):

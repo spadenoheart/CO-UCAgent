@@ -1,0 +1,26 @@
+# Runnable compatibility profile. The included source YAML is preserved byte-for-byte.
+include: legacy_20260717_workflow_source.yaml
+
+# Route pre-sync stage contracts through the frozen 2026-07-15 checker implementation.
+"stage[0].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerMarkdownFileFormat
+"stage[1].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerMarkdownFileFormat
+"stage[2].stage[0].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerLabelStructure
+"stage[2].stage[1].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerLabelStructure
+"stage[2].stage[2].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerLabelStructure
+"stage[3].stage[0].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerDutCreation
+"stage[3].stage[1].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerDutFixture
+"stage[4].stage[0].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerCoverageGroup
+"stage[4].stage[1].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerCoverageGroup
+"stage[4].stage[1].stage[0].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerCoverageGroupBatchImplementation
+"stage[5].stage[1].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerBundleWrapper
+"stage[5].stage[2].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerMockComponent
+"stage[5].stage[3].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerEnvFixture
+"stage[5].stage[4].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerEnvFixtureTest
+"stage[6].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerDutApi
+"stage[7].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerDutApiTest
+"stage[8].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerTestTemplate
+"stage[9].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerTestCase
+"stage[9].stage[0].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerBatchTestsImplementation
+"stage[10].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerTestCaseWithLineCoverage
+"stage[11].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test_random.RandomTestCasesChecker
+"stage[12].checker[0].clss": ucagent.checkers.legacy_20260717_unity_test.UnityChipCheckerTestCase

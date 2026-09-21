@@ -14,7 +14,13 @@ output/
 *.dat
 *.hier
 log/
-node_modules/
+res.csv
+*.pid
+exit_code
+llm_input_dumps/
+benchmark/**/*_runs/
+benchmark/**/workspace/
+benchmark/**/home/
 _version.py
 # Byte-compiled / optimized / DLL files
 __pycache__/

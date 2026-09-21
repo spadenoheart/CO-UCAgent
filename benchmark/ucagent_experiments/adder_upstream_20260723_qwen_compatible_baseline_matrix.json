@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "experiment": "adder_upstream_0_9_1_qwen_compatible_behavioral_baseline",
+  "seeds": [
+    20260721,
+    20260722,
+    20260723
+  ],
+  "fixed_configuration": {
+    "dut": "Adder",
+    "workflow_profile": "upstream_0.9.1_20260716",
+    "source_root": "../UCAgent-main",
+    "source_snapshot_paths": [
+      "ucagent",
+      "ucagent.py",
+      "Makefile",
+      "config.yaml",
+      "examples/Adder"
+    ],
+    "source_snapshot_sha256": "8fa738f6a828041d9aea138f204774f8f160cf3996d54eccd42a96f6c318a7b0",
+    "agent_config": "../UCAgent-main/config.yaml",
+    "interaction_mode": "standard",
+    "stream_output": true,
+    "isolate_home": true,
+    "requires_embedding": false,
+    "required_python_packages": {
+      "langchain": "1.2.15",
+      "langchain-core": "1.2.10",
+      "langgraph": "1.1.5",
+      "langgraph-prebuilt": "1.0.9"
+    },
+    "check_summarization_middleware": true,
+    "requires_langchain_tool_call_preflight": true,
+    "model": "mdq100/qwen3.5-coder:122b-64k",
+    "source_model": "mdq100/qwen3.5-coder:122b",
+    "api_base": "http://127.0.0.1:11434/v1",
+    "num_ctx": 65536,
+    "summary_max_tokens": 51200,
+    "summary_max_output_tokens": 1024,
+    "observed_gpu_count": 5,
+    "quantization": "Q4_K_M",
+    "expected_server_environment": {
+      "OLLAMA_KEEP_ALIVE": "-1",
+      "OLLAMA_FLASH_ATTENTION": "1",
+      "OLLAMA_KV_CACHE_TYPE": "q8_0",
+      "OLLAMA_NUM_PARALLEL": "1",
+      "OLLAMA_MAX_LOADED_MODELS": "1",
+      "OLLAMA_SCHED_SPREAD": "false"
+    },
+    "unset_environment": [
+      "OPENAI_TEMPERATURE",
+      "OPENAI_TOP_P",
+      "EMBED_MODEL",
+      "EMBED_OPENAI_API_BASE",
+      "EMBED_OPENAI_API_KEY",
+      "UCAGENT_PROMPT_VARIANT",
+      "UCAGENT_LLM_INPUT_DUMP",
+      "UCAGENT_CONTEXT_REUSE_PACK",
+      "UCAGENT_CONTEXT_REUSE_MIN_QUALITY",
+      "UCAGENT_CONTEXT_REUSE_UTILITY_GATE",
+      "UCAGENT_CONTEXT_REUSE_MIN_UTILITY",
+      "UCAGENT_CONTEXT_REUSE_STRICT_ACTION_MATCH",
+      "UCAGENT_CONTEXT_REUSE_EXACT_PATTERN_GROUPS",
+      "UCAGENT_CONTEXT_REUSE_GENERIC_SIGNATURE",
+      "UCAGENT_CONTEXT_REUSE_SKIP_NON_REUSABLE",
+      "UCAGENT_CONTEXT_REUSE_STRICT_HINT_MATCH",
+      "UCAGENT_CONTEXT_REUSE_ALLOW_HINTS_ONLY",
+      "UCAGENT_CONTEXT_REUSE_DESTRUCTIVE_SUPPORT_GATE"
+    ],
+    "required_controls": [
+      "execute the source tree under UCAgent-main without source edits",
+      "use upstream workflow, prompts, checkers, and context middleware",
+      "delete only the upstream period stop sequence through a recorded CLI override",
+      "pin the minimum compatible LangChain and LangGraph dependency set",
+      "exercise the real stage-0 prompt and all UCAgent tools before every run",
+      "abort after three consecutive empty AI turns",
+      "use an isolated HOME so ~/.ucagent/setting.yaml cannot contaminate the run",
+      "same Q4_K_M model alias and 65536-token model context",
+      "same five-GPU Ollama server with no concurrent inference workload",
+      "do not mix this baseline with raw-upstream-invalid, legacy-workflow, or research-arm runs"
+    ],
+    "note": "This is the synchronized upstream UCAgent 0.9.1 behavioral baseline adapted only for the local Qwen OpenAI-compatible backend. The source tree remains unchanged. The recorded override removes the upstream stop sequence ['.'], which causes the 122B Qwen model to return an empty AIMessage with finish_reason=stop when the real 25-tool stage-0 request is used. A controlled replay with the same seed, messages, tools, and streaming mode returned ReadTextFile immediately after removing only that stop sequence. Prompt v1, data collection, long-term memory, failure-aware context, and context reuse remain disabled. The 51200 summary trigger is the upstream default and is distinct from the model's 65536-token context limit."
+  },
+  "arms": [
+    {
+      "id": "UPSTREAM_BASELINE",
+      "description": "Upstream UCAgent 0.9.1 workflow with a recorded Qwen stop-sequence compatibility override",
+      "repeat": 3,
+      "environment": {
+        "UC_MODEL_TYPE": "openai",
+        "ENABLE_LANGFUSE": "false",
+        "ENABLE_LLM_RATE_LIMIT": "false",
+        "ENABLE_LLM_SUGGESTION": "false",
+        "ENABLE_LLM_FAIL_SUGGESTION": "false",
+        "ENABLE_LLM_PASS_SUGGESTION": "false",
+        "NEED_REF_MODEL": "false",
+        "IGNORE_MOCK_COMPONENT": "true",
+        "HUMAN_CHECK_CK": "false",
+        "SKIP_ENV_HUMAN_CHECK": "true",
+        "TEMPLATE_MUST_FAIL": "true",
+        "BATCH_SIZE_RANDOM_TC": "10",
+        "BATCH_SIZE_TC": "10",
+        "BATCH_SIZE_TMP": "20",
+        "STATIC_ANALYSIS_BATCH_SIZE": "1",
+        "MIN_LINE_COV_RATE": "0.9"
+      },
+      "overrides": [
+        "openai.model_kwargs.stop=@delete"
+      ]
+    }
+  ],
+  "reporting_policy": {
+    "initial_diagnostic": "Run seed 20260721 first and inspect stage residency before scheduling more seeds.",
+    "paper_result": "Run all three fixed seeds and report completion rate, wall time, stage residency, token usage when available, and failure-loop counts.",
+    "invalid_attempt": "adder_upstream_20260723_baseline_locked_v2_runs is excluded because the upstream period stop sequence produced 862 empty AI turns and no tool call at stage 0.",
+    "do_not_pool": "Do not pool with adder_upstream_20260723_baseline_runs, adder_upstream_20260723_baseline_locked_v2_runs, adder_b0_b3_runs, adder_timeout_ttft_fix_20260722, or legacy_20260717 workflow results."
+  }
+}

@@ -4,7 +4,8 @@
 
 from langchain_core.tools import BaseTool
 from langchain_core.tools.base import ArgsSchema
-from pydantic import Field, BaseModel
+from langchain_core.messages import ToolMessage
+from pydantic import Field, BaseModel, ConfigDict, PrivateAttr, ValidationError
 from typing import Callable, Optional, Any
 from mcp.server.fastmcp import Context
 from langchain_mcp_adapters.tools import _get_injected_args, create_model, ArgModelBase, FuncMetadata
@@ -21,6 +22,17 @@ import time
 class EmptyArgs(BaseModel):
     """Empty arguments for tools that do not require any input."""
     pass
+
+
+class ExtraArgModelBase(ArgModelBase):
+    """FastMCP argument model base that preserves undeclared tool arguments."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
+
+    def model_dump_one_level(self) -> dict[str, Any]:
+        kwargs = super().model_dump_one_level()
+        kwargs.update(getattr(self, "__pydantic_extra__", None) or {})
+        return kwargs
 
 
 class UCTool(BaseTool):
@@ -90,10 +102,14 @@ class UCTool(BaseTool):
         default=False,
         description="send block message to client"
     )
-    async_lock: asyncio.Lock = Field(
-        default_factory=asyncio.Lock,
-        description="Asynchronous lock for thread safety."
-    )
+    _async_lock: asyncio.Lock = PrivateAttr(default=None)
+    _call_guards: list[Callable] = PrivateAttr(default_factory=list)
+
+    @property
+    def async_lock(self) -> asyncio.Lock:
+        if self._async_lock is None:
+            self._async_lock = asyncio.Lock()
+        return self._async_lock
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -154,13 +170,66 @@ class UCTool(BaseTool):
         return {"error": f"Tool ({self.__class__.__name__}) call timed out after {self.call_time_out} seconds.",
                 "logs":  data}
 
+    def append_call_guard(self, guard: Callable):
+        """Register a guard that may reject a call before tool side effects."""
+        if guard not in self._call_guards:
+            self._call_guards.append(guard)
+        return self
+
+    def remove_call_guard(self, guard: Callable):
+        if guard in self._call_guards:
+            self._call_guards.remove(guard)
+        return self
+
+    def _run_call_guards(self, tool_input) -> Optional[str]:
+        for guard in list(self._call_guards):
+            result = guard(tool_input)
+            if result is None or result is True:
+                continue
+            if isinstance(result, tuple) and len(result) == 2:
+                allowed, message = result
+                if allowed:
+                    continue
+                return str(message)
+            if isinstance(result, dict):
+                if result.get("allowed", False):
+                    continue
+                return str(result.get("message") or result)
+            if result is False:
+                return f"[ERROR] Tool ({self.__class__.__name__}) call blocked by runtime policy."
+            return str(result)
+        return None
+
+    def _error_result(self, tool_input, message: str):
+        """Preserve the LangGraph tool-call contract for recoverable errors."""
+        if (
+            isinstance(tool_input, dict)
+            and tool_input.get("id")
+            and isinstance(tool_input.get("args"), dict)
+        ):
+            return ToolMessage(
+                content=message,
+                tool_call_id=str(tool_input["id"]),
+                name=str(tool_input.get("name") or self.name),
+                status="error",
+            )
+        return message
+
     def invoke(self, input, config = None, **kwargs):
-        if self.is_disabled:
-            return {"error": f"Tool ({self.__class__.__name__}) is disabled. Reason: {self.disable_reason}"}
+        blocked = self._run_call_guards(input)
+        if blocked is not None:
+            return self._error_result(input, blocked)
         self.call_count += 1
         self.is_in_call = True
         try:
             return super().invoke(input, config, **kwargs)
+        except ValidationError as exc:
+            error_msg = (
+                f"[ERROR] Tool ({self.__class__.__name__}) received invalid "
+                f"arguments: {exc}"
+            )
+            fc.warning(error_msg)
+            return self._error_result(input, error_msg)
         finally:
             self.is_in_call = False
             self.last_call_time = time.time()
@@ -214,24 +283,35 @@ class UCTool(BaseTool):
 
     async def ainvoke(self, input, config = None, **kwargs):
         if self.is_disabled:
-            return {"error": f"Tool ({self.__class__.__name__}) is disabled. Reason: {self.disable_reason}"}
+            return f"[ERROR] Tool ({self.__class__.__name__}) is disabled. Reason: {self.disable_reason}"
+        blocked = self._run_call_guards(input)
+        if blocked is not None:
+            return self._error_result(input, blocked)
+        alive_thread = None
         try:
             await asyncio.wait_for(self.async_lock.acquire(), timeout=self.lock_time_out)
         except asyncio.TimeoutError:
-            error_msg = {"error": f"Tool ({self.__class__.__name__}) is busy, get lock timeout ({self.call_time_out} seconds). Please try again later."}
-            fc.warning(str(error_msg))
+            error_msg = f"[ERROR] Tool ({self.__class__.__name__}) is busy, get lock timeout ({self.call_time_out} seconds). Please try again later."
+            fc.warning(error_msg)
             return error_msg
         except Exception as e:
-            error_msg = {"error": f"Tool ({self.__class__.__name__}) acquire lock error: {str(e)}"}
-            fc.warning(str(error_msg))
+            error_msg = f"[ERROR] Tool ({self.__class__.__name__}) acquire lock error: {str(e)}"
+            fc.warning(error_msg)
             return error_msg
         try:
             data, alive_thread = await self._ainvoke(input, config, **kwargs)
             return data
+        except ValidationError as e:
+            error_msg = (
+                f"[ERROR] Tool ({self.__class__.__name__}) received invalid "
+                f"arguments: {e}"
+            )
+            fc.warning(error_msg)
+            return self._error_result(input, error_msg)
         except Exception as e:
-            error_msg = {"error": f"Tool ({self.__class__.__name__}) ainvoke error: {str(e)}"}
-            fc.warning(str(error_msg))
-            return error_msg
+            error_msg = f"[ERROR] Tool ({self.__class__.__name__}) ainvoke error: {str(e)}"
+            fc.warning(error_msg)
+            return self._error_result(input, error_msg)
         finally:
             if alive_thread is not None:
                 alive_thread.join()
@@ -241,10 +321,12 @@ class UCTool(BaseTool):
         self.call_count += 1
         self.last_call_time = time.time()
         ctx = input.get("ctx", None)
+        tool_input = input.copy()
+        tool_input.pop("ctx", None)
         if not isinstance(ctx, Context):
             try:
                 self.is_in_call = True
-                return await super().ainvoke(input, config, **kwargs), None
+                return await super().ainvoke(tool_input, config, **kwargs), None
             finally:
                 self.is_in_call = False
                 self.last_call_time = time.time()
@@ -256,12 +338,12 @@ class UCTool(BaseTool):
         fc.info(f"set tool ({self.__class__.__name__}) timeout to {timeout + self.lock_time_out} (timeout:{timeout} + lock_time_out:{self.lock_time_out}) seconds")
         timeout = timeout + self.lock_time_out
         if self.is_in_streaming:
-            error_msg = {"error": f"Tool ({self.__class__.__name__}) is already running. Please wait until it finishes."}
-            fc.info(str(error_msg))
+            error_msg = f"[ERROR] Tool ({self.__class__.__name__}) is already running. Please wait until it finishes."
+            fc.info(error_msg)
             return error_msg, None
         if self.is_alive_loop:
-            error_msg = {"error": f"Tool ({self.__class__.__name__}) is in the process of terminating. Please wait until it finishes."}
-            fc.info(str(error_msg))
+            error_msg = f"[ERROR] Tool ({self.__class__.__name__}) is in the process of terminating. Please wait until it finishes."
+            fc.info(error_msg)
             return error_msg, None
         self.is_in_streaming = True
         self.last_call_time = time.time()
@@ -269,12 +351,12 @@ class UCTool(BaseTool):
         alive_thread = threading.Thread(target=self.__alive_loop, args=(timeout, ctx), daemon=True)
         alive_thread.start()
         try:
-            data = await super().ainvoke(input, config, **kwargs)
+            data = await super().ainvoke(tool_input, config, **kwargs)
         except Exception as e:
             import traceback
             fc.info(f"error: {e}")
             fc.info(traceback.format_exc())
-            data = {"error": str(e)}
+            data = f"[ERROR] {str(e)}"
         self.is_in_streaming = False
         self.last_call_time = time.time()
         fc.info(f"call {self.__class__.__name__} exit Stream-MPC mode")
@@ -325,10 +407,24 @@ def to_fastmcp(tool: BaseTool) -> FastMCPTool:
         field: (field_info.annotation, field_info)
         for field, field_info in tool.tool_call_schema.model_fields.items()
     }
+    arg_model_base = ArgModelBase
+    if getattr(getattr(tool, "args_schema", None), "model_config", {}).get("extra") == "allow":
+        raw_parameters = tool.args_schema.model_json_schema()
+        parameters["additionalProperties"] = raw_parameters.get(
+            "additionalProperties",
+            True,
+        )
+        if raw_parameters.get("description"):
+            parameters["description"] = (
+                f"{parameters.get('description', '')}\n\n{raw_parameters['description']}"
+                if parameters.get("description")
+                else raw_parameters["description"]
+            )
+        arg_model_base = ExtraArgModelBase
     arg_model = create_model(
         f"{tool.name}Arguments",
         **field_definitions,
-        __base__=ArgModelBase,
+        __base__=arg_model_base,
     )
     fn_metadata = FuncMetadata(arg_model=arg_model)
 

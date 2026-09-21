@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import copy
+import shutil
 import socket
 import stat
+from collections.abc import Sequence
 from ucagent.util.log import info, warning
 import os
 from typing import List, Tuple, Union
@@ -13,10 +15,15 @@ import time
 import inspect
 import fnmatch
 import ast
+import codecs
+import locale
 from pathlib import Path
 import yaml
 from collections import OrderedDict
 import traceback
+import subprocess
+import selectors
+import signal
 
 
 def fmt_time_deta(sec: Union[int, float, str, None], abbr: bool = False) -> str:
@@ -83,7 +90,7 @@ def is_text_file(file_path: str) -> bool:
         True if the file is a text file, False otherwise.
     """
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             f.read(1000)  # Read a small portion of the file
             return True
     except UnicodeDecodeError:
@@ -132,11 +139,11 @@ def get_sub_str(text, start_str, end_str):
     if start_index == -1:
         return None
     start_index += len(start_str)
-    
+
     end_index = text.find(end_str, start_index)
     if end_index == -1:
         return None
-    
+
     return start_str + text[start_index:end_index].strip() + end_str
 
 
@@ -155,7 +162,7 @@ def str_remove_blank(text: str) -> str:
     :param text: The input string.
     :return: The string with all whitespace characters removed.
     """
-    return ''.join(text.split())
+    return "".join(text.split())
 
 
 def str_replace_to(text: str, old: list, new: str) -> str:
@@ -171,13 +178,23 @@ def str_replace_to(text: str, old: list, new: str) -> str:
     return text
 
 
-def nested_keys_as_list(ndata:dict, leaf:str, keynames: List[str], ex_ignore_names=["line"]) -> Tuple[List[str],List[str]]:
+def nested_keys_as_list(
+    ndata: dict, leaf: str, keynames: List[str], ex_ignore_names=["line", "pline", "nline"]
+) -> Tuple[List[str], List[str]]:
     """Convert nested dictionary keys to a list of paths up to a specified leaf node."""
     broken_leaf = []
-    def _nest_dict_leafs(data, ret_list,
-                         prefix="", stop_key="", leaf_key="",
-                         ignore_keys=[], parent_key=""):
+    def _nest_dict_leafs(
+        data,
+        ret_list,
+        ret_map,
+        prefix="",
+        stop_key="",
+        leaf_key="",
+        ignore_keys=[],
+        parent_key="",
+    ):
         child_count = [len(data[k]) for k in data.keys() if not k in ex_ignore_names]
+        is_processed = False
         for key, value in data.items():
             if isinstance(value, dict):
                 new_prefix = f"{prefix}/{key}" if prefix else key
@@ -185,28 +202,52 @@ def nested_keys_as_list(ndata:dict, leaf:str, keynames: List[str], ex_ignore_nam
                     new_prefix = prefix
                     parent_key = key
                 if key != stop_key:
-                    _nest_dict_leafs(value, ret_list, new_prefix, stop_key, leaf_key, ignore_keys, parent_key)
-            else:
+                    _nest_dict_leafs(
+                        value,
+                        ret_list,
+                        ret_map,
+                        new_prefix,
+                        stop_key,
+                        leaf_key,
+                        ignore_keys,
+                        parent_key,
+                    )
+            elif not is_processed:
                 new_prefix = prefix
                 if key not in ignore_keys:
                     new_prefix = f"{prefix}/{key}" if prefix else key
                 if parent_key == leaf_key:
                     ret_list.append(f"{new_prefix}")
+                    ret_map[new_prefix] = data
+                    is_processed = True
                 else:
                     if child_count and child_count[0] < 1:
                         broken_leaf.append((parent_key, new_prefix, value))
+                        is_processed = True
+
     ret_data = []
+    ret_lblock = OrderedDict()
     stop_keys = keynames + [""]
-    stop_key_map = {k:stop_keys[i+1] for i, k in enumerate(keynames)}
-    _nest_dict_leafs(ndata, ret_data,
-                     stop_key=stop_key_map[leaf], leaf_key=leaf,
-                     ignore_keys=keynames + ex_ignore_names,
-                     parent_key=keynames[0])
-    return ret_data, broken_leaf
+    stop_key_map = {k: stop_keys[i + 1] for i, k in enumerate(keynames)}
+    _nest_dict_leafs(
+        ndata,
+        ret_data,
+        ret_lblock,
+        stop_key=stop_key_map[leaf],
+        leaf_key=leaf,
+        ignore_keys=keynames + ex_ignore_names,
+        parent_key=keynames[0],
+    )
+    return ret_data, broken_leaf, ret_lblock
 
 
-def parse_nested_keys(target_file: str, keyname_list: List[str], prefix_list: List[str], subfix_list: List[str],
-                      ignore_chars: List[str] = ["<", ">"]) -> dict:
+def parse_nested_keys(
+    target_file: str,
+    keyname_list: List[str],
+    prefix_list: List[str],
+    subfix_list: List[str],
+    ignore_chars: List[str] = ["<", ">"],
+) -> dict:
     """Parse the function points and checkpoints from a file."""
     assert os.path.exists(target_file), f"File {target_file} does not exist. You need to provide a valid file path."
     assert len(keyname_list) > 0, "Prefix must be provided."
@@ -214,9 +255,9 @@ def parse_nested_keys(target_file: str, keyname_list: List[str], prefix_list: Li
     assert len(prefix_list) == len(subfix_list), "Prefix and subfix lists must have the same length."
     assert len(prefix_list) == len(keyname_list), "Prefix and keyname lists must have the same length."
     pre_values = [None] * len(prefix_list)
-    key_dict = {}
+    key_dict = OrderedDict()
     def get_pod_next_key(i: int):
-        nkey = keyname_list[i+1] if i < len(keyname_list) - 1 else None
+        nkey = keyname_list[i + 1] if i < len(keyname_list) - 1 else None
         if i == 0:
             return key_dict, nkey
         # Check if parent level exists
@@ -226,6 +267,7 @@ def parse_nested_keys(target_file: str, keyname_list: List[str], prefix_list: Li
     with open(target_file, 'r') as f:
         index = 1
         lines = f.readlines()
+        pre_pod = {}
         for line in lines:
             line = str_remove_blank(line.strip())
             for i, key in enumerate(keyname_list):
@@ -247,7 +289,11 @@ def parse_nested_keys(target_file: str, keyname_list: List[str], prefix_list: Li
                         f"preceded by a '{pre_prf}' tag.\nCurrent line content: {line}"
                     )
                 assert current_key not in pod, f"At line ({index}): '{current_key}' is defined multiple times."
-                pod[current_key] = {"line": index}
+                pline = pre_pod.get("line", index - 5) # default 5 lines before if no previous pod
+                pod[current_key] = {"line": index, "pline": pline, "nline": index + 5} # default 5 more lines for a node
+                if pre_pod:
+                    pre_pod["nline"] = index
+                pre_pod = pod[current_key]
                 if next_key is not None:
                     pod[current_key][next_key] = {}
                 pre_values[i] = pod[current_key]
@@ -263,7 +309,7 @@ def load_json_file(path: str):
     """
     assert os.path.exists(path), f"JSON file {path} does not exist."
     json_file = os.path.join(path)
-    with open(json_file, 'r', encoding='utf-8') as f:
+    with open(json_file, "r", encoding="utf-8") as f:
         try:
             data = json.load(f)
             return data
@@ -271,6 +317,7 @@ def load_json_file(path: str):
             raise ValueError(f"Error decoding JSON from file {json_file}: {e}")
         except Exception as e:
             raise RuntimeError(f"Unexpected error while loading JSON file {json_file}: {e}")
+
 
 def save_json_file(path: str, data):
     """
@@ -289,6 +336,19 @@ def save_json_file(path: str, data):
         except Exception as e:
             raise RuntimeError(f"Unexpected error while saving JSON file {path}: {e}")
 
+def get_abs_path_cwd_ucagent(workspace, path):
+    """
+    Get the absolute path of a file or directory in the workspace.
+    :param workspace: The workspace directory.
+    :param path: The relative or absolute path to be resolved.
+    :return: The absolute path.
+    """
+    ucagent_path = os.path.abspath(workspace + os.sep + ".ucagent")
+    if not os.path.exists(ucagent_path):
+        os.makedirs(ucagent_path)
+    return os.path.abspath(ucagent_path + os.sep + path)
+
+
 def save_ucagent_info(workspace, info: dict):
     """
     Save UCAgent information to a JSON file in the workspace.
@@ -296,8 +356,9 @@ def save_ucagent_info(workspace, info: dict):
     :param info: The UCAgent information to be saved.
     """
     assert os.path.exists(workspace), f"Workspace {workspace} does not exist."
-    info_path = os.path.join(workspace, ".ucagent_info.json")
+    info_path = get_abs_path_cwd_ucagent(workspace, "ucagent_info.json")
     save_json_file(info_path, info)
+
 
 def load_ucagent_info(workspace) -> dict:
     """
@@ -307,12 +368,20 @@ def load_ucagent_info(workspace) -> dict:
     """
     if not os.path.exists(workspace):
         return {}
-    info_path = os.path.join(workspace, ".ucagent_info.json")
+    info_path = get_abs_path_cwd_ucagent(workspace, "ucagent_info.json")
     if not os.path.exists(info_path):
+        return {}
+    if os.path.getsize(info_path) == 0:
         return {}
     return load_json_file(info_path)
 
-def load_toffee_report(result_json_path: str, workspace: str, run_test_success: bool, return_all_checks: bool) -> dict:
+
+def load_toffee_report(
+    result_json_path: str,
+    workspace: str,
+    run_test_success: bool,
+    return_all_checks: bool,
+) -> dict:
     """
     Load a Toffee JSON report from the specified path.
     :param path: Path to the Toffee JSON report file.
@@ -320,7 +389,7 @@ def load_toffee_report(result_json_path: str, workspace: str, run_test_success: 
     """
     assert os.path.exists(result_json_path), f"Toffee report file {result_json_path} does not exist."
     ret_data = {
-            "run_test_success": run_test_success,
+        "run_test_success": run_test_success,
     }
     try:
         data = load_json_file(result_json_path)
@@ -347,7 +416,7 @@ def load_toffee_report(result_json_path: str, workspace: str, run_test_success: 
             for i, test_item in enumerate(tests):
                 if not isinstance(test_item, (list, tuple)) or len(test_item) < 2:
                     raise ValueError(f"Test item {i} is not a proper tuple/list with at least 2 elements: {test_item}")
-            
+
             tests_map = {k[0]: k[1] for k in tests}
             fails = [k[0] for k in tests if k[1] == "FAILED"]
         except Exception as e:
@@ -395,8 +464,9 @@ def load_toffee_report(result_json_path: str, workspace: str, run_test_success: 
                         bins_funcs[func_key].append(bin_full_name)
                         if bin_full_name not in bins_funcs_reverse:
                             bins_funcs_reverse[bin_full_name] = []
-                        bins_funcs_reverse[bin_full_name].append([
-                            func_key, tests_map.get(func_key, "Unknown")])
+                        bins_funcs_reverse[bin_full_name].append(
+                            [func_key, tests_map.get(func_key, "Unknown")]
+                        )
                 # all bins
                 bins_all.append(bin_full_name)
     ret_data["failed_test_case_with_check_point_list"] = failed_funcs_bins
@@ -445,7 +515,91 @@ def del_report_keys(report: dict, keys: List[str]) -> dict:
     return report
 
 
-def get_toffee_json_test_case(workspace:str, item: dict) -> str:
+def workspace_relative_path(workspace: str, path: str) -> str:
+    """
+    Convert an absolute or workspace-relative path to a workspace-relative path.
+
+    Report producers may canonicalize symlinked directories differently from the
+    UCAgent workspace path (for example /private/tmp/... vs /tmp/... on macOS).
+    Prefer realpath/commonpath for strict prefix removal, then fall back to a
+    unique path-suffix match inside the workspace for container/host path drift.
+    """
+    workspace_abs = os.path.abspath(workspace)
+    workspace_real = os.path.realpath(workspace_abs)
+
+    def _rel_if_under(abs_path: str, base_path: str):
+        try:
+            if os.path.commonpath([base_path, abs_path]) == base_path:
+                rel_path = os.path.relpath(abs_path, base_path)
+                return "." if rel_path == "." else rel_path
+        except ValueError:
+            return None
+        return None
+
+    def _path_parts(value: str):
+        return [p for p in os.path.normpath(value).split(os.sep) if p and p != "."]
+
+    def _common_path_suffix_len(left: str, right: str) -> int:
+        left_parts = _path_parts(left)
+        right_parts = _path_parts(right)
+        score = 0
+        for lpart, rpart in zip(reversed(left_parts), reversed(right_parts)):
+            if lpart != rpart:
+                break
+            score += 1
+        return score
+
+    def _unique_suffix_match(path_for_match: str):
+        if not os.path.isdir(workspace_abs):
+            return None
+        target_name = os.path.basename(path_for_match)
+        if not target_name or target_name in (".", ".."):
+            return None
+
+        matches = []
+        skip_dirs = {".git", ".pytest_cache", "__pycache__"}
+        for root, dirs, files in os.walk(workspace_abs):
+            dirs[:] = [d for d in dirs if d not in skip_dirs]
+            if target_name not in files:
+                continue
+            rel_path = os.path.relpath(os.path.join(root, target_name), workspace_abs)
+            score = _common_path_suffix_len(path_for_match, rel_path)
+            if score > 0:
+                matches.append((score, rel_path))
+        if matches:
+            max_score = max(score for score, _ in matches)
+            best_matches = sorted({rel_path for score, rel_path in matches if score == max_score})
+            if len(best_matches) == 1:
+                return best_matches[0]
+        return None
+
+    normalized_path = os.path.normpath(str(path).replace("\\", os.sep))
+    if os.path.isabs(normalized_path):
+        path_abs = os.path.abspath(normalized_path)
+        rel_path = _rel_if_under(path_abs, workspace_abs)
+        if rel_path is not None:
+            return rel_path
+
+        path_real = os.path.realpath(path_abs)
+        rel_path = _rel_if_under(path_real, workspace_real)
+        if rel_path is not None:
+            return rel_path
+
+    else:
+        rel_candidate = os.path.normpath(normalized_path)
+        direct_path = os.path.abspath(os.path.join(workspace_abs, rel_candidate))
+        rel_path = _rel_if_under(direct_path, workspace_abs)
+        if rel_path is not None and os.path.exists(direct_path):
+            return rel_path
+
+    suffix_match = _unique_suffix_match(normalized_path.lstrip(os.sep))
+    if suffix_match is not None:
+        return suffix_match
+
+    return normalized_path.lstrip(os.sep) if os.path.isabs(normalized_path) else normalized_path
+
+
+def get_toffee_json_test_case(workspace: str, item: dict) -> str:
     """
     Get the test case file and word from a toffee JSON item.
     :param workspace: The workspace directory where the test case files are located.
@@ -454,21 +608,23 @@ def get_toffee_json_test_case(workspace:str, item: dict) -> str:
     """
     ret = []
     for k, v in item.items():
-        key = k.replace(os.path.abspath(workspace), "")
-        if key.startswith(os.sep):
-            key = key[1:]
+        try:
+            file_path, line_from, line_to, tc_name = parse_test_case_location(k, workspace)
+            key = f"{file_path}:{line_from}-{line_to}::{tc_name}"
+        except Exception:
+            key = workspace_relative_path(workspace, k)
         ret.append((key, v))
     return ret
 
 
-def get_unity_chip_doc_marks(path: str, leaf_node:str, mini_leaf_count:int = 0,
-                             error_char_list=["*", "?"]) -> list:
+def get_unity_chip_doc_marks(path: str, leaf_node: str, mini_leaf_count: int = 0, error_char_list=["*", "?"], return_line_block: bool = False):
     """
     Get the Unity chip documentation marks from a file.
     :param path: Path to the file containing Unity chip documentation.
     :param leaf_node: The leaf node type to consider in the documentation hierarchy.
     :param mini_leaf_count: The minimum number of leaf nodes required.
-    :return: key_name_list.
+    :return: key_name_list
+    :return: key_name_list, key_line_blocks
     """
     keynames = ["FG", "FC", "CK", "BG", "TC"]
     assert leaf_node in keynames, f"Invalid leaf_node '{leaf_node}'. Must be one of {keynames}."
@@ -476,7 +632,7 @@ def get_unity_chip_doc_marks(path: str, leaf_node:str, mini_leaf_count:int = 0,
     subfix   = [">"]* len(prefix)
     data = parse_nested_keys(path, keynames, prefix, subfix)
     tindex = keynames.index(leaf_node)
-    klist, blist = nested_keys_as_list(data, leaf_node, keynames, ex_ignore_names=["line"])
+    klist, blist, klines = nested_keys_as_list(data, leaf_node, keynames)
     assert len(klist) >= mini_leaf_count, f"Need {mini_leaf_count} {leaf_node} at least, but find {len(klist)}"
     fmsg = ", ".join([f"{b[1]} at line {b[2]} need sub node '<{leaf_node}-*>'" for b in blist])
     assert len(blist) == 0, f"Incomplete label '<{leaf_node}-*>' detected: `{fmsg}`, delete the incomplete labels or fix it according to the format requirements: " + \
@@ -492,10 +648,72 @@ def get_unity_chip_doc_marks(path: str, leaf_node:str, mini_leaf_count:int = 0,
         invalid_char_keys = ", ".join(invalid_char_keys)
         finded_keys = ", ".join(finded_keys)
         raise ValueError(f"Invalid characters {finded_keys} found in keys: {invalid_char_keys}")
-    return klist
+    if not return_line_block:
+        return klist
+    return klist, get_file_blocks(path, klines)
 
 
-def rm_workspace_prefix(workspace: str, path:str) -> dict:
+def get_file_blocks(file_path: str, line_info) -> dict:
+    blocks = OrderedDict()
+    with open(file_path, "r") as f:
+        lines = f.read().splitlines()
+        for k, v in line_info.items():
+            blocks[k] = []
+            line = v.get("line", -1)
+            if line < 0:
+                continue
+            pline = v.get("pline", line)
+            nline = v.get("nline", line)
+            nsize = max(1, nline - pline + 1)
+            lnfmt = f"%0" + str(max(len(str(nline)), len(str(pline)))) + "d: %s"
+            for i, l in enumerate(lines[pline - 1: pline - 1 + nsize]):
+                if i == 0 and pline != line:
+                    l = "..."
+                if i == (nsize - 1) and nline != line:
+                    l = "..."
+                blocks[k].append(lnfmt % (i + pline, l))
+    return blocks
+
+
+def merge_file_blocks(blocks: list) -> list:
+    if len(blocks) < 2:
+        return blocks
+    line_content = {}
+    for block in blocks:
+        for lines in block.values():
+            for line in lines:
+                if ": " in line:
+                    n, c = line.split(": ", 1)
+                    if c != "...":
+                        line_content[int(n)] = line
+    recorded_lines = set()
+    result = []
+    for block in blocks:
+        for key, lines in block.items():
+            new_lines = []
+            no_list = []
+            for line in lines:
+                if ": " in line:
+                    n, _ = line.split(": ", 1)
+                    n = int(n)
+                    no_list.append(n)
+                    if n in recorded_lines:
+                        continue
+                    recorded_lines.add(n)
+                    new_lines.append(line_content.get(n, line))
+                else:
+                    new_lines.append(line)
+            if new_lines:
+                mean_value = -1
+                if no_list:
+                    mean_value = no_list[len(no_list) // 2]
+                result.append(({key: new_lines}, mean_value))
+    # sort by mean line number
+    result.sort(key=lambda x: x[1])
+    return [result[0] for result in result]
+
+
+def rm_workspace_prefix(workspace: str, path: str) -> dict:
     """
     Remove the workspace prefix from the keys in a dictionary.
     :param workspace: The workspace directory to be removed from the keys.
@@ -513,7 +731,6 @@ def rm_workspace_prefix(workspace: str, path:str) -> dict:
     return path if path else "."
 
 
-
 def import_class_from_str(class_path: str, modue: None = None):
     """
     Import a class from a string like 'module.submodule.ClassName'
@@ -521,7 +738,7 @@ def import_class_from_str(class_path: str, modue: None = None):
     if "." not in class_path:
         assert modue is not None, "Module must be provided if class_path does not contain a dot."
         return getattr(modue, class_path)
-    module_path, class_name = class_path.rsplit('.', 1)
+    module_path, class_name = class_path.rsplit(".", 1)
     module = importlib.import_module(module_path)
     return getattr(module, class_name)
 
@@ -544,7 +761,7 @@ def append_python_path(py_path: list):
             sys.path.append(p)
 
 
-def import_python_file(file_path: str, py_path:list = []):
+def import_python_file(file_path: str, py_path: list = []):
     """
     Import a Python file as a module.
     :param file_path: Path to the Python file to be imported.
@@ -568,6 +785,8 @@ def render_template(template: str, kwargs) -> str:
     :param kwargs: Keyword arguments to be used in the template.
     :return: The rendered string.
     """
+    if not isinstance(template, str):
+        return template
     tvalue = template.strip()
     if (tvalue.count("{") == tvalue.count("}") == 1) and \
        (tvalue.startswith("{") and tvalue.endswith("}")):
@@ -632,27 +851,27 @@ def find_files_by_regex(workspace, pattern):
 
 
 def find_files_by_glob(workspace, pattern):
-    """Find files in a workspace that match a given glob pattern.
-    """
+    """Find files in a workspace that match a given glob pattern."""
     import glob
+
     assert os.path.exists(workspace), f"Workspace {workspace} does not exist."
     if isinstance(pattern, str):
         pattern = [pattern]
     abs_workspace = os.path.abspath(workspace)
     ret = set()
+
     def __find(p):
-        for f in glob.glob(os.path.join(abs_workspace, "**", p), recursive=True):
-            ret.add(
-            f.removeprefix(abs_workspace + os.sep)
-        )
+        for f in glob.glob(os.path.join(abs_workspace, p), recursive=True):
+            ret.add(f.removeprefix(abs_workspace + os.sep))
+
     for p in pattern:
         __find(p)
     return list(ret)
 
 
-def find_files_by_pattern(workspace, pattern):
-    """Find files in a workspace that match a given pattern, which can be either a glob or regex.
-    """
+def find_files_by_pattern(workspace, pattern, ignore_warn=False):
+    """Find files in a workspace that match a given pattern, which can be either a glob or regex."""
+
     def is_regex_pattern(s: str) -> bool:
         try:
             re.compile(s)
@@ -663,7 +882,7 @@ def find_files_by_pattern(workspace, pattern):
         pattern = [pattern]
     ret = []
     for p in pattern:
-        if os.path.isfile(os.path.join(workspace, p)):
+        if os.path.isfile(workspace + os.path.sep + p):
             ret.append(p)
             continue
         # first try glob
@@ -671,7 +890,7 @@ def find_files_by_pattern(workspace, pattern):
         # if no files found, try regex
         if not new_p and is_regex_pattern(p):
             new_p += find_files_by_regex(workspace, p)
-        if len(new_p) < 1:
+        if len(new_p) < 1 and not ignore_warn:
             warning(f"No files found in workspace {workspace} matching pattern: {p}")
             continue
         ret += new_p
@@ -686,6 +905,98 @@ def dump_as_json(data):
         return data
     return json.dumps(data, indent=4, ensure_ascii=False) #.replace("\\n", "\n").replace("\\", "")
 
+def copytree_incremental(src_dir, dst_dir, enable_skill_list=[], disable_skill_list=[]):
+    """
+    Incremental copying of directories with skill-based filtering.
+
+    :param src_dir: source directory
+    :param dst_dir: destination directory
+    :param enable_skill_list: list of skills to include (only copy these)
+    :param disable_skill_list: list of skills to exclude (copy all except these)
+    :return: list of copied skills
+    """
+    if not os.path.exists(src_dir):
+        raise ValueError(f"Source directory {src_dir} does not exist")
+    if not os.path.exists(dst_dir):
+        os.makedirs(dst_dir)
+
+    # if both are not empty, enable_skill_list is first
+    if enable_skill_list and disable_skill_list:
+        disable_skill_list = []
+
+    copied_skills = []
+
+    # recursively discover skills by SKILL.md. Keep each directory as a separate
+    # entry so different paths can contain skills with the same directory name.
+    skill_entries = []
+    for root, _, files in os.walk(src_dir):
+        if "SKILL.md" not in files:
+            continue
+        skill_name = os.path.basename(root)
+        skill_rel_dir = os.path.relpath(root, src_dir)
+        skill_entries.append((skill_name, skill_rel_dir, root))
+    skill_entries.sort(key=lambda item: item[1])
+
+    # determine which skills to copy based on enable_skill_list and disable_skill_list
+    skills_to_copy = []
+    enable_skill_set = set(enable_skill_list or [])
+    disable_skill_set = set(disable_skill_list or [])
+    if enable_skill_list:
+        skills_to_copy = [
+            entry for entry in skill_entries
+            if entry[0] in enable_skill_set or entry[1] in enable_skill_set
+        ]
+    elif disable_skill_list:
+        skills_to_copy = [
+            entry for entry in skill_entries
+            if entry[0] not in disable_skill_set and entry[1] not in disable_skill_set
+        ]
+    else:
+        skills_to_copy = skill_entries
+
+    # copy skill
+    for skill, skill_rel_dir, src_skill_dir in skills_to_copy:
+        if not src_skill_dir or not os.path.exists(src_skill_dir):
+            continue
+        dst_skill_dir = os.path.join(dst_dir, skill_rel_dir)
+        if not os.path.exists(dst_skill_dir):
+            os.makedirs(dst_skill_dir)
+        for root, dirs, files in os.walk(src_skill_dir):
+            rel_path = os.path.relpath(root, src_skill_dir)
+            dst_path = os.path.join(dst_skill_dir, rel_path) if rel_path != '.' else dst_skill_dir
+            for dirname in dirs:
+                dst_subdir = os.path.join(dst_path, dirname)
+                if not os.path.exists(dst_subdir):
+                    os.makedirs(dst_subdir)
+            file_copied = False
+            for filename in files:
+                src_file = os.path.join(root, filename)
+                dst_file = os.path.join(dst_path, filename)
+                if os.path.exists(dst_file):
+                    os.chmod(dst_file, stat.S_IRUSR | stat.S_IWUSR)
+                shutil.copy2(src_file, dst_file)
+                file_copied = True
+                if os.path.exists(dst_file):
+                    try:
+                        os.chmod(dst_file, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+                    except OSError as e:
+                        warning(f"Failed to set skill file read-only: {dst_file}: {e}")
+            if file_copied and skill_rel_dir not in copied_skills:
+                copied_skills.append(skill_rel_dir)
+
+    return copied_skills
+
+
+def find_skill_dir_by_name(root_dir, target_dir_name):
+    if not root_dir or not target_dir_name:
+        return None
+    if not os.path.isdir(root_dir):
+        return None
+
+    for root, dirs, _ in os.walk(root_dir):
+        if target_dir_name in dirs:
+            return os.path.join(root, target_dir_name)
+    return None
 
 def render_template_dir(workspace, template_dir, kwargs):
     """
@@ -745,7 +1056,7 @@ def get_template_path(template_name: str, lang:str=None, template_path:str=None)
     return tmp
 
 
-def append_time_str(data:str):
+def append_time_str(data: str):
     time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     return data + "\nNow time: " + time_str
 
@@ -824,9 +1135,12 @@ def get_func_arg_list(func):
     if not callable(func):
         raise ValueError("Provided object is not callable.")
     sig = inspect.signature(func)
-    return [param.name for param in sig.parameters.values() \
-            if param.kind in (inspect.Parameter.POSITIONAL_ONLY,
-                              inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+    return [
+        param.name
+        for param in sig.parameters.values()
+        if param.kind
+        in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    ]
 
 
 def get_target_from_file(target_file, func_pattern, ex_python_path = [], dtype="FUNC"):
@@ -836,7 +1150,7 @@ def get_target_from_file(target_file, func_pattern, ex_python_path = [], dtype="
     :param func_pattern: Pattern to match object names. Can be:
                         - Exact string: "func_A1" or "ClassA"
                         - Glob pattern: "func_A*" or "Class*"
-                        - Regex pattern: r"func_[A-Z]\d+" or r"Class[A-Z]+"
+                        - Regex pattern: r"func_[A-Z]\\d+" or r"Class[A-Z]+"
     :param ex_python_path: Additional Python paths to add to sys.path for import.
     :param dtype: Type of objects to retrieve. Options:
                 - "FUNC": Only functions
@@ -880,8 +1194,7 @@ def get_target_from_file(target_file, func_pattern, ex_python_path = [], dtype="
             if target_dtype == "FUNC":
                 return callable(obj)
             elif target_dtype == "CLASS":
-                return (isinstance(obj, type) and
-                        not isinstance(obj, types.ModuleType))
+                return isinstance(obj, type) and not isinstance(obj, types.ModuleType)
             elif target_dtype == "ALL":
                 return True
             return False
@@ -890,25 +1203,27 @@ def get_target_from_file(target_file, func_pattern, ex_python_path = [], dtype="
         for name in dir(module):
             obj = getattr(module, name)
             # Skip private/protected members and built-ins
-            if name.startswith('_'):
+            if name.startswith("_"):
                 continue
             # Check if object is defined in this module (not imported)
-            if hasattr(obj, '__module__') and obj.__module__ != module_name:
+            if hasattr(obj, "__module__") and obj.__module__ != module_name:
                 continue
             # For classes, also check if they're defined in this file
             if isinstance(obj, type):
-                if not hasattr(obj, '__module__') or obj.__module__ != module_name:
+                if not hasattr(obj, "__module__") or obj.__module__ != module_name:
                     continue
             # Check if object matches the target dtype
             if is_target_type(obj, dtype):
                 all_objects.append((name, obj))
         # Filter objects based on pattern
         matched_objects = []
+
         # Determine if pattern is regex or glob
         def is_regex_pattern(pattern):
             """Check if pattern contains regex special characters"""
-            regex_chars = set('[]()+?^${}\\|.')
+            regex_chars = set("[]()+?^${}\\|.")
             return any(char in pattern for char in regex_chars)
+
         if is_regex_pattern(func_pattern):
             # Treat as regex pattern
             try:
@@ -928,40 +1243,64 @@ def get_target_from_file(target_file, func_pattern, ex_python_path = [], dtype="
         raise ImportError(f"Failed to import and process {target_file}: {e}")
 
 
-def list_files_by_mtime(directory, max_files=100, subdir=None,
-                        ignore_patterns="*.pyc,*.log,*.tmp,*.fst,*.dat,*.vcd,*.bin,*.ini,.*"
-                        ):
+def list_files_by_mtime(
+    directory: str | os.PathLike[str],
+    max_files: int = 100,
+    subdir: str | Sequence[str] | None = None,
+    ignore_patterns: str = "*.pyc,*.log,*.tmp,*.fst,*.dat,*.vcd,*.bin,*.ini,.*",
+) -> list[tuple[float, float, str]]:
     """列出目录中的文件并按修改时间倒序排列"""
-    ntime = time.time()
-    def find_f(source_dir, workspace):
-        files = []
-        for file_path in Path(source_dir).rglob('*'):
-            try:
-                if file_path.is_file():
-                    mtime = os.path.getmtime(file_path)
-                    file_path = os.path.abspath(str(file_path)).replace(workspace + os.sep, "")
-                    if any(fnmatch.fnmatch(file_path, pattern) for pattern in ignore_patterns.split(',')):
-                        continue
-                    files.append((ntime - mtime, mtime, file_path))
-            except Exception as e:
-                warning(f"Error processing file {file_path}: {e}")
-                continue
-        return files
-    directory = os.path.abspath(directory)
-    files = []
+    root = Path(directory).resolve()
+    if not root.is_dir():
+        return []
+
+    now = time.time()
+    patterns = [pattern.strip() for pattern in ignore_patterns.split(",") if pattern.strip()]
+    files: list[tuple[float, float, str]] = []
+
+    def collect(current: Path) -> None:
+        try:
+            for entry in current.iterdir():
+                try:
+                    stat_result = entry.stat()
+                except OSError as error:
+                    warning(f"Error processing path {entry}: {error}")
+                    continue
+
+                if stat.S_ISDIR(stat_result.st_mode):
+                    collect(entry)
+                    continue
+
+                if not stat.S_ISREG(stat_result.st_mode):
+                    continue
+
+                try:
+                    relative = entry.relative_to(root)
+                except ValueError:
+                    relative = Path(os.path.relpath(entry, root))
+
+                relative_str = str(relative)
+                if any(fnmatch.fnmatch(relative_str, pattern) for pattern in patterns):
+                    continue
+
+                files.append((now - stat_result.st_mtime, stat_result.st_mtime, relative_str))
+        except OSError as error:
+            warning(f"Error listing directory {current}: {error}")
+
     if subdir is None:
-        files = find_f(directory, directory)
+        targets = [root]
+    elif isinstance(subdir, str):
+        targets = [root / subdir]
     else:
-        for sub in subdir:
-            sub_path = os.path.join(directory, sub)
-            if not os.path.exists(sub_path):
-                continue
-            if not os.path.isdir(sub_path):
-                continue
-            files += find_f(sub_path, directory)
+        targets = [root / item for item in subdir]
+
+    for target in targets:
+        if not target.is_dir():
+            continue
+        collect(target)
+
     files.sort(key=lambda x: x[0])
     return files[:max_files]
-
 
 
 def fix_json_string(json_str):
@@ -987,7 +1326,7 @@ def fix_json_string(json_str):
                 in_string = True
                 quote_char = char
                 result.append('"')
-            elif char == quote_char and (i == 0 or fixed[i-1] != '\\'):
+            elif char == quote_char and (i == 0 or fixed[i - 1] != "\\"):
                 in_string = False
                 result.append('"')
             else:
@@ -995,15 +1334,14 @@ def fix_json_string(json_str):
         else:
             result.append(char)
         i += 1
-    fixed = ''.join(result)
-    fixed = re.sub(r'([{,])\s*([a-zA-Z0-9_]+)\s*:', r'\1"\2":', fixed)
-    fixed = re.sub(r',\s*([}\]])', r'\1', fixed)
+    fixed = "".join(result)
+    fixed = re.sub(r"([{,])\s*([a-zA-Z0-9_]+)\s*:", r'\1"\2":', fixed)
+    fixed = re.sub(r",\s*([}\]])", r"\1", fixed)
     try:
         json.loads(fixed)
         return fixed
     except json.JSONDecodeError:
         return json_str
-
 
 
 def import_and_instance_tools(class_list: List[str], module=None):
@@ -1015,11 +1353,13 @@ def import_and_instance_tools(class_list: List[str], module=None):
     """
     if not class_list:
         return []
+
     def _attach_call_count(instance):
-        if hasattr(instance, 'call_count'):
+        if hasattr(instance, "call_count"):
             return instance
         warning(f"Attaching call_count to tool instance of type {type(instance)}")
-        instance.__dict__['call_count'] = 0
+        instance.__dict__["call_count"] = 0
+
         def get_new_invoke(old_inv):
             def new_invoke(self, input, config=None, **kwargs):
                 self.call_count += 1
@@ -1039,7 +1379,7 @@ def import_and_instance_tools(class_list: List[str], module=None):
             assert module is not None, "Module must be provided if class does not contain a dot."
             tools.append(_attach_call_count(getattr(module, cls)()))
         else:
-            module_path, class_name = cls.rsplit('.', 1)
+            module_path, class_name = cls.rsplit(".", 1)
             mod = importlib.import_module(module_path)
             tools.append(_attach_call_count(getattr(mod, class_name)()))
     return tools
@@ -1058,7 +1398,6 @@ def convert_tools(tools):
     return llm_builtin_tools + tool_classes
 
 
-
 def copy_indent_from(src: list, dst: list):
     """
     Copy the indentation from the source string to the destination string.
@@ -1075,11 +1414,36 @@ def copy_indent_from(src: list, dst: list):
             ret.append(d)
             continue
         indent = len(s) - len(s.lstrip())
-        ret.append(' ' * indent + d.lstrip())
+        ret.append(" " * indent + d.lstrip())
     if len(src) < len(dst):
-        for d in dst[len(src):]:
-            ret.append(' ' * indent + d)
+        for d in dst[len(src) :]:
+            ret.append(" " * indent + d)
     return ret
+
+
+def _install_uvicorn_log_bridge(logger):
+    """Attach a handler to the real uvicorn loggers that delegates to *logger*.
+
+    uvicorn's module-level ``logger = logging.getLogger("uvicorn.error")`` is
+    evaluated at import time, before the monkey-patch in create_verify_mcps
+    runs.  This means runtime log calls bypass the patched getLogger and go to
+    the standard logger.  By adding a handler *after* construction we ensure
+    runtime messages (startup, connection, shutdown) are forwarded to the TUI.
+    """
+    import logging
+
+    class _BridgeHandler(logging.Handler):
+        def emit(self, record):
+            try:
+                logger.log(record.levelno, record.getMessage())
+            except Exception:
+                pass
+
+    handler = _BridgeHandler()
+    handler.setLevel(logging.DEBUG)
+    for name in ("uvicorn.error", "uvicorn.access"):
+        uv_logger = logging.getLogger(name)
+        uv_logger.addHandler(handler)
 
 
 def create_verify_mcps(mcp_tools: list, host: str, port: int, logger=None):
@@ -1089,28 +1453,36 @@ def create_verify_mcps(mcp_tools: list, host: str, port: int, logger=None):
         return logger
     if logger:
         logging.getLogger = __getLogger
-    from mcp.server.fastmcp import FastMCP
-    from ucagent.tools.uctool import to_fastmcp
-    from ucagent.util.log import info
-    fastmcp_tools = []
-    for tool in mcp_tools:
-        fastmcp_tools.append(to_fastmcp(tool))
-    # Start the FastMCP server
-    info(f"create FastMCP server with tools: {[tool.name for tool in fastmcp_tools]}")
-    mcp = FastMCP("UnityTest", tools=fastmcp_tools, host=host, port=port)
-    s = mcp.settings
-    info(f"FastMCP server started at {s.host}:{s.port}")
-    starlette_app = mcp.streamable_http_app()
-    import uvicorn
-    config = uvicorn.Config(
-        starlette_app,
-        host=mcp.settings.host,
-        port=mcp.settings.port,
-        log_level=mcp.settings.log_level.lower(),
-        timeout_keep_alive=300,
-        timeout_graceful_shutdown=60,
-    )
-    return uvicorn.Server(config), __old_getLogger
+    try:
+        from mcp.server.fastmcp import FastMCP
+        from ucagent.tools.uctool import to_fastmcp
+        from ucagent.util.log import info
+        fastmcp_tools = []
+        for tool in mcp_tools:
+            fastmcp_tools.append(to_fastmcp(tool))
+        # Start the FastMCP server
+        info(f"create FastMCP server with tools: {[tool.name for tool in fastmcp_tools]}")
+        mcp = FastMCP("UnityTest", tools=fastmcp_tools, host=host, port=port)
+        s = mcp.settings
+        info(f"FastMCP server started at {s.host}:{s.port}")
+        starlette_app = mcp.streamable_http_app()
+        import uvicorn
+        config = uvicorn.Config(
+            starlette_app,
+            host=mcp.settings.host,
+            port=mcp.settings.port,
+            log_level=mcp.settings.log_level.lower(),
+            timeout_keep_alive=300,
+            timeout_graceful_shutdown=60,
+        )
+        server = uvicorn.Server(config)
+    finally:
+        logging.getLogger = __old_getLogger
+
+    if logger:
+        _install_uvicorn_log_bridge(logger)
+
+    return server, __old_getLogger
 
 
 def start_verify_mcps(server, old_getLogger):
@@ -1124,7 +1496,10 @@ def start_verify_mcps(server, old_getLogger):
     except Exception as e:
         info(f"FastMCP server exit with: {e}")
     info("FastMCP server stopped.")
-    logging.getLogger = old_getLogger
+    # logging.getLogger was already restored in create_verify_mcps; this is kept
+    # for safety in case old_getLogger is still the real function (no-op then).
+    if old_getLogger is not None:
+        logging.getLogger = old_getLogger
 
 
 def stop_verify_mcps(server):
@@ -1139,13 +1514,14 @@ def stop_verify_mcps(server):
 def get_diff(old_lines, new_lines, file_name):
     import difflib
     diff = difflib.unified_diff(
-        old_lines, new_lines,
+        old_lines,
+        new_lines,
         fromfile=file_name + "(old)",
         tofile=file_name + "(new)",
     )
     if not diff:
         return "\n[DIFF]\nNo changes detected."
-    return "\n[DIFF]\n" + ''.join(diff)
+    return "\n[DIFF]\n" + "".join(diff)
 
 
 def max_str(str_data, max_size=10):
@@ -1168,30 +1544,36 @@ def yam_str(data: dict) -> str:
         pass
     def represent_literal_str(dumper, data):
         """Custom representer for literal strings"""
-        if '\n' in data:
+        if "\n" in data:
             # Use literal style (|) for multi-line strings
-            return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
         else:
             # Use default style for single-line strings
-            return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
     def process_strings(obj):
         if isinstance(obj, dict):
             ret = OrderedDict()
-            for k,v in obj.items():
+            for k, v in obj.items():
                 ret[k] = process_strings(v)
             return ret
         elif isinstance(obj, list):
             return [process_strings(item) for item in obj]
-        elif isinstance(obj, str) and '\n' in obj:
+        elif isinstance(obj, str) and "\n" in obj:
             return LiteralStr(obj)
         else:
             return obj
+
     processed_data = process_strings(data)
     yaml.add_representer(LiteralStr, represent_literal_str)
     try:
-        return yaml.dump(processed_data, allow_unicode=True, default_flow_style=False,
-                         width=float('inf'),  # Prevent line wrapping
-                         indent=2)
+        return yaml.dump(
+            processed_data,
+            allow_unicode=True,
+            default_flow_style=False,
+            width=float("inf"),  # Prevent line wrapping
+            indent=2,
+        )
     finally:
         if LiteralStr in yaml.representer.Representer.yaml_representers:
             del yaml.representer.Representer.yaml_representers[LiteralStr]
@@ -1218,7 +1600,7 @@ def parse_marks_from_file(file_path: str, tag: str) -> dict:
     }
     tag = tag.strip()
     assert os.path.exists(file_path), f"File {file_path} does not exist."
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
             line = rm_blank_in_str(line).strip()
@@ -1249,7 +1631,7 @@ def parse_line_ignore_file(file_path: str) -> dict:
         "detail": [],
     }
     assert os.path.exists(file_path), f"File {file_path} does not exist."
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
             line = rm_blank_in_str(line).strip()
@@ -1285,9 +1667,9 @@ def parse_un_coverage_json(file_path: str, workspace: str) -> dict:
         file_path = file_path[1:]
     file_path = os.path.abspath(os.path.join(workspace, file_path))
     assert os.path.exists(file_path), f"File {file_path} does not exist."
-    data = json.load(open(file_path, 'r', encoding='utf-8'))
-    ret["lines_total"] = data['overview']['total']["line"]
-    ret["lines_uncovered"] = data['overview']['miss']["line"]
+    data = json.load(open(file_path, "r", encoding="utf-8"))
+    ret["lines_total"] = data["overview"]["total"]["line"]
+    ret["lines_uncovered"] = data["overview"]["miss"]["line"]
     ret["lines_covered"] = ret["lines_total"] - ret["lines_uncovered"]
     # Parse uncovered lines details
     un_covered = data.get("uncovered", {}).get("data", {})
@@ -1323,74 +1705,60 @@ def get_str_array_diff(str_list1, str_list2):
     return only_in_1, only_in_2
 
 
-def clean_report_with_keys(report: dict,
-                           keys: list = None,
-                           default_keys=["all_check_point_list"]) -> dict:
-        data = copy.deepcopy(report)
-        target_keys = []
-        if keys is not None:
-            target_keys = keys
-        return del_report_keys(data, list(set(target_keys + default_keys)))
+def clean_report_with_keys(
+    report: dict, keys: list = None, default_keys=["all_check_point_list"]
+) -> dict:
+    data = copy.deepcopy(report)
+    target_keys = []
+    if keys is not None:
+        target_keys = keys
+    return del_report_keys(data, list(set(target_keys + default_keys)))
 
 
 def description_bug_doc():
     return [
-         "Bug analysis document format:",
-         "   You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK>, <BG-NAME-XX>, <TC-FAILEDTESTCASE>.",
-         "   Where XX is an integer between 0 and 100 representing the confidence level. The format of FAILEDTESTCASE is 'test_python_file.py::testcase_name'.",
-         "   For example:",
-         "    <FG-LOGIC>",
-         "            <FC-ADD>",
-         "                <CK-BASIC>",
-         "                    <BG-NAME1-80> Bug NAME1 explain and its has 80% confidence to be a DUT bug.",
-         "                       <TC-test.py::test_my_test1> failed test case test.py::test_my_test1 explain",
-         "                       <TC-test.py::test_my_test2> failed test case test.py::test_my_test2 explain",
-         "                   Bug reason analysis:",
-         "                   ```verilog",
-         "                     assert (a + b == c) else $error('Addition error');",
-         "                     // use comments to explain why this is a bug in DUT",
-         "                   ...",
-         "                   Bug fix suggestion:",
-         "                   ```verilog",
-         "                     // Ensure proper handling of XXX cases",
-         "                     <BG-NAME2-90> ....",
-         "                     ...",
-         "                <CK-OVERFLOW>",
-         "                    <BG-NAME3-50> Bug NAME3 explain and its has 50% confidence to be a DUT bug.",
-         "                      <TC-test2.py::test_overflow> failed test case test2.py::test_overflow explain",
-         "                   Bug reason analysis:",
-         "                   ```verilog",
-         "                     assert (a + b >= a) else $error('Overflow error');",
-         "                     // use comments to explain why this is a bug in DUT",
-         "                   ...",
-         "                   Bug fix suggestion:",
-         "                   ```verilog",
-         "                     // Ensure proper handling of overflow cases",
-         "             <FC-MUL>",
-         "                ...",
+        "[Bug Analysis Document Format] (see Guide_Doc/dut_bug_analysis.md for details)",
+        "  Tag hierarchy: <FG-GROUP> / <FC-FUNCTION> / <CK-CHECKPOINT> / <BG-BUGNAME-XX> / <TC-FAILEDTESTCASE>",
+        "  - Confidence(XX): integer 0~100, indicating confidence level (0=known ignore/placeholder, 100=confirmed bug)",
+        "  - <TC-*> format: <TC-test_xxx.py::[ClassName::]test_func_name>, ClassName is optional",
+        "  - Each <BG-*> must have at least one FAILED <TC-*> test case",
+        "  - Failed checkpoints should also be recorded as bugs, using 'assert False' as placeholder if needed",
+        "  Format example:",
+        "    <FG-LOGIC>",
+        "            <FC-ADD>",
+        "                <CK-BASIC>",
+        "                    <BG-ADD_OVERFLOW-80> Addition overflow handling error, 80% confidence",
+        "                       <TC-test_add.py::test_add_overflow> Overflow boundary test",
+        "                       <TC-test_add.py::test_add_max_value> Max value test",
+        "                   Bug root cause analysis:",
+        "                   ```verilog",
+        "                     // Adder.v line 10, bit-width error",
+        "                     10: output [WIDTH-2:0] sum,  // BUG: should be [WIDTH-1:0]",
+        "                   ```",
+        "                   Fix suggestion:",
+        "                   ```verilog",
+        "                     10: output [WIDTH-1:0] sum,  // FIX: restore correct bit-width",
+        "                   ```",
     ]
-
 
 
 def description_func_doc():
     return [
-         "Functions and check points document format:",
-         "   You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK> to tag the functions and its checkpoints.",
-         "   For example:",
-         "    <FG-LOGIC>",
-         "          group description.",
-         "            <FC-ADD>",
-         "               function description: This function performs addition of two numbers.",
-         "                <CK-BASIC>",
-         "                  check description: This check verifies basic addition functionality.",
-         "                <CK-OVERFLOW>",
-         "                  check description: This check verifies addition overflow handling.",
-         "             <FC-MUL>",
-         "                ...",
-         "             <FC-DIV>",
-         "                 ...",
-         "    <FG-MEMORY>",
-         "          ...",
+        "[Functions and Checkpoints Document Format] (see Guide_Doc/dut_functions_and_checks.md for details)",
+        "  Tag hierarchy: <FG-GROUP> / <FC-FUNCTION> / <CK-CHECKPOINT>, tags must be on separate lines",
+        "  Format example:",
+        "    <FG-LOGIC>",
+        "          Group description...",
+        "            <FC-ADD>",
+        "               Function description: Performs addition of two numbers.",
+        "                <CK-BASIC>",
+        "                  Checkpoint description: Verifies basic addition functionality.",
+        "                <CK-OVERFLOW>",
+        "                  Checkpoint description: Verifies addition overflow handling.",
+        "             <FC-MUL>",
+        "                ...",
+        "    <FG-MEMORY>",
+        "          ...",
     ]
 
 
@@ -1406,12 +1774,13 @@ def check_file_block(file_blocks, workspace, checker=None):
     assert isinstance(file_blocks, dict), "file_blocks must be a dictionary."
     ret_map = {}
     for f, blocks in file_blocks.items():
+        f = workspace_relative_path(workspace, f)
         fpath = os.path.abspath(os.path.join(workspace, f))
         assert os.path.exists(fpath), f"File {f} does not exist in workspace {workspace}."
         if not blocks:
             continue
         assert isinstance(blocks, dict), f"Blocks for file {f} must be a dictionary."
-        with open(fpath, 'r', encoding='utf-8') as fr:
+        with open(fpath, "r", encoding="utf-8") as fr:
             lines = fr.readlines()
             line_count = len(lines)
         for k, v in blocks.items():
@@ -1427,7 +1796,8 @@ def check_file_block(file_blocks, workspace, checker=None):
                 if line_from <= line_index <= line_to:
                     return k
             return None
-        record_map = {k:"" for k in blocks.keys()}
+
+        record_map = {k: "" for k in blocks.keys()}
         for index, line in enumerate(lines, start=1):
             block_key = _get_code_block_key(index)
             if block_key is None:
@@ -1446,28 +1816,58 @@ def check_file_block(file_blocks, workspace, checker=None):
     return ret_map
 
 
-def description_mark_function_doc(func_list=[], workspace=None, func_RunTestCases=None, timeout_RunTestCases=0):
+def parse_test_case_location(tc, workspace=None):
+    # file.py:xx-yy::[ClassName::]test_func
+    tc_file, tc_name = tc.split("::", 1)
+    tc_rfile, line_range = tc_file.rsplit(":", 1)
+    if workspace is not None:
+        tc_rfile = workspace_relative_path(workspace, tc_rfile)
+    a, b = line_range.split("-", 1)
+    assert a.isdigit() and b.isdigit(), f"Invalid line range in test case '{tc}'."
+    return tc_rfile, int(a), int(b), tc_name
+
+
+def tc_list_as_loc_blocks(func_list, target_tc_prefix="", ignore_tc_prefix="", workspace=None):
+    func_file_blocks = {}
+    for tc in func_list:
+        tc_fname, (file_path, line_from, line_to) = parse_test_case_name(tc, workspace)
+        tc_name = tc_fname.split("::", 1)[-1]
+        if target_tc_prefix and not tc_name.startswith(target_tc_prefix):
+            continue
+        if ignore_tc_prefix and tc_name.startswith(ignore_tc_prefix):
+            continue
+        if file_path not in func_file_blocks:
+            func_file_blocks[file_path] = {}
+        func_file_blocks[file_path][tc] = [line_from, line_to]
+    return func_file_blocks
+
+
+def parse_test_case_name(tc, workspace=None):
+    tc_rfile, line_from, line_to, tc_name = parse_test_case_location(tc, workspace)
+    tc_file = tc_rfile.split("/tests/", 1)[-1]
+    return f"{tc_file}::{tc_name}", (tc_rfile, line_from, line_to)
+
+
+def description_mark_function_doc(
+    func_list=[], workspace=None, func_RunTestCases=None, timeout_RunTestCases=0
+):
     """
     Description for marking functions in test cases.
     """
-    simple_msg = ("At the test functions beginning, you need use proper `mark_function` to associate them with the related check points. "
-            "For example: env.dut.fc_cover['FG-GROUP'].mark_function('FC-FUNCTION', "
-            "test_function_name, ['CK-CHECK1', 'CK-CHECK2']). If a test case covers checkpoints of multiple functions, you should call it multiple times. If the test case is redundant, you need to delete it. "
-           )
-    def parse_test_case_name(tc):
-        # file.py:xx-yy::[ClassName::]test_func
-        tc_file, tc_name = tc.split("::", 1)
-        tc_rfile, line_range = tc_file.split(":")
-        tc_file = tc_rfile.split("/tests/", 1)[-1]
-        a, b = line_range.split("-", 1)
-        assert a.isdigit() and b.isdigit(), f"Invalid line range in test case '{tc}'."
-        return f"{tc_file}::{tc_name}", (tc_rfile, int(a), int(b))
+    simple_msg = (
+        "You need to use `mark_function` at the beginning of test functions to associate them with checkpoints. "
+        "Example: env.dut.fc_cover['FG-GROUP'].mark_function('FC-FUNCTION', "
+        "test_function_name, ['CK-CHECK1', 'CK-CHECK2']). "
+        "If a test case covers checkpoints of multiple functions, call mark_function multiple times. "
+        "If the test case is redundant, delete it. (See Guide_Doc/dut_test_case.md)"
+    )
+
     if len(func_list) > 0:
         assert workspace is not None, "workspace must be provided if func_list is empty."
         func_file_blocks = {}
         func_test_cases = {}
         for tc in func_list:
-            tc_name, (file_path, line_from, line_to) = parse_test_case_name(tc)
+            tc_name, (file_path, line_from, line_to) = parse_test_case_name(tc, workspace)
             func_test_cases[tc] = tc_name
             if file_path not in func_file_blocks:
                 func_file_blocks[file_path] = {}
@@ -1490,13 +1890,13 @@ def description_mark_function_doc(func_list=[], workspace=None, func_RunTestCase
         emsg = ""
         if len(er_mark_tc_list) > 0:
             tc_to_run = " ".join([func_test_cases[tc] for tc in er_mark_tc_list])
-            tc_msg = f"Test cases ({', '.join(er_mark_tc_list)}) already called function 'mark_function' but has errors, you need call tool RunTestCases('{tc_to_run}') " + \
-                    "to get the detail errors to check if the names of 'function point', 'test case' and 'check point' are correct. "
+            tc_msg = f"Test cases ({', '.join(er_mark_tc_list)}) already called 'mark_function' but encountered errors. " + \
+                    f"Please call RunTestCases('{tc_to_run}') to see detailed errors and verify that function point, test case, and checkpoint names match the documentation."
             if func_RunTestCases is not None:
                 warning(f"Running test RunTestCases('{tc_to_run}') to get detailed error messages...")
                 _, run_msg = func_RunTestCases(pytest_args=tc_to_run, timeout=timeout_RunTestCases, return_line_coverage=False, raw_return=True, detail=True)
-                tc_msg = f"Test cases ({', '.join(er_mark_tc_list)}) already called function 'mark_function' but has errors:\n STD_OUT:\n{run_msg['STDOUT']}\nSTD_ERR:\n{run_msg['STDERR']}\n" + \
-                         f"Note:\nIf you cannot find the root cause, you can call tool RunTestCases('{tc_to_run}') to get more detail information. "
+                tc_msg = f"Test cases ({', '.join(er_mark_tc_list)}) already called 'mark_function' but encountered errors:\n STDOUT:\n{run_msg['STDOUT']}\nSTDERR:\n{run_msg['STDERR']}\n" + \
+                         f"Note: If you cannot find the root cause, call RunTestCases('{tc_to_run}') to get more detailed information."
             emsg += tc_msg
         if len(no_mark_tc_list) > 0:
             emsg += f"Test cases not marked with 'mark_function': {', '.join(no_mark_tc_list)}. {simple_msg}"
@@ -1504,7 +1904,9 @@ def description_mark_function_doc(func_list=[], workspace=None, func_RunTestCase
     return simple_msg
 
 
-def check_source_code_in_tc(workspace, report, checker, target_tc_prefix="", ignore_tc_preifx=""):
+def check_source_code_in_tc(
+    workspace, report, checker, target_tc_prefix="", ignore_tc_preifx=""
+):
     """Check source code in test cases"""
     test_cases = report.get("tests", {}).get("test_cases", {})
     if target_tc_prefix:
@@ -1516,17 +1918,15 @@ def check_source_code_in_tc(workspace, report, checker, target_tc_prefix="", ign
         warning("target_tc_prefix: " + target_tc_prefix)
         warning("ignore_tc_preifx: " + ignore_tc_preifx)
         warning("raw test cases: " + ", ".join(report.get("tests", {}).get("test_cases", {}).keys()))
-        return False, {"error": "no test cases find in test report"}
+        return False, {"error": "[No Test Cases] No matching test cases found in the test report. Please check that test files exist and are named with 'test_' prefix, and that the filter prefix settings are correct."}
     # file.py:line1-line2::[class::]test_case_name
     # block fmt: {'file1.py': {"k1": [line_from, line_to], 'k2': [line_from, line_to]}, ...}
     file_blocks = {}
     for k in test_cases.keys():
-        p = k.split("::")[0]
         try:
-            path, lins = p.split(":")
+            path, line_s, line_t, _ = parse_test_case_location(k, workspace)
             if path not in file_blocks:
                 file_blocks[path] = {}
-            line_s, line_t = lins.split("-")
             file_blocks[path][k] = [int(line_s), int(line_t)]
         except Exception as e:
             raise ValueError(f"Invalid test case format '{k}'. Expected format: 'file.py:line1-line2::[class::]test_case_name'. Error: {e}")
@@ -1538,19 +1938,18 @@ def check_source_code_in_tc(workspace, report, checker, target_tc_prefix="", ign
 
 def check_has_assert_in_tc(workspace, report, target_tc_prefix="", ignore_tc_preifx=""):
     """Check tc has assert or not"""
+
     def has_assert(text_str):
         for key in ["assert", "pytest.raises"]:
-            if len([l for l in text_str.splitlines() \
-                           if key in l.strip()]) > 0:
+            if len([l for l in text_str.splitlines() if key in l.strip()]) > 0:
                 return True
         return False
+
     try:
         failed_tc = []
-        ret, msg = check_source_code_in_tc(workspace,
-                                           report,
-                                           has_assert,
-                                           target_tc_prefix,
-                                           ignore_tc_preifx)
+        ret, msg = check_source_code_in_tc(
+            workspace, report, has_assert, target_tc_prefix, ignore_tc_preifx
+        )
         if not ret:
             return ret, msg
         for k, v in msg.items():
@@ -1560,11 +1959,12 @@ def check_has_assert_in_tc(workspace, report, target_tc_prefix="", ignore_tc_pre
             return True, "All test cases have assert statements."
         failed_str = list_str_abbr(failed_tc)
         return False, {
-            "error": f"The following {len(failed_tc)} test cases do not contain assert statements: {failed_str}. " + \
-                      "Note: A test case MUST contain at least one assert statement to verify the DUT behavior. "+\
-                      "Its format is 'assert output == expected_output, \"Error message\". or 'with pytest.raises(ExpectedException): ...'. "+\
-                      "Donot use 'self.assertEqual' or other unittest assert methods, as they are not supported in this verification framework.",
-            }
+            "error": f"[Missing Assertions] The following {len(failed_tc)} test cases do not contain assert statements: {failed_str}. "
+            + "[Problem] Every test case MUST contain at least one assert statement to verify DUT behavior, otherwise it cannot be determined whether the test truly passes. "
+            + "[Solution] Add assertions in test functions, format: assert output == expected_output, 'error description'. "
+            + "You can also use 'with pytest.raises(ExpectedException): ...' to verify exceptions. "
+            + "Note: Do not use 'self.assertEqual' or other unittest methods; this framework only supports assert and pytest.raises.",
+        }
     except Exception as e:
         warning(f"check_has_assert_in_tc error: {e}")
         warning(traceback.format_exc())
@@ -1582,11 +1982,13 @@ def replace_bash_var(in_str, data: dict):
     Returns:
         str: replaced str eg: "Hello, Alice!"
     """
-    pattern = r'\$\(\s*(?P<key>\w+)\s*:\s*(?P<default>.*?)\s*\)'
+    pattern = r"\$\(\s*(?P<key>\w+)\s*:\s*(?P<default>.*?)\s*\)"
+
     def replace_match(match):
-        key = match.group('key').strip()
-        default = match.group('default').strip()
+        key = match.group("key").strip()
+        default = match.group("default").strip()
         return str(data.get(key, default)) if default else str(data.get(key))
+
     return re.sub(pattern, replace_match, in_str)
 
 
@@ -1598,9 +2000,17 @@ def get_coverage_data_path(request, new_path:bool):
 """
 
 
-def make_llm_tool_ret(ret):
+def make_llm_tool_ret(ret, check_pass=True):
     """Convert the return value to a LLM tool return format."""
-    return yam_str(ret)
+    if isinstance(ret, str):
+        return ret
+    ret_str =  yam_str(ret)
+    if isinstance(ret, dict) and check_pass:
+        for k in ["check_pass", "complete"]:
+            if not ret.get(k, True):
+                ret_str += "\n[Important]\nYou MUST check the error messages (or suggestions) above, and fix it."
+                break
+    return ret_str
 
 
 def list_str_abbr(data: list, max_items=50):
@@ -1626,23 +2036,23 @@ def get_fixture_scope(dut_func_or_dut_code):
     else:
         dut_func = dut_func_or_dut_code
         source_code = inspect.getsource(dut_func)
-    if hasattr(dut_func, '_pytestfixturefunction'):
+    if hasattr(dut_func, "_pytestfixturefunction"):
         fixture_def = dut_func._pytestfixturefunction
-        scope = getattr(fixture_def, 'scope', None)
+        scope = getattr(fixture_def, "scope", None)
         if scope is None:
             # Try to get scope from the fixture definition
-            if hasattr(fixture_def, '_scope'):
+            if hasattr(fixture_def, "_scope"):
                 scope = fixture_def._scope
         return scope
     # check fixture scope in source code
     if "@pytest.fixture" in source_code:
         # Extract the fixture decorator line
-        fixture_pattern = r'@pytest\.fixture\([^)]*\)'
+        fixture_pattern = r"@pytest\.fixture\([^)]*\)"
         matches = re.findall(fixture_pattern, source_code)
         if matches:
             for match in matches:
                 # Check if scope is specified
-                if 'scope' in match:
+                if "scope" in match:
                     # Extract scope value
                     scope_pattern = r'scope\s*=\s*["\'](\w+)["\']'
                     scope_match = re.search(scope_pattern, match)
@@ -1651,7 +2061,7 @@ def get_fixture_scope(dut_func_or_dut_code):
     return None
 
 
-def markdown_headers(workspace, markdown_file, levels=(1,2,3,4,5,6)):
+def markdown_headers(workspace, markdown_file, levels=(1, 2, 3, 4, 5, 6)):
     """Extract headers from a markdown file.
     Args:
         markdown_file: The path to the markdown file.
@@ -1659,13 +2069,13 @@ def markdown_headers(workspace, markdown_file, levels=(1,2,3,4,5,6)):
         A list of headers found in the markdown file.
     """
     if isinstance(levels, int):
-        levels = (levels, )
+        levels = (levels,)
     file_path = os.path.abspath(workspace + os.sep + markdown_file)
     if not os.path.isfile(file_path):
         raise Exception(f"File not found: {file_path}")
-    pattern = re.compile(r'^(#{1,6})\s+(.*)', re.MULTILINE)
+    pattern = re.compile(r"^(#{1,6})\s+(.*)", re.MULTILINE)
     headers = []
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
         matches = pattern.findall(content)
         for match in matches:
@@ -1685,11 +2095,13 @@ def markdown_get_miss_headers(workspace, markdown_file, ref_markdown_file, level
     Returns:
         A list of missing headers and diff messages.
     """
+
     def has_head(s_list, lev, t_head):
-        for k,v in s_list:
+        for k, v in s_list:
             if k == lev and t_head in v:
                 return True
         return False
+
     missed_msg = "Target headers:\n"
     missed_headers = []
     source_headers = markdown_headers(workspace, markdown_file, levels)
@@ -1748,7 +2160,7 @@ def parse_line_CK_map_file(workspace, file_path: str) -> dict:
     ret = {}
     real_file_path = os.path.abspath(workspace + os.sep + file_path)
     assert os.path.exists(real_file_path), f"File {real_file_path} does not exist."
-    with open(real_file_path, 'r', encoding='utf-8') as f:
+    with open(real_file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
             line = rm_blank_in_str(line).strip()
@@ -1771,16 +2183,16 @@ def parse_line_CK_map_file(workspace, file_path: str) -> dict:
                 assert start_line <= end_line, f"{file_path} at line {i+1}: Line range '{lr}' start line must be less than or equal to end line"
                 line_list.append((start_line, end_line))
             # Merge line ranges
-            pre_list = []            
+            pre_list = []
             if key in ret:
                 pre_list = ret[key]
             ret[key] = range_list_merge(pre_list, line_list)
     return ret
 
 
-def get_un_mapped_lines(workspace, 
-                          source_file: str, 
-                          ck_line_map: dict, max_example_lines: int=20) -> list:
+def get_un_mapped_lines(
+    workspace, source_file: str, ck_line_map: dict, max_example_lines: int = 20
+) -> list:
     """Get unmapped lines from a source file based on CK line mapping.
 
     Args:
@@ -1793,7 +2205,7 @@ def get_un_mapped_lines(workspace,
     """
     real_file_path = os.path.abspath(workspace + os.sep + source_file)
     assert os.path.exists(real_file_path), f"File {real_file_path} does not exist."
-    with open(real_file_path, 'r', encoding='utf-8') as f:
+    with open(real_file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
         total_lines = len(lines)
     range_list = []
@@ -1828,8 +2240,15 @@ def is_ucagent_complete(workspace=".", need_agent_exit=False):
     return True
 
 
-def get_ucagent_hook_msg(msg_continue, msg_cmp, msg_exit, msg_init,
-                         msg_wait_hm="", workspace=".", need_agent_exit=False):
+def get_ucagent_hook_msg(
+    msg_continue,
+    msg_cmp,
+    msg_exit,
+    msg_init,
+    msg_wait_hm="",
+    workspace=".",
+    need_agent_exit=False,
+):
     """Get UCAgent hook message from file"""
     status_data = load_ucagent_info(workspace)
     if not status_data:
@@ -1849,24 +2268,25 @@ def get_interaction_messages(key, config_file=None):
     # [config_file.yaml::]continue_prompt_keys[|stop_prompt_keys]
     from ucagent.util.config import get_config
     import os
-    if '::' in key:
-        config_file, key = key.split('::', 1)
+
+    if "::" in key:
+        config_file, key = key.split("::", 1)
     if config_file:
         if not os.path.isfile(config_file):
             print(f"Config file '{config_file}' not found.")
             return False, None, None
     continue_key = key
-    if '|' in key:
-        continue_key, stop_key = key.split('|', 1)
+    if "|" in key:
+        continue_key, stop_key = key.split("|", 1)
     else:
         stop_key = None
     cfg = get_config(config_file)
     continue_value = os.environ.get(continue_key, None)
     if continue_value is None:
-        continue_value = cfg.get_value('hooks.'+continue_key, None)
+        continue_value = cfg.get_value("hooks." + continue_key, None)
     stop_value = os.environ.get(stop_key, None) if stop_key else None
     if stop_value is None and stop_key:
-        stop_value = cfg.get_value('hooks.'+stop_key, None)
+        stop_value = cfg.get_value("hooks." + stop_key, None)
     return True, continue_value, stop_value
 
 
@@ -1874,7 +2294,11 @@ def is_run_report_pass(report, stdout, stderr):
     run_pass = report.get("run_test_success", False)
     if run_pass:
         return True, ""
-    return False, {"error": "Run test cases/generate report fail!", "STDOUT": stdout, "STDERR": stderr}
+    return False, {
+        "error": "[Run Failed] Running test cases / generating report failed! Check STDOUT and STDERR output to identify the cause (common issues: import errors, syntax errors, undefined fixtures, DUT compilation failures, etc.).",
+        "STDOUT": stdout,
+        "STDERR": stderr,
+    }
 
 
 def get_tools_from_cfg(tool_list, cfg: dict):
@@ -1929,7 +2353,20 @@ def find_available_port(start_port=5000, end_port=65000):
     raise RuntimeError(f"No available port found in range {start_port}-{end_port}.")
 
 
-def chmode_ro(workspace, pattern_list: str, ignore_list: list = ["__pycache__"]) -> list:
+def is_port_free(host: str, port: int) -> bool:
+    """Return True if *host:port* is available to bind."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            s.bind((host, port))
+            return True
+        except OSError:
+            return False
+
+
+def chmode_ro_by_pattern(
+    workspace, pattern_list: str, ignore_list: list = ["__pycache__"]
+) -> list:
     """Change file mode to read-only."""
     file_list = []
     path_list = []
@@ -1940,7 +2377,7 @@ def chmode_ro(workspace, pattern_list: str, ignore_list: list = ["__pycache__"])
                 if os.path.isdir(file_path):
                     for dirpath, dirnames, filenames in os.walk(file_path):
                         for filename in filenames:
-                            file_full_path =  os.path.join(dirpath, filename)
+                            file_full_path = os.path.join(dirpath, filename)
                             file_list.append(file_full_path)
                         for dirname in dirnames:
                             dir_full_path = os.path.join(dirpath, dirname)
@@ -1950,10 +2387,14 @@ def chmode_ro(workspace, pattern_list: str, ignore_list: list = ["__pycache__"])
                     file_list.append(file_path)
             else:
                 warning(f"File not found for: {file_path}")
+    all_list = file_list + path_list
+    return chmode_ro(all_list, ignore_list)
+
+
+def chmode_ro(path_list: list, ignore_list: list = ["__pycache__"]):
     mfile = stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH
     mpath = mfile | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-    all_list = file_list + path_list
-    for file_path in all_list:
+    for file_path in path_list:
         ignored = False
         for ig in ignore_list:
             if ig in file_path:
@@ -1970,13 +2411,20 @@ def chmode_ro(workspace, pattern_list: str, ignore_list: list = ["__pycache__"])
             os.chmod(file_path, mpath)
         else:
             os.chmod(file_path, mfile)
-    info(f"Set file mode to read-only completed ({len(all_list)} files).")
-    return all_list
+    info(f"Set file mode to read-only completed ({len(path_list)} files).")
+    return path_list
 
 
 def chmode_rw(path_list: list, ignore_list: list = ["__pycache__"]):
     """Set file mode to read-write."""
-    mfile = stat.S_IREAD | stat.S_IWRITE | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH
+    mfile = (
+        stat.S_IREAD
+        | stat.S_IWRITE
+        | stat.S_IRGRP
+        | stat.S_IWGRP
+        | stat.S_IROTH
+        | stat.S_IWOTH
+    )
     mpath = mfile | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
     for file_path in path_list:
         ignored = False
@@ -1999,62 +2447,329 @@ def chmode_rw(path_list: list, ignore_list: list = ["__pycache__"]):
         else:
             warning(f"File not found for setting mode to read-write: {file_path}")
     info(f"Set file mode to read-write completed ({len(path_list)} files).")
+    return path_list
 
 
-def compact_pytest_output(text: str, max_lines: int = 120, max_chars: int = 8000) -> str:
+def get_xml_tag_list(workspace, xml_file, tag_name: str) -> list:
+    """Get list of tag values from an XML file.
+
+    Args:
+        xml_file (str): The path to the XML file.
+        tag_name (str): The name of the tag to extract.
+
+    Returns:
+        list: A list of tag values.
     """
-    Compact pytest stdout/stderr while keeping failure signal and key context.
+    import xml.etree.ElementTree as ET
 
-    Keeps:
-      - FAILURES/ERRORS headers
-      - test case headers and short summaries
-      - error type lines (E   ...)
-      - a few context lines per failure
+    target = os.path.abspath(workspace + os.path.sep + xml_file)
+    if os.path.exists(target) == False:
+        raise Exception(f"XML file not found in workspace: {xml_file}")
+    content = "<root>" + open(target, "r", encoding="utf-8").read() + "</root>"
+    ret = []
+    tree = ET.ElementTree(ET.fromstring(content))
+    root = tree.getroot()
+    for elem in root.iter(tag_name):
+        ret.append(elem.text.strip())
+    return ret
+
+
+def match_pattern_list(name: str, pattern_list: list) -> bool:
+    """Check if the name matches any pattern in the pattern list."""
+    for pattern in pattern_list:
+        if "*" in pattern:
+            if fnmatch.fnmatch(name, pattern):
+                return True
+        else:
+            if pattern in name:
+                return True
+    return False
+
+
+def sync_dir_to(source_dir, target_dir, ignore_pattern_list=[]):
+    """Sync source directory to target directory with incremental updates and deletion support.
+
+    Args:
+        source_dir: Source directory path
+        target_dir: Target directory path
+        ignore_pattern_list: List of patterns to ignore during sync
+
+    Returns:
+        target_dir: The target directory path
+
+    Features:
+        - Only copies files if they don't exist in target or have newer modification time
+        - Removes files/directories in target that don't exist in source
+        - Recursively syncs subdirectories
     """
-    if not text:
-        return text
-    lines = text.splitlines()
-    kept = []
-    in_fail_section = False
-    context_lines_left = 0
+    if not os.path.exists(source_dir):
+        raise Exception(f"Source directory '{source_dir}' does not exist.")
+    if not os.path.isdir(source_dir):
+        raise Exception(f"Source path '{source_dir}' is not a directory.")
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    # Track items in source (excluding ignored ones)
+    source_items = set()
+    # Sync items from source to target
+    for item in os.listdir(source_dir):
+        if match_pattern_list(item, ignore_pattern_list):
+            continue
+        source_items.add(item)
+        s = os.path.join(source_dir, item)
+        d = os.path.join(target_dir, item)
+        if os.path.isdir(s):
+            # Recursively sync subdirectories
+            sync_dir_to(s, d, ignore_pattern_list)
+        else:
+            # Check if file needs to be copied
+            need_copy = False
+            if not os.path.exists(d):
+                need_copy = True
+                info(f"New file to copy: {item}")
+            else:
+                # Compare modification times
+                source_mtime = os.path.getmtime(s)
+                target_mtime = os.path.getmtime(d)
+                if source_mtime > target_mtime:
+                    need_copy = True
+                    info(f"Updated file to copy: {item}")
+            if need_copy:
+                shutil.copy2(s, d)
+    # Remove items in target that don't exist in source
+    for item in os.listdir(target_dir):
+        if match_pattern_list(item, ignore_pattern_list):
+            continue
+        if item not in source_items:
+            d = os.path.join(target_dir, item)
+            if os.path.isdir(d):
+                shutil.rmtree(d)
+                info(f"Removed directory from target: {item}")
+            else:
+                os.remove(d)
+                info(f"Removed file from target: {item}")
+    return target_dir
 
-    for line in lines:
-        low = line.lower()
-        if "=================================== failures" in low or "==================================== errors" in low:
-            in_fail_section = True
-            kept.append(line)
-            context_lines_left = 0
-            continue
-        if "short test summary info" in low or "generated report" in low:
-            kept.append(line)
-            context_lines_left = 0
-            continue
-        if line.startswith("FAILED ") or line.startswith("ERROR "):
-            kept.append(line)
-            context_lines_left = 4
-            continue
-        if line.startswith("E   ") or line.startswith("E  "):
-            kept.append(line)
-            continue
-        if line.startswith("_ _ _ _") or line.startswith("___"):
-            kept.append(line)
-            context_lines_left = 4
-            continue
-        if in_fail_section and context_lines_left > 0:
-            if line.strip():
-                kept.append(line)
-                context_lines_left -= 1
-            continue
-        if "====" in line and ("failed" in low or "passed" in low):
-            kept.append(line)
+def copy_skill_files(cfg, workspace, root_dir):
+    """Copy skill files to workspace,include default skills and additional skills.
+    Args:
+        cfg: Configuration object
+        workspace: Workspace directory path
+        root_dir: Root directory path
+    """
+    dst_path = get_workspace_skill_root(workspace)
+    copy_tasks = []
+    # default skills path
+    default_skill_path = os.path.join(root_dir, "lang", cfg.lang, "skills")
+    copy_tasks.append((default_skill_path, dst_path))
+    # additional skills path
+    if cfg.skill.extra_skill_path:
+        extra_skill_path = os.path.abspath(cfg.skill.extra_skill_path)
+        copy_tasks.append((extra_skill_path, os.path.join(dst_path, "ext")))
+    # Copy skills to workspace
+    for src_path, target_path in copy_tasks:
+        if os.path.exists(src_path):
+            try:
+                copied_skills = copytree_incremental(src_path, target_path, enable_skill_list=cfg.skill.enable_skill_list, disable_skill_list=cfg.skill.disable_skill_list)
+                if copied_skills:
+                    info(f"Copy {len(copied_skills)} new skill file(s)")
+            except Exception as e:
+                warning(f"Failed to copy skills: {e}")
+        else:
+            info(f"Skills not found at {src_path}, skipping")
 
-    if not kept:
-        kept = lines[-max_lines:]
-    out = "\n".join(kept)
-    if len(out) > max_chars:
-        out = out[:max_chars] + "\n...[truncated]"
-    out_lines = out.splitlines()
-    if len(out_lines) > max_lines:
-        out_lines = out_lines[:max_lines]
-        out = "\n".join(out_lines) + "\n...[truncated]"
-    return out
+
+def find_most_similar_strings(a: Union[str, List[str]], b: List[str]) -> Union[int, List[Tuple[str, int]]]:
+    """
+    Find the index of the most similar string in array b.
+    If input a is a single string, returns the index directly.
+    If input a is a list of strings, returns list of (string, index) tuples.
+
+    Args:
+        a: Single string or list of strings to be matched
+        b: List of candidate strings to compare against
+
+    Returns:
+        The most similar string if a is single string,
+        or list of tuples (string_from_a, index_of_most_similar_in_b) if a is list
+    """
+    import difflib
+    # Handle single string input case
+    if isinstance(a, str):
+        max_similarity = -1
+        best_index = 0
+        for idx, b_item in enumerate(b):
+            similarity = difflib.SequenceMatcher(None, a, b_item).ratio()
+            if similarity > max_similarity:
+                max_similarity = similarity
+                best_index = idx
+        return b[best_index]
+    # Handle list input case
+    result = []
+    for a_item in a:
+        max_similarity = -1
+        best_index = 0
+        for idx, b_item in enumerate(b):
+            similarity = difflib.SequenceMatcher(None, a_item, b_item).ratio()
+            if similarity > max_similarity:
+                max_similarity = similarity
+                best_index = idx
+        result.append((a_item, best_index))
+    return result
+
+def get_workspace_skill_root(workspace):
+    return get_abs_path_cwd_ucagent(workspace, "skills")
+
+
+def get_func_params_regex(source_code: str) -> list[str]:
+    """
+    Extract function parameter names from the source code of a Python function using regular expressions.
+    """
+    pattern = r'def\s+\w+\s*\(([^)]*)\)'
+    match = re.search(pattern, source_code)
+    if not match:
+        return []
+    params_str = match.group(1).strip()
+    if not params_str:
+        return []
+    params = []
+    current = ""
+    bracket_count = 0
+    for char in params_str:
+        if char == ',' and bracket_count == 0:
+            params.append(current.strip())
+            current = ""
+        else:
+            if char in '([{':
+                bracket_count += 1
+            elif char in ')]}':
+                bracket_count -= 1
+            current += char
+    if current:
+        params.append(current.strip())
+    return params
+
+
+def process_bash_cmd(CWD, cmd, echo_func, interrupted_fc=None):
+    """
+    Process a bash command and return the output.
+    """
+    def _terminate_process(process):
+        if process.poll() is not None:
+            info(f"Process {process.pid} already terminated.")
+            return
+        warning(f"Terminating process {process.pid}...")
+        try:
+            if os.name != "nt":
+                os.killpg(process.pid, signal.SIGTERM)
+            else:
+                process.terminate()
+            process.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            if os.name != "nt":
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                process.kill()
+            process.wait(timeout=1)
+        except ProcessLookupError:
+            warning(f"Process {process.pid} does not exist, it may have already terminated.")
+        except Exception as e:
+            warning(f"Failed to terminate process {process.pid}: {e}, trying to force kill...")
+            try:
+                process.kill()
+                process.wait(timeout=1)
+            except Exception as e:
+                warning(f"Failed to force kill process {process.pid}: {e}")
+    info(f'Executing bash command: {cmd}')
+    popen_kwargs = {}
+    if os.name != "nt":
+        popen_kwargs["start_new_session"] = True
+    process = subprocess.Popen(cmd, shell=True, cwd=CWD,
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               bufsize=0, **popen_kwargs)
+    output_lines = []
+    interrupted = False
+    line_buffer = ""
+    decoder = codecs.getincrementaldecoder(locale.getpreferredencoding(False))(errors="replace")
+
+    def _emit_output_line(line):
+        line = line.strip()
+        output_lines.append(line)
+        if callable(echo_func):
+            echo_func(line)
+
+    def _append_output_text(text):
+        nonlocal line_buffer
+        line_buffer += text
+        lines = line_buffer.splitlines(keepends=True)
+        if lines and not lines[-1].endswith(("\n", "\r")):
+            line_buffer = lines.pop()
+        else:
+            line_buffer = ""
+        for line in lines:
+            _emit_output_line(line)
+
+    def _flush_output_buffer():
+        nonlocal line_buffer
+        tail = decoder.decode(b"", final=True)
+        if tail:
+            _append_output_text(tail)
+        if line_buffer:
+            _emit_output_line(line_buffer)
+            line_buffer = ""
+
+    with selectors.DefaultSelector() as selector:
+        stdout_fd = None
+        stdout_open = False
+        if process.stdout is not None:
+            stdout_fd = process.stdout.fileno()
+            os.set_blocking(stdout_fd, False)
+            selector.register(stdout_fd, selectors.EVENT_READ)
+            stdout_open = True
+
+        def _drain_stdout(timeout=0):
+            nonlocal stdout_open
+            if not stdout_open or stdout_fd is None:
+                return False
+            read_any = False
+            for _, _ in selector.select(timeout=timeout):
+                while True:
+                    try:
+                        chunk = os.read(stdout_fd, 4096)
+                    except BlockingIOError:
+                        break
+                    except OSError:
+                        stdout_open = False
+                        break
+                    if not chunk:
+                        stdout_open = False
+                        try:
+                            selector.unregister(stdout_fd)
+                        except Exception:
+                            pass
+                        break
+                    read_any = True
+                    _append_output_text(decoder.decode(chunk))
+            return read_any
+
+        try:
+            while True:
+                if callable(interrupted_fc) and interrupted_fc():
+                    interrupted = True
+                    _terminate_process(process)
+                    info(f"Bash command '{cmd}' aborted.")
+                    break
+                _drain_stdout(timeout=0.1)
+                if process.poll() is not None:
+                    break
+        except KeyboardInterrupt:
+            interrupted = True
+            _terminate_process(process)
+            info(f"Bash command '{cmd}' interrupted.")
+        while _drain_stdout(timeout=0):
+            pass
+        _flush_output_buffer()
+        if process.stdout is not None:
+            process.stdout.close()
+    return_code = process.poll()
+    info(f"Bash command '{cmd}' finished with return code {return_code}.")
+    return return_code, output_lines, interrupted

@@ -1,23 +1,76 @@
 
 # Current Workspace Dir
-CWD ?= output
+CWD ?= output/workspace_$*
 CFG ?= config.yaml
+PYTHON ?= $(shell env_prefix="$${CONDA_PREFIX:-$$VIRTUAL_ENV}"; if [ -n "$$env_prefix" ] && [ -x "$$env_prefix/bin/python3.11" ]; then printf "%s/bin/python3.11" "$$env_prefix"; else command -v python3.11 2>/dev/null || command -v python3; fi)
+PIP ?= $(PYTHON) -m pip
+BBV ?= false
+SRC ?= examples
+SWARM_IMAGE ?= ghcr.io/spadenoheart/co-ucagent:latest
+SWARM_NETWORK ?= ucagent_net
+SWARM_MASTER_SERVICE ?= ucagent_master
+SWARM_MASTER_PORT ?= 8800
+SWARM_MASTER_PERSIST ?= /tmp/ucagent_master
+SWARM_DOCKER_SOCK ?= /var/run/docker.sock
+SWARM_MASTER_HOST ?=
+SWARM_LOCAL_UCAGENT_DIR := $(CURDIR)
+SWARM_IS_COLIMA ?= $(shell ctx="$$(docker context show 2>/dev/null)"; host="$$(docker context inspect "$$ctx" --format '{{.Endpoints.docker.Host}}' 2>/dev/null)"; printf '%s\n%s\n' "$$ctx" "$$host" | grep -Eq '(^colima|[/.]colima)' && echo 1 || echo 0)
+SWARM_COLIMA_SSH ?= colima ssh --
+SWARM_MASTER_PERSIST_SOURCE := $(abspath $(SWARM_MASTER_PERSIST))
+SWARM_COMMA := ,
+MASTER_IP ?= 127.0.0.1
+
+SWARM_MASTER_PUBLISH = published=$(SWARM_MASTER_PORT),target=$(SWARM_MASTER_PORT)$(if $(filter 1 true yes,$(SWARM_IS_COLIMA)),$(SWARM_COMMA)mode=host)
+SWARM_DOCKER_SOCK_CHECK = $(if $(filter 1 true yes,$(SWARM_IS_COLIMA)),$(SWARM_COLIMA_SSH) test -S $(SWARM_DOCKER_SOCK),test -S $(SWARM_DOCKER_SOCK))
+SWARM_MASTER_PERSIST_MKDIR = $(if $(filter 1 true yes,$(SWARM_IS_COLIMA)),$(SWARM_COLIMA_SSH) mkdir -p $(SWARM_MASTER_PERSIST_SOURCE),mkdir -p $(SWARM_MASTER_PERSIST_SOURCE))
+
+ifneq ($(strip $(UCAGENT_MASTER_SOURCE)),)
+SWARM_MASTER_SOURCE_DIR := $(abspath $(UCAGENT_MASTER_SOURCE))
+SWARM_MASTER_UCAGENT_MOUNT := --mount type=bind,source=$(SWARM_MASTER_SOURCE_DIR),target=/UCAgent
+SWARM_MASTER_CMD := python3 /UCAgent/ucagent/cli.py
+SWARM_MASTER_SOURCE_ENV := --env UCAGENT_MASTER_SOURCE=$(SWARM_MASTER_SOURCE_DIR)
+else
+SWARM_MASTER_SOURCE_DIR :=
+SWARM_MASTER_UCAGENT_MOUNT :=
+SWARM_MASTER_CMD := ucagent
+SWARM_MASTER_SOURCE_ENV := --env UCAGENT_MASTER_SOURCE=
+endif
+
+SWARM_OVERRIDE := --override launch.default_args.launch_mode=docker_swarm \
+                  --override launch.cluster.docker_network=$(SWARM_NETWORK) \
+                  --override launch.cluster.master_ip=$(SWARM_MASTER_SERVICE) \
+                  --override launch.default_args.extra_args[0:0]=@base64:LS1vdmVycmlkZQpzdGFnZVstMV0ubmVlZF9odW1hbl9jaGVjaz1UcnVl
+
+
+UCAGENT_PY := $(wildcard ucagent.py)
+ifdef UCAGENT_PY
+CMD ?= $(PYTHON) ucagent.py
+else
+CMD ?= ucagent
+endif
 
 all: clean test
 
 init:
-	pip3 install -r requirements.txt
+	$(PIP) install -r requirements.txt
 
 reset_%:
 	rm $(CWD)/unity_test -rf  || true
+	rm $(CWD)/.ucagent -rf  || true
+	rm $(CWD)/uc_test_report -rf  || true
+	rm $(CWD)/*.md -rf  || true
 
 init_%:
 	mkdir -p $(CWD)/$*_RTL
-	cp examples/$*/*.v $(CWD)/$*_RTL/ || true
-	cp examples/$*/*.sv $(CWD)/$*_RTL/ || true
-	cp examples/$*/*.vh $(CWD)/$*_RTL/ || true
-	cp examples/$*/*.scala $(CWD)/$*_RTL/ || true
-	cp examples/$*/filelist.txt $(CWD)/$*_RTL/ || true
+	cp $(SRC)/$*/*.v $(CWD)/$*_RTL/ || true
+	cp $(SRC)/$*/*.sv $(CWD)/$*_RTL/ || true
+	cp $(SRC)/$*/*.vh $(CWD)/$*_RTL/ || true
+	cp $(SRC)/$*/*.scala $(CWD)/$*_RTL/ || true
+	cp $(SRC)/$*/filelist.txt $(CWD)/$*_RTL/ || true
+	@if [ -d $(SRC)/$*/Doc ]; then \
+		echo "Copying Doc files from $(SRC)/$*/Doc to $(CWD)/$*_Doc/"; \
+		cp -r $(SRC)/$*/Doc $(CWD)/$*_Doc/ || true; \
+	fi
 	@if [ ! -d $(CWD)/$* ]; then \
 		option_fs=""; \
 		if [ -f $(CWD)/$*_RTL/filelist.txt ]; then \
@@ -29,22 +82,49 @@ init_%:
 			picker export $(CWD)/$*_RTL/$*.sv --rw 1 --sname $* --tdir $(CWD)/ -c -w $(CWD)/$*/$*.fst $$option_fs; \
 		fi; \
 	fi
-	cp examples/$*/*.md $(CWD)/$*/  || true
-	cp examples/$*/*.py $(CWD)/$*/  || true
+	cp $(SRC)/$*/*.md $(CWD)/$*/  || true
+	cp $(SRC)/$*/*.py $(CWD)/$*/  || true
+	@if [ $(BBV) = "true" ]; then \
+		echo "Enable BBV mode: clear RTL files"; \
+		for f in $(CWD)/$*/$*.v $(CWD)/$*/$*.sv $(CWD)/$*/$*.vh; do \
+			if [ -f $$f ]; then \
+				echo "clear file $$f"; \
+				echo "" > $$f; \
+			fi; \
+		done; \
+		for f in `find $(CWD)/$*_RTL/*|grep -v '.scala'`; do \
+			echo "" > $$f; \
+		done; \
+	fi
+	@python3 $(CWD)/$*/example.py || { echo "Error: picker try to generate DUT, but failed.\n"; exit 1; }
 
 test_%: init_%
-	@LOG_DIR=$$(python3 scripts/mklogdir.py --dut $* --config ucagent/setting.yaml); \
+	@LOG_DIR=$$($(PYTHON) scripts/mklogdir.py --dut $* --config $(CFG)); \
 	echo "Log dir: $$LOG_DIR"; \
-	python3 ucagent.py output/ $* --config ucagent/setting.yaml -s -hm --tui -im advanced -l --log --log-file $$LOG_DIR/ucagent-log.log --msg-file $$LOG_DIR/ucagent-msg.log ${ARGS}
+	$(CMD) $(CWD)/ $* --config $(CFG) -hm --tui -im advanced -l --log --log-file $$LOG_DIR/ucagent-log.log --msg-file $$LOG_DIR/ucagent-msg.log ${ARGS}
+
+# Headless, reproducible entry point used by the public quick start and CI.
+run_%: init_%
+	@LOG_DIR=$$($(PYTHON) scripts/mklogdir.py --dut $* --config $(CFG)); \
+	echo "Log dir: $$LOG_DIR"; \
+	$(CMD) $(CWD)/ $* --config $(CFG) -im standard -l --exit-on-completion --stream-output --log --log-file $$LOG_DIR/ucagent-log.log --msg-file $$LOG_DIR/ucagent-msg.log ${ARGS}
+
+test_with_master_%: init_%
+	$(CMD) $(CWD)/ $* --config $(CFG) -s -hm --tui -l --master ${MASTER_IP} --export-cmd-api  ${ARGS}
 
 mcp_%: init_%
-	python3 ucagent.py $(CWD)/ $* --config $(CFG) -s -hm --tui --mcp-server-no-file-tools --no-embed-tools ${ARGS}
+	$(CMD) $(CWD)/ $* --config $(CFG) -s -hm --tui --mcp-server-no-file-tools --no-embed-tools ${ARGS}
+
+mcp_with_master_%: init_%
+	$(CMD) $(CWD)/ $* --config $(CFG) -s -hm --tui --mcp-server-no-file-tools --master ${MASTER_IP} --export-cmd-api ${ARGS}
 
 mcp_all_tools_%: init_%
-	python3 ucagent.py $(CWD)/ $* --config $(CFG) -s -hm --tui --mcp-server ${ARGS}
+	$(CMD) $(CWD)/ $* --config $(CFG) -s -hm --tui --mcp-server ${ARGS}
+
+clean_%:
+	rm -rf $(CWD)
 
 clean:
-	rm -rf $(CWD)
 	rm -rf .pytest_cache
 	rm -rf UCAgent.egg-info
 	rm -rf build
@@ -55,11 +135,156 @@ clean:
 	find ./ -name __pycache__|xargs rm -rf
 	find ./ -name output|xargs rm -rf
 
-clean_test:
+clean_test_%:
 	rm -rf $(CWD)/unity_test
 
 continue:
-	python3 ucagent.py $(CWD)/ ${DUT} --config config.yaml ${ARGS}
+	$(PYTHON) ucagent.py $(CWD)/ ${DUT} --config config.yaml ${ARGS}
+
+continue_%:
+	$(CMD) $(CWD)/ $* --config $(CFG) -im standard -l --exit-on-completion --stream-output ${ARGS}
+
+as_master:
+	$(CMD) --as-master --export-cmd-api ${ARGS}
+
+as_master_persist:
+	$(CMD) --as-master-persist ${PATH_PERSISTENT}  --export-cmd-api --as-master ${ARGS}
+
+swarm_check:
+	@command -v docker >/dev/null 2>&1 || { echo "Error: docker CLI is not installed or not in PATH."; exit 1; }
+	@docker info >/dev/null 2>&1 || { echo "Error: Docker daemon is not available. Please start Docker first."; exit 1; }
+	@$(SWARM_DOCKER_SOCK_CHECK) || { echo "Error: Docker socket $(SWARM_DOCKER_SOCK) is not available."; exit 1; }
+	@if [ -n "$(SWARM_MASTER_SOURCE_DIR)" ] && [ ! -f "$(SWARM_MASTER_SOURCE_DIR)/ucagent/cli.py" ]; then \
+		echo "Error: UCAGENT_MASTER_SOURCE must point to a UCAgent source tree containing ucagent/cli.py: $(SWARM_MASTER_SOURCE_DIR)"; \
+		exit 1; \
+	fi
+	@state=$$(docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null); \
+	if [ "$$state" != "active" ]; then \
+		echo "Error: Docker Swarm is not active (state: $${state:-unknown})."; \
+		echo "Hint: initialize or join a swarm first, for example: docker swarm init"; \
+		exit 1; \
+	fi
+	@control=$$(docker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null); \
+	if [ "$$control" != "true" ]; then \
+		echo "Error: this Docker node is not a Swarm manager, so it cannot launch Swarm services."; \
+		echo "Hint: run make swarm_master on a manager node, or promote this node with: docker node promote <node>"; \
+		exit 1; \
+	fi
+
+swarm_init:
+	$(MAKE) swarm_check
+	@if docker network inspect $(SWARM_NETWORK) >/dev/null 2>&1; then \
+		driver=$$(docker network inspect $(SWARM_NETWORK) --format '{{.Driver}}'); \
+		scope=$$(docker network inspect $(SWARM_NETWORK) --format '{{.Scope}}'); \
+		if [ "$$driver" != "overlay" ] || [ "$$scope" != "swarm" ]; then \
+			echo "Error: Docker network $(SWARM_NETWORK) exists but is $$driver/$$scope, expected overlay/swarm."; \
+			echo "Hint: remove or rename the existing network, then run make swarm_master again."; \
+			exit 1; \
+		fi; \
+	else \
+		docker network create --driver overlay --attachable $(SWARM_NETWORK); \
+	fi
+	@if ! docker image inspect $(SWARM_IMAGE) >/dev/null 2>&1; then \
+		echo "Pulling Docker image $(SWARM_IMAGE)..."; \
+		docker pull $(SWARM_IMAGE); \
+	fi
+
+swarm_clean:
+	@echo "Removing existing Docker Swarm services with name prefix $(SWARM_MASTER_SERVICE)...";
+	@sid=`docker service list|grep ucagent|awk '{print $$1}'|xargs`; if [ -n "$$sid" ]; then echo "stop service $$sid"; docker service rm $$sid; fi;
+	@docker service ls
+	@echo "Stop all containers...";
+	@did=`docker ps|grep ucagent|awk '{print $$1}'|xargs`; if [ -n "$$did" ]; then echo "stop container $$did"; docker stop $$did; fi;
+	@docker ps -a
+
+swarm_master: swarm_init
+	@$(SWARM_MASTER_PERSIST_MKDIR)
+	@if docker service inspect $(SWARM_MASTER_SERVICE) >/dev/null 2>&1; then \
+		echo "Removing existing Docker Swarm service $(SWARM_MASTER_SERVICE)..."; \
+		docker service rm $(SWARM_MASTER_SERVICE) >/dev/null; \
+		while docker service inspect $(SWARM_MASTER_SERVICE) >/dev/null 2>&1; do sleep 1; done; \
+	fi
+	@docker service create \
+		--name $(SWARM_MASTER_SERVICE) \
+		--hostname $(SWARM_MASTER_SERVICE) \
+		--detach=true \
+		--replicas 1 \
+		--restart-condition any \
+		--constraint node.role==manager \
+		--network $(SWARM_NETWORK) \
+		--env DOCKER_HOST=unix://$(SWARM_DOCKER_SOCK) \
+		--env UCAGENT_LAUNCH_IMAGE=$(SWARM_IMAGE) \
+		--env UCAGENT_LAUNCH_MASTER_IP=$(SWARM_MASTER_SERVICE) \
+		--env OPENAI_MODEL \
+		--env OPENAI_API_KEY \
+		--env OPENAI_API_BASE \
+		--env EMBED_MODEL \
+		--env EMBED_OPENAI_API_KEY \
+		--env EMBED_OPENAI_API_BASE \
+		--env UC_MODEL_TYPE \
+		--env ANTHROPIC_BASE_URL \
+		--env ANTHROPIC_AUTH_TOKEN \
+		--env ANTHROPIC_MODEL \
+		--env ANTHROPIC_BIG_MODEL \
+		--env ANTHROPIC_SML_MODEL \
+		--env GOOGLE_GENAI_API_KEY \
+		--env GOOGLE_GENAI_MODEL \
+		--env UC_ENV_CMD_BACKEND_EX_ARGS \
+		--env UC_ENV_CMD_BACKEND_EX_ARGS_N \
+		--env UC_ENV_CMD_BACKEND_EX_ARGS_C \
+		$(SWARM_MASTER_SOURCE_ENV) \
+		--publish $(SWARM_MASTER_PUBLISH) \
+		--mount type=bind,source=$(SWARM_MASTER_PERSIST_SOURCE),target=$(SWARM_MASTER_PERSIST) \
+		--mount type=bind,source=$(SWARM_DOCKER_SOCK),target=$(SWARM_DOCKER_SOCK) \
+		$(SWARM_MASTER_UCAGENT_MOUNT) \
+		--workdir /workspace/UCAgent \
+		$(SWARM_IMAGE) \
+		sh -c "tail -f /dev/null | $(SWARM_MASTER_CMD) --export-cmd-api --as-master-persist $(SWARM_MASTER_PERSIST) --as-master 0.0.0.0:$(SWARM_MASTER_PORT) $(SWARM_OVERRIDE) $(ARGS)"
+	@echo "Waiting for $(SWARM_MASTER_SERVICE) to start..."
+	@for i in $$(seq 1 30); do \
+		replicas=$$(docker service ls --filter name=$(SWARM_MASTER_SERVICE) --format '{{.Replicas}}' | head -n 1); \
+		if [ "$$replicas" = "1/1" ]; then \
+			host="$(SWARM_MASTER_HOST)"; \
+			if [ -z "$$host" ]; then \
+				host=$$(docker node inspect self --format '{{.Status.Addr}}' 2>/dev/null | head -n 1); \
+			fi; \
+			if [ -z "$$host" ] || [ "$$host" = "<no value>" ]; then \
+				host=$$(docker info --format '{{.Swarm.NodeAddr}}' 2>/dev/null); \
+			fi; \
+			if [ -z "$$host" ] || [ "$$host" = "<no value>" ]; then \
+				host=$$(hostname -I 2>/dev/null | awk '{print $$1}'); \
+			fi; \
+			if [ -z "$$host" ]; then host=127.0.0.1; fi; \
+			echo "Docker Swarm master is running: http://$(SWARM_MASTER_SERVICE):$(SWARM_MASTER_PORT) on network $(SWARM_NETWORK)"; \
+			echo "Published on host: http://$$host:$(SWARM_MASTER_PORT)"; \
+			echo "Override the printed host with: make swarm_master SWARM_MASTER_HOST=<reachable-ip-or-dns>"; \
+			exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "Error: Docker Swarm service $(SWARM_MASTER_SERVICE) did not reach 1/1 replicas."; \
+	echo "Hint: inspect it with: docker service ps $(SWARM_MASTER_SERVICE) --no-trunc"; \
+	echo "Hint: view logs with: docker service logs $(SWARM_MASTER_SERVICE)"; \
+	exit 1
 
 # Include docs Makefile
 -include docs/Makefile
+
+# ---------- Formal Verification ----------
+FORMAL_DIR   := examples/Formal
+FORMAL_CWD   ?= $(FORMAL_DIR)/output/workspace_$*
+FORMAL_CFG   := ucagent/lang/zh/config/formal.yaml
+FORMAL_DOC   := ucagent/lang/zh/doc/Formal_Doc
+
+formal_init_%:
+	mkdir -p $(FORMAL_CWD)
+	cp -r $(FORMAL_DIR)/$* $(FORMAL_CWD)/
+
+formal_%: formal_init_%
+	$(CMD) $(FORMAL_CWD)/ $* --config $(FORMAL_CFG) -s -hm --tui --guid-doc-path $(FORMAL_DOC)/ --output formal_test $(ARGS)
+
+formal_mcp_%: formal_init_%
+	$(CMD) $(FORMAL_CWD)/ $* --config $(FORMAL_CFG) -s -hm --tui --mcp-server-no-file-tools --guid-doc-path $(FORMAL_DOC)/ --output formal_test --mcp-server-port 5000 --master 127.0.0.1 --export-cmd-api --use-skill --log $(ARGS)
+
+clean_formal:
+	rm -rf $(FORMAL_DIR)/output

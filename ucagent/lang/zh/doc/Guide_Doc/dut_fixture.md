@@ -23,6 +23,7 @@ DUT fixture负责：
 在实现 dut Fixture 之前，需要先实现 `create_dut(request)` 函数，它的作用是创建 DUT。其基本结构如下：
 
 ```python
+import ucagent
 import os
 from toffee_test.reporter import get_file_in_tmp_dir
 
@@ -51,6 +52,10 @@ def create_dut(request):
     Returns:
         DUT实例，已完成基本初始化
     """
+    # 如果是正在生成测试模板，返回fake DUT用于提速（模板中不会真运行DUT）
+    if ucagent.is_imp_test_template():
+        return ucagent.get_fake_dut(DUT{{DutClass}})
+
     # 导入并实例化具体的DUT类
     from {{DUT}} import DUT{{DutClass}}
     
@@ -72,6 +77,7 @@ def create_dut(request):
 dut Fixture 参考如下：
 
 ```python
+import ucagent
 import pytest
 from toffee_test.reporter import set_func_coverage, set_line_coverage, get_file_in_tmp_dir
 from toffee_test.reporter import set_user_info, set_title_info
@@ -613,6 +619,7 @@ class MockMemory:
     def __init__(self):
         self.data = {}
         self.pending_writes = []
+        self.io = MemBundle.from_prefix("io_mem_")
     
     def on_clock_edge(self, cycles):
         """在时钟上升沿处理待处理的操作"""
@@ -621,14 +628,17 @@ class MockMemory:
             addr, data = self.pending_writes.pop(0)
             self.data[addr] = data
 
+    def bind(self, dut):
+        self.dut = dut
+        self.io.bind(dut)
+        self.dut.StepRis(self.on_clock_edge)
+
 
 class CacheTestEnv:
     def __init__(self, dut):
         self.dut = dut
         self.memory = MockMemory()
-        
-        # 注册内存模型的时钟回调
-        self.dut.StepRis(self.memory.on_clock_edge)
+        self.memory.bind(dut)
     
     def Step(self, c=1):
         return self.dut.Step(c)
@@ -759,6 +769,7 @@ def test_clear_env(env):
 ##### 完整示例
 
 ```python
+import ucagent
 from toffee import Bundle, Signals
 import pytest
 
@@ -818,3 +829,5 @@ def test_axi_transactions(env):
 - 建议在环境类中实现自检和调试功能
 - 环境类应该负责自己的资源管理和清理
 - 考虑使用async/await支持异步操作（如果需要）
+- 在create_dut需要通过ucagent.is_imp_test_template判断当前是否是测试模板生成阶段
+-  -是则需要通过ucagent.get_fake_dut返回fake dut用于提速

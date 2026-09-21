@@ -18,6 +18,7 @@ import psutil
 from typing import Tuple
 import subprocess
 import json
+import sys
 
 
 class ArgRunPyTest(BaseModel):
@@ -68,6 +69,7 @@ class RunPyTest(UCTool):
              return_stdout: bool = False,
              return_stderr: bool = False,
              timeout: int = 15,
+             pytest_ex_env: dict = {},
              run_manager: CallbackManagerForToolRun = None, python_paths: list = None) -> Tuple[int, str, str]:
         """Run the Python tests."""
         assert os.path.exists(test_dir_or_file), \
@@ -84,12 +86,20 @@ class RunPyTest(UCTool):
         env["PYTHONPATH"] = python_path_str + ((":" + pythonpath) if pythonpath else "")
         if "XSPCOMM_LOG_LEVEL" not in env:
             env["XSPCOMM_LOG_LEVEL"] = "4"  # 1-DEBUG, 2-INFO, 3-WARNING, 4-ERROR, 5-FATAL
+        env.update(pytest_ex_env)
         # Determine the correct working directory and test target
         abs_test_path = os.path.abspath(test_dir_or_file)
         if os.path.isdir(abs_test_path):
             # If it's a directory, set cwd to the directory itself and use relative path
             work_dir = abs_test_path
-            test_target = ["."] if pytest_ex_args == "" else pytest_ex_args.split()
+            if not pytest_ex_args:
+                test_target = ["."]
+            elif isinstance(pytest_ex_args, str):
+                test_target = pytest_ex_args.split()
+            elif isinstance(pytest_ex_args, list):
+                test_target = pytest_ex_args
+            else:
+                raise ValueError(f"pytest_ex_args ({pytest_ex_args}) must be a string or a list.")
         else:
             # If it's a file, set cwd to the directory containing the file
             work_dir = os.path.dirname(abs_test_path)
@@ -97,9 +107,15 @@ class RunPyTest(UCTool):
             test_target = [file_basename]
             # Handle pytest_ex_args that may contain absolute paths
             if pytest_ex_args:
-                test_target.extend(pytest_ex_args.split())
+                if isinstance(pytest_ex_args, str):
+                    test_target.extend(pytest_ex_args.split())
+                elif isinstance(pytest_ex_args, list):
+                    test_target.extend(pytest_ex_args)
+                else:
+                    raise ValueError(f"pytest_ex_args ({pytest_ex_args}) must be a string or a list.")
 
-        cmd = ["pytest", "-s", *self.get_pytest_args(), *test_target]
+        ENV_ARGS = env.get("UCA_PYTEST_ARGS", "").replace(";", " ").strip().split()
+        cmd = [sys.executable, "-m", "pytest", *ENV_ARGS, "-s", *self.get_pytest_args(), *test_target]
         info(f"Run command: PYTHONPATH={env['PYTHONPATH']} {' '.join(cmd)} (in {work_dir})\n")
         try:
             worker = subprocess.Popen(
@@ -117,7 +133,10 @@ class RunPyTest(UCTool):
                 ret_stdout = ""
             if not return_stderr:
                 ret_stderr = ""
-            return True, ret_stdout, ret_stderr
+            all_pass = worker.returncode == 0
+            if not all_pass and return_stderr:
+                ret_stderr = (ret_stderr or "") + f"\nPytest process exited with code {worker.returncode}."
+            return all_pass, ret_stdout, ret_stderr
         except subprocess.TimeoutExpired as e:
             try:
                 worker.terminate()
@@ -135,7 +154,7 @@ class RunPyTest(UCTool):
                 ret_stderr += e.stderr
             return False, ret_stdout, ret_stderr + f"\nCalledProcessError: {e}"
         except Exception as e:
-            return False, "Test Fail", ret_stderr + f"\Exception: {e}"
+            return False, "Test Fail", ret_stderr + f"\nException: {e}"
 
     def _run(self,
              test_dir_or_file: str,
@@ -210,7 +229,9 @@ class RunUnityChipTest(RunPyTest):
              return_stdout: bool = False,
              return_stderr: bool = False,
              timeout: int = 15,
-             run_manager: CallbackManagerForToolRun = None, return_all_checks=False) -> dict:
+             pytest_ex_env:dict = {},
+             run_manager: CallbackManagerForToolRun = None, return_all_checks=False,
+             **kw) -> dict:
         """Run the Unity chip tests."""
         shutil.rmtree(self.result_dir, ignore_errors=True)
         all_pass, pyt_out, pyt_err = RunPyTest.do(self,
@@ -219,6 +240,7 @@ class RunUnityChipTest(RunPyTest):
                                           return_stdout,
                                           return_stderr,
                                           timeout,
+                                          pytest_ex_env,
                                           run_manager,
                                           python_paths = [self.workspace, os.path.join(self.workspace, test_dir_or_file)])
         result_json_path = os.path.join(self.result_dir, self.result_json_path)

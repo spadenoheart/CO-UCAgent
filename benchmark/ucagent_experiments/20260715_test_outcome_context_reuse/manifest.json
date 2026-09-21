@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "experiment_baseline": "20260715_test_outcome_context_reuse",
+  "created_at": "2026-07-15T11:14:28+08:00",
+  "repo_root": "<REPO_ROOT>",
+  "git_head": "b9c259b35d048e70cf4d0429d3b20a0077fed15d",
+  "git_branch": "main",
+  "worktree_dirty": true,
+  "python_version": "3.13.2 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:02) [GCC 11.2.0]",
+  "files": [
+    {
+      "path": "ucagent/setting.yaml",
+      "source_sha256": "f18f61229abca2a1bd44e80533c815833a5febb433ea4a89bbb9370a1a1b6dbe",
+      "snapshot_sha256": "314e7b4bb10e0719a8ed2b193a046eb4a58ba1f8afdd3b771f5e7ff49f9c7549",
+      "bytes": 16096,
+      "redacted_snapshot": true
+    },
+    {
+      "path": "ucagent/util/test_result.py",
+      "source_sha256": "a5863cd3742f8bef81aad151db194fae282077e763add9ce1ebb4f1ce217e9d6",
+      "snapshot_sha256": "a5863cd3742f8bef81aad151db194fae282077e763add9ce1ebb4f1ce217e9d6",
+      "bytes": 5068,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/stage/vmanager.py",
+      "source_sha256": "0c7656a6cac714a58f2262664ebb299f164e5c548921aa97eb9cb43c702f9b2d",
+      "snapshot_sha256": "0c7656a6cac714a58f2262664ebb299f164e5c548921aa97eb9cb43c702f9b2d",
+      "bytes": 77616,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/tools/testops.py",
+      "source_sha256": "7ab1e1d675a63d285c8ea2c9a49fcdd6808334353fddd18439fb28deabec6210",
+      "snapshot_sha256": "7ab1e1d675a63d285c8ea2c9a49fcdd6808334353fddd18439fb28deabec6210",
+      "bytes": 11504,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/checkers/unity_test.py",
+      "source_sha256": "7e35971597903ee57220401160cdc0a0bb05d5d936ab8f1ee0ec8a84731fbeb5",
+      "snapshot_sha256": "7e35971597903ee57220401160cdc0a0bb05d5d936ab8f1ee0ec8a84731fbeb5",
+      "bytes": 69365,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/memory/context_reuse.py",
+      "source_sha256": "0a29e4e4e46761dae4292dab3327bf617327f6e5a0afd35a1a326bc570ab71bc",
+      "snapshot_sha256": "0a29e4e4e46761dae4292dab3327bf617327f6e5a0afd35a1a326bc570ab71bc",
+      "bytes": 29937,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/build_trace_tree.py",
+      "source_sha256": "40c74b5c2cde2b35b49b70ff405ce2b2c7e9a15aa1c36ce135389eb07e025f27",
+      "snapshot_sha256": "40c74b5c2cde2b35b49b70ff405ce2b2c7e9a15aa1c36ce135389eb07e025f27",
+      "bytes": 10896,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/build_context_reuse_pack.py",
+      "source_sha256": "e43b68af74173efd99040588725b103781acc3d58a8f4844040a4f61409c9adf",
+      "snapshot_sha256": "e43b68af74173efd99040588725b103781acc3d58a8f4844040a4f61409c9adf",
+      "bytes": 14884,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/curate_context_reuse_pack.py",
+      "source_sha256": "6603dd77660888826e85548796f72a1a6b61ae4aa11e932bd9442d06dbc77eaa",
+      "snapshot_sha256": "6603dd77660888826e85548796f72a1a6b61ae4aa11e932bd9442d06dbc77eaa",
+      "bytes": 16068,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/update_context_reuse_pack.py",
+      "source_sha256": "8e23829821f41230f52b9ace9edaf9a7b14f802773978fa32b8cfb0cc02811b5",
+      "snapshot_sha256": "8e23829821f41230f52b9ace9edaf9a7b14f802773978fa32b8cfb0cc02811b5",
+      "bytes": 12580,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/freeze_experiment_baseline.py",
+      "source_sha256": "5d3f79624e10f4d1a7a1af1ae8034a447a8c88ced16b5bd3c936d9ee320fd08a",
+      "snapshot_sha256": "5d3f79624e10f4d1a7a1af1ae8034a447a8c88ced16b5bd3c936d9ee320fd08a",
+      "bytes": 7227,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_test_result_classification.py",
+      "source_sha256": "c254bc3b1523846eb3f6dbb53ac6ac08ce05af9d8a7b04be7b1322420e99f839",
+      "snapshot_sha256": "c254bc3b1523846eb3f6dbb53ac6ac08ce05af9d8a7b04be7b1322420e99f839",
+      "bytes": 5680,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_context_reuse_curation.py",
+      "source_sha256": "2d75fc47053d6100f8efaf1f7db3e5d658e0c673ea950a7b380eb4c0978e3e7f",
+      "snapshot_sha256": "2d75fc47053d6100f8efaf1f7db3e5d658e0c673ea950a7b380eb4c0978e3e7f",
+      "bytes": 3673,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_experiment_baseline.py",
+      "source_sha256": "a0799b6e7a7f5cc8f04b77033d568cca119a97cc587ae9100182aa042d053eee",
+      "snapshot_sha256": "a0799b6e7a7f5cc8f04b77033d568cca119a97cc587ae9100182aa042d053eee",
+      "bytes": 618,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+      "source_sha256": "a3705275f27e8fb6623745cde8921897b9d650ee9c20d9da23d742915c7578f4",
+      "snapshot_sha256": "a3705275f27e8fb6623745cde8921897b9d650ee9c20d9da23d742915c7578f4",
+      "bytes": 304901,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_source_v1.json",
+      "source_sha256": "f843053a69f10aeac9ff7f7b3ebb50da3f8dcac2a9fbc794527941ec19701b64",
+      "snapshot_sha256": "f843053a69f10aeac9ff7f7b3ebb50da3f8dcac2a9fbc794527941ec19701b64",
+      "bytes": 291340,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+      "source_sha256": "955eb594a106d257d12e492ad8fb9686f372dd528e3c15d527c8fe4ebbf8e986",
+      "snapshot_sha256": "955eb594a106d257d12e492ad8fb9686f372dd528e3c15d527c8fe4ebbf8e986",
+      "bytes": 419362,
+      "redacted_snapshot": false
+    }
+  ],
+  "comparison": {
+    "shared_code_snapshot": "snapshot/",
+    "v0_baseline": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+      "min_quality_score": 0.0,
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0"
+      }
+    },
+    "v1_candidate": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+      "min_quality_score": 0.68,
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68"
+      }
+    }
+  },
+  "notes": [
+    "The repository worktree was dirty; this snapshot, not git HEAD alone, defines the baseline.",
+    "The setting snapshot is redacted. Its source_sha256 identifies the exact local configuration.",
+    "v0 is retained unchanged; v1 is the curated candidate pack."
+  ]
+}

@@ -1,0 +1,2191 @@
+{
+  "trace_count": 4,
+  "dut_list": [
+    "ALU754",
+    "Adder",
+    "FSM",
+    "uart_tx"
+  ],
+  "pattern_counts": {
+    "api_or_env_interface_mismatch": 63,
+    "test_template_not_implemented": 52,
+    "bug_doc_schema_or_marking": 47,
+    "test_logic_or_case_implementation": 43,
+    "coverage_or_test_marks_missing": 40,
+    "label_or_report_mismatch": 9,
+    "missing_assert": 4,
+    "bug_doc_incomplete_tc_label": 4,
+    "duplicate_label_definition": 2,
+    "test_import_error": 1,
+    "generic_checker_failure": 1,
+    "bug_doc_passed_tc_marked_as_bug": 1
+  },
+  "pattern_by_dut": {
+    "ALU754": {
+      "api_or_env_interface_mismatch": 16,
+      "coverage_or_test_marks_missing": 14,
+      "bug_doc_schema_or_marking": 14,
+      "test_template_not_implemented": 6,
+      "label_or_report_mismatch": 2,
+      "generic_checker_failure": 1,
+      "missing_assert": 1
+    },
+    "Adder": {
+      "test_template_not_implemented": 15,
+      "api_or_env_interface_mismatch": 9,
+      "bug_doc_schema_or_marking": 4,
+      "coverage_or_test_marks_missing": 3,
+      "test_logic_or_case_implementation": 3,
+      "missing_assert": 1,
+      "label_or_report_mismatch": 1
+    },
+    "FSM": {
+      "test_template_not_implemented": 30,
+      "api_or_env_interface_mismatch": 19,
+      "bug_doc_schema_or_marking": 13,
+      "coverage_or_test_marks_missing": 10,
+      "label_or_report_mismatch": 6,
+      "test_logic_or_case_implementation": 4,
+      "bug_doc_incomplete_tc_label": 2,
+      "missing_assert": 2,
+      "duplicate_label_definition": 1,
+      "bug_doc_passed_tc_marked_as_bug": 1
+    },
+    "uart_tx": {
+      "test_logic_or_case_implementation": 36,
+      "api_or_env_interface_mismatch": 19,
+      "bug_doc_schema_or_marking": 16,
+      "coverage_or_test_marks_missing": 13,
+      "bug_doc_incomplete_tc_label": 2,
+      "test_import_error": 1,
+      "duplicate_label_definition": 1,
+      "test_template_not_implemented": 1
+    }
+  },
+  "high_failure_stages": [
+    {
+      "dut": "FSM",
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "score": 299,
+      "file_mutations": 117,
+      "test_runs": 28,
+      "check_failures": 24,
+      "failure_signature_count": 10,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "score": 249,
+      "file_mutations": 101,
+      "test_runs": 25,
+      "check_failures": 17,
+      "failure_signature_count": 10,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 22,
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "score": 157,
+      "file_mutations": 71,
+      "test_runs": 5,
+      "check_failures": 16,
+      "failure_signature_count": 4,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "score": 144,
+      "file_mutations": 62,
+      "test_runs": 4,
+      "check_failures": 11,
+      "failure_signature_count": 10,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "score": 126,
+      "file_mutations": 49,
+      "test_runs": 7,
+      "check_failures": 9,
+      "failure_signature_count": 9,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "score": 114,
+      "file_mutations": 28,
+      "test_runs": 14,
+      "check_failures": 7,
+      "failure_signature_count": 10,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 16,
+      "stage_name": "evaluate_env_fixture",
+      "score": 109,
+      "file_mutations": 43,
+      "test_runs": 18,
+      "check_failures": 0,
+      "failure_signature_count": 10,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 16,
+      "stage_name": "evaluate_env_fixture",
+      "score": 106,
+      "file_mutations": 19,
+      "test_runs": 14,
+      "check_failures": 8,
+      "failure_signature_count": 9,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 22,
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "score": 102,
+      "file_mutations": 20,
+      "test_runs": 18,
+      "check_failures": 4,
+      "failure_signature_count": 10,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 16,
+      "stage_name": "evaluate_env_fixture",
+      "score": 94,
+      "file_mutations": 21,
+      "test_runs": 12,
+      "check_failures": 7,
+      "failure_signature_count": 7,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "score": 79,
+      "file_mutations": 19,
+      "test_runs": 11,
+      "check_failures": 2,
+      "failure_signature_count": 10,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "score": 62,
+      "file_mutations": 16,
+      "test_runs": 5,
+      "check_failures": 3,
+      "failure_signature_count": 8,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 25,
+      "stage_name": "verification_review_and_summary",
+      "score": 57,
+      "file_mutations": 11,
+      "test_runs": 3,
+      "check_failures": 7,
+      "failure_signature_count": 4,
+      "stage_advanced": true,
+      "all_completed": true
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 24,
+      "stage_name": "generate_random_test_cases",
+      "score": 55,
+      "file_mutations": 12,
+      "test_runs": 8,
+      "check_failures": 3,
+      "failure_signature_count": 5,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 20,
+      "stage_name": "create_test_case_templates",
+      "score": 50,
+      "file_mutations": 17,
+      "test_runs": 3,
+      "check_failures": 3,
+      "failure_signature_count": 5,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 24,
+      "stage_name": "generate_random_test_cases",
+      "score": 47,
+      "file_mutations": 16,
+      "test_runs": 6,
+      "check_failures": 1,
+      "failure_signature_count": 5,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 20,
+      "stage_name": "create_test_case_templates",
+      "score": 45,
+      "file_mutations": 20,
+      "test_runs": 2,
+      "check_failures": 3,
+      "failure_signature_count": 3,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 20,
+      "stage_name": "create_test_case_templates",
+      "score": 35,
+      "file_mutations": 14,
+      "test_runs": 2,
+      "check_failures": 2,
+      "failure_signature_count": 3,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 16,
+      "stage_name": "evaluate_env_fixture",
+      "score": 30,
+      "file_mutations": 5,
+      "test_runs": 4,
+      "check_failures": 2,
+      "failure_signature_count": 3,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 18,
+      "stage_name": "basic_api_implementation",
+      "score": 30,
+      "file_mutations": 14,
+      "test_runs": 3,
+      "check_failures": 1,
+      "failure_signature_count": 2,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 9,
+      "stage_name": "coverage_group_creation",
+      "score": 27,
+      "file_mutations": 13,
+      "test_runs": 0,
+      "check_failures": 2,
+      "failure_signature_count": 2,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 10,
+      "stage_name": "implemente_function_checks_in_batch",
+      "score": 27,
+      "file_mutations": 4,
+      "test_runs": 1,
+      "check_failures": 3,
+      "failure_signature_count": 3,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 24,
+      "stage_name": "generate_random_test_cases",
+      "score": 25,
+      "file_mutations": 8,
+      "test_runs": 2,
+      "check_failures": 1,
+      "failure_signature_count": 3,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 22,
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "score": 24,
+      "file_mutations": 8,
+      "test_runs": 1,
+      "check_failures": 2,
+      "failure_signature_count": 2,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 22,
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "score": 20,
+      "file_mutations": 9,
+      "test_runs": 0,
+      "check_failures": 2,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 13,
+      "stage_name": "bundle_wrapper_design",
+      "score": 18,
+      "file_mutations": 11,
+      "test_runs": 0,
+      "check_failures": 1,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 18,
+      "stage_name": "basic_api_implementation",
+      "score": 16,
+      "file_mutations": 9,
+      "test_runs": 2,
+      "check_failures": 0,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 6,
+      "stage_name": "dut_creation_implementation",
+      "score": 16,
+      "file_mutations": 9,
+      "test_runs": 0,
+      "check_failures": 1,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 2,
+      "stage_name": "dut_function_grouping",
+      "score": 16,
+      "file_mutations": 9,
+      "test_runs": 0,
+      "check_failures": 1,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 24,
+      "stage_name": "generate_random_test_cases",
+      "score": 15,
+      "file_mutations": 3,
+      "test_runs": 6,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 2,
+      "stage_name": "dut_function_grouping",
+      "score": 11,
+      "file_mutations": 4,
+      "test_runs": 0,
+      "check_failures": 1,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 10,
+      "stage_name": "implemente_function_checks_in_batch",
+      "score": 10,
+      "file_mutations": 3,
+      "test_runs": 0,
+      "check_failures": 1,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 9,
+      "stage_name": "coverage_group_creation",
+      "score": 10,
+      "file_mutations": 3,
+      "test_runs": 0,
+      "check_failures": 1,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 6,
+      "stage_name": "dut_creation_implementation",
+      "score": 10,
+      "file_mutations": 3,
+      "test_runs": 0,
+      "check_failures": 1,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 18,
+      "stage_name": "basic_api_implementation",
+      "score": 9,
+      "file_mutations": 2,
+      "test_runs": 0,
+      "check_failures": 1,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 25,
+      "stage_name": "verification_review_and_summary",
+      "score": 6,
+      "file_mutations": 1,
+      "test_runs": 1,
+      "check_failures": 0,
+      "failure_signature_count": 1,
+      "stage_advanced": true,
+      "all_completed": true
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 6,
+      "stage_name": "dut_creation_implementation",
+      "score": 6,
+      "file_mutations": 6,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 2,
+      "stage_name": "dut_function_grouping",
+      "score": 4,
+      "file_mutations": 4,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 2,
+      "stage_name": "dut_function_grouping",
+      "score": 3,
+      "file_mutations": 3,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 9,
+      "stage_name": "coverage_group_creation",
+      "score": 3,
+      "file_mutations": 3,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 13,
+      "stage_name": "bundle_wrapper_design",
+      "score": 3,
+      "file_mutations": 3,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 15,
+      "stage_name": "env_fixture_implementation",
+      "score": 3,
+      "file_mutations": 1,
+      "test_runs": 1,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 0,
+      "stage_name": "requirement_analysis_and_planning",
+      "score": 3,
+      "file_mutations": 3,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 7,
+      "stage_name": "pytest_fixture_dut_implementation",
+      "score": 3,
+      "file_mutations": 1,
+      "test_runs": 1,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 18,
+      "stage_name": "basic_api_implementation",
+      "score": 3,
+      "file_mutations": 1,
+      "test_runs": 1,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 0,
+      "stage_name": "requirement_analysis_and_planning",
+      "score": 2,
+      "file_mutations": 2,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 20,
+      "stage_name": "create_test_case_templates",
+      "score": 2,
+      "file_mutations": 2,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 0,
+      "stage_name": "requirement_analysis_and_planning",
+      "score": 2,
+      "file_mutations": 2,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 7,
+      "stage_name": "pytest_fixture_dut_implementation",
+      "score": 2,
+      "file_mutations": 2,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 1,
+      "stage_name": "dut_function_understanding",
+      "score": 2,
+      "file_mutations": 2,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 0,
+      "stage_name": "requirement_analysis_and_planning",
+      "score": 2,
+      "file_mutations": 2,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 9,
+      "stage_name": "coverage_group_creation",
+      "score": 2,
+      "file_mutations": 2,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "Adder",
+      "stage_index": 1,
+      "stage_name": "dut_function_understanding",
+      "score": 1,
+      "file_mutations": 1,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 1,
+      "stage_name": "dut_function_understanding",
+      "score": 1,
+      "file_mutations": 1,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 13,
+      "stage_name": "bundle_wrapper_design",
+      "score": 1,
+      "file_mutations": 1,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "uart_tx",
+      "stage_index": 25,
+      "stage_name": "verification_review_and_summary",
+      "score": 1,
+      "file_mutations": 1,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": true
+    },
+    {
+      "dut": "ALU754",
+      "stage_index": 25,
+      "stage_name": "verification_review_and_summary",
+      "score": 1,
+      "file_mutations": 1,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": true
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 1,
+      "stage_name": "dut_function_understanding",
+      "score": 1,
+      "file_mutations": 1,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    },
+    {
+      "dut": "FSM",
+      "stage_index": 13,
+      "stage_name": "bundle_wrapper_design",
+      "score": 1,
+      "file_mutations": 1,
+      "test_runs": 0,
+      "check_failures": 0,
+      "failure_signature_count": 0,
+      "stage_advanced": true,
+      "all_completed": false
+    }
+  ],
+  "common_stages": [
+    {
+      "stage_name": "basic_api_functional_test",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 399,
+      "check_failures": 23,
+      "file_mutations": 125
+    },
+    {
+      "stage_name": "evaluate_env_fixture",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 339,
+      "check_failures": 17,
+      "file_mutations": 88
+    },
+    {
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 303,
+      "check_failures": 24,
+      "file_mutations": 108
+    },
+    {
+      "stage_name": "generate_random_test_cases",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 142,
+      "check_failures": 5,
+      "file_mutations": 39
+    },
+    {
+      "stage_name": "create_test_case_templates",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 132,
+      "check_failures": 8,
+      "file_mutations": 53
+    },
+    {
+      "stage_name": "verification_review_and_summary",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 65,
+      "check_failures": 7,
+      "file_mutations": 14
+    },
+    {
+      "stage_name": "basic_api_implementation",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 58,
+      "check_failures": 2,
+      "file_mutations": 26
+    },
+    {
+      "stage_name": "coverage_group_creation",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 42,
+      "check_failures": 3,
+      "file_mutations": 21
+    },
+    {
+      "stage_name": "dut_function_grouping",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 34,
+      "check_failures": 2,
+      "file_mutations": 20
+    },
+    {
+      "stage_name": "bundle_wrapper_design",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 23,
+      "check_failures": 1,
+      "file_mutations": 16
+    },
+    {
+      "stage_name": "requirement_analysis_and_planning",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 9,
+      "check_failures": 0,
+      "file_mutations": 9
+    },
+    {
+      "stage_name": "dut_function_understanding",
+      "dut_count": 4,
+      "duts": [
+        "ALU754",
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 5,
+      "check_failures": 0,
+      "file_mutations": 5
+    },
+    {
+      "stage_name": "test_case_implementation_in_batch",
+      "dut_count": 3,
+      "duts": [
+        "Adder",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 674,
+      "check_failures": 50,
+      "file_mutations": 267
+    },
+    {
+      "stage_name": "dut_creation_implementation",
+      "dut_count": 3,
+      "duts": [
+        "ALU754",
+        "FSM",
+        "uart_tx"
+      ],
+      "score": 32,
+      "check_failures": 2,
+      "file_mutations": 18
+    },
+    {
+      "stage_name": "implemente_function_checks_in_batch",
+      "dut_count": 2,
+      "duts": [
+        "ALU754",
+        "Adder"
+      ],
+      "score": 37,
+      "check_failures": 4,
+      "file_mutations": 7
+    },
+    {
+      "stage_name": "pytest_fixture_dut_implementation",
+      "dut_count": 2,
+      "duts": [
+        "ALU754",
+        "uart_tx"
+      ],
+      "score": 5,
+      "check_failures": 0,
+      "file_mutations": 3
+    },
+    {
+      "stage_name": "env_fixture_implementation",
+      "dut_count": 1,
+      "duts": [
+        "uart_tx"
+      ],
+      "score": 3,
+      "check_failures": 0,
+      "file_mutations": 1
+    }
+  ],
+  "pattern_by_stage": {
+    "FSM | 21 | test_case_implementation_in_batch": {
+      "test_template_not_implemented": 24,
+      "label_or_report_mismatch": 5,
+      "bug_doc_schema_or_marking": 5,
+      "test_logic_or_case_implementation": 3,
+      "coverage_or_test_marks_missing": 2,
+      "bug_doc_incomplete_tc_label": 2,
+      "bug_doc_passed_tc_marked_as_bug": 1
+    },
+    "uart_tx | 21 | test_case_implementation_in_batch": {
+      "test_logic_or_case_implementation": 33,
+      "coverage_or_test_marks_missing": 1
+    },
+    "ALU754 | 22 | comprehensive_verification_and_bug_analysis": {
+      "bug_doc_schema_or_marking": 14,
+      "label_or_report_mismatch": 2,
+      "api_or_env_interface_mismatch": 1,
+      "test_template_not_implemented": 1
+    },
+    "uart_tx | 16 | evaluate_env_fixture": {
+      "api_or_env_interface_mismatch": 13,
+      "coverage_or_test_marks_missing": 4
+    },
+    "Adder | 21 | test_case_implementation_in_batch": {
+      "test_template_not_implemented": 12,
+      "api_or_env_interface_mismatch": 1,
+      "bug_doc_schema_or_marking": 1,
+      "label_or_report_mismatch": 1,
+      "test_logic_or_case_implementation": 1
+    },
+    "FSM | 16 | evaluate_env_fixture": {
+      "api_or_env_interface_mismatch": 9,
+      "coverage_or_test_marks_missing": 5
+    },
+    "uart_tx | 19 | basic_api_functional_test": {
+      "bug_doc_schema_or_marking": 5,
+      "api_or_env_interface_mismatch": 3,
+      "coverage_or_test_marks_missing": 2,
+      "bug_doc_incomplete_tc_label": 2,
+      "duplicate_label_definition": 1
+    },
+    "uart_tx | 22 | comprehensive_verification_and_bug_analysis": {
+      "bug_doc_schema_or_marking": 11,
+      "coverage_or_test_marks_missing": 2
+    },
+    "ALU754 | 19 | basic_api_functional_test": {
+      "api_or_env_interface_mismatch": 7,
+      "coverage_or_test_marks_missing": 4
+    },
+    "ALU754 | 16 | evaluate_env_fixture": {
+      "api_or_env_interface_mismatch": 6,
+      "coverage_or_test_marks_missing": 2,
+      "missing_assert": 1,
+      "test_template_not_implemented": 1
+    },
+    "FSM | 19 | basic_api_functional_test": {
+      "api_or_env_interface_mismatch": 9,
+      "coverage_or_test_marks_missing": 1
+    },
+    "FSM | 25 | verification_review_and_summary": {
+      "bug_doc_schema_or_marking": 6,
+      "test_template_not_implemented": 3,
+      "label_or_report_mismatch": 1
+    },
+    "Adder | 19 | basic_api_functional_test": {
+      "api_or_env_interface_mismatch": 4,
+      "coverage_or_test_marks_missing": 2,
+      "bug_doc_schema_or_marking": 1,
+      "missing_assert": 1
+    },
+    "uart_tx | 24 | generate_random_test_cases": {
+      "test_logic_or_case_implementation": 3,
+      "api_or_env_interface_mismatch": 2
+    },
+    "ALU754 | 20 | create_test_case_templates": {
+      "test_template_not_implemented": 4,
+      "coverage_or_test_marks_missing": 1
+    },
+    "FSM | 24 | generate_random_test_cases": {
+      "missing_assert": 2,
+      "api_or_env_interface_mismatch": 1,
+      "test_logic_or_case_implementation": 1,
+      "bug_doc_schema_or_marking": 1
+    },
+    "uart_tx | 20 | create_test_case_templates": {
+      "coverage_or_test_marks_missing": 3,
+      "test_template_not_implemented": 1
+    },
+    "FSM | 20 | create_test_case_templates": {
+      "test_template_not_implemented": 3,
+      "coverage_or_test_marks_missing": 1
+    },
+    "Adder | 16 | evaluate_env_fixture": {
+      "api_or_env_interface_mismatch": 3
+    },
+    "Adder | 22 | comprehensive_verification_and_bug_analysis": {
+      "bug_doc_schema_or_marking": 2,
+      "test_template_not_implemented": 1
+    },
+    "Adder | 24 | generate_random_test_cases": {
+      "test_logic_or_case_implementation": 2,
+      "test_template_not_implemented": 1
+    },
+    "ALU754 | 10 | implemente_function_checks_in_batch": {
+      "coverage_or_test_marks_missing": 3
+    },
+    "ALU754 | 9 | coverage_group_creation": {
+      "coverage_or_test_marks_missing": 2
+    },
+    "ALU754 | 18 | basic_api_implementation": {
+      "coverage_or_test_marks_missing": 1,
+      "api_or_env_interface_mismatch": 1
+    },
+    "FSM | 22 | comprehensive_verification_and_bug_analysis": {
+      "coverage_or_test_marks_missing": 1,
+      "bug_doc_schema_or_marking": 1
+    },
+    "Adder | 10 | implemente_function_checks_in_batch": {
+      "coverage_or_test_marks_missing": 1
+    },
+    "Adder | 18 | basic_api_implementation": {
+      "api_or_env_interface_mismatch": 1
+    },
+    "Adder | 25 | verification_review_and_summary": {
+      "test_template_not_implemented": 1
+    },
+    "uart_tx | 6 | dut_creation_implementation": {
+      "test_import_error": 1
+    },
+    "uart_tx | 9 | coverage_group_creation": {
+      "coverage_or_test_marks_missing": 1
+    },
+    "uart_tx | 18 | basic_api_implementation": {
+      "api_or_env_interface_mismatch": 1
+    },
+    "ALU754 | 2 | dut_function_grouping": {
+      "generic_checker_failure": 1
+    },
+    "ALU754 | 6 | dut_creation_implementation": {
+      "api_or_env_interface_mismatch": 1
+    },
+    "ALU754 | 13 | bundle_wrapper_design": {
+      "coverage_or_test_marks_missing": 1
+    },
+    "FSM | 2 | dut_function_grouping": {
+      "duplicate_label_definition": 1
+    }
+  },
+  "file_category_hotspots": {
+    "FSM | test_case_implementation_in_batch | test_code": 75,
+    "uart_tx | test_case_implementation_in_batch | test_code": 74,
+    "uart_tx | basic_api_functional_test | bug_document": 41,
+    "FSM | test_case_implementation_in_batch | bug_document": 35,
+    "ALU754 | comprehensive_verification_and_bug_analysis | bug_document": 34,
+    "Adder | test_case_implementation_in_batch | test_code": 27,
+    "uart_tx | test_case_implementation_in_batch | bug_document": 27,
+    "ALU754 | basic_api_functional_test | test_code": 26,
+    "FSM | evaluate_env_fixture | test_code": 22,
+    "uart_tx | basic_api_functional_test | test_code": 21,
+    "FSM | evaluate_env_fixture | coverage_code": 21,
+    "Adder | test_case_implementation_in_batch | bug_document": 20,
+    "ALU754 | evaluate_env_fixture | test_code": 19,
+    "FSM | basic_api_functional_test | test_code": 19,
+    "ALU754 | comprehensive_verification_and_bug_analysis | test_code": 18,
+    "ALU754 | comprehensive_verification_and_bug_analysis | coverage_code": 18,
+    "ALU754 | create_test_case_templates | test_code": 17,
+    "FSM | create_test_case_templates | test_code": 17,
+    "uart_tx | generate_random_test_cases | test_code": 15,
+    "uart_tx | create_test_case_templates | test_code": 14,
+    "uart_tx | comprehensive_verification_and_bug_analysis | test_code": 14,
+    "uart_tx | evaluate_env_fixture | test_code": 13,
+    "ALU754 | basic_api_implementation | test_code": 13,
+    "FSM | generate_random_test_cases | test_code": 12,
+    "FSM | verification_review_and_summary | bug_document": 10,
+    "Adder | basic_api_implementation | test_code": 9,
+    "Adder | basic_api_functional_test | test_code": 8,
+    "Adder | comprehensive_verification_and_bug_analysis | bug_document": 8,
+    "uart_tx | dut_creation_implementation | test_code": 8,
+    "ALU754 | dut_function_grouping | spec_check_document": 8,
+    "Adder | basic_api_functional_test | bug_document": 7,
+    "ALU754 | coverage_group_creation | test_code": 7,
+    "uart_tx | evaluate_env_fixture | coverage_code": 6,
+    "ALU754 | coverage_group_creation | coverage_code": 6,
+    "ALU754 | bundle_wrapper_design | test_code": 6,
+    "FSM | dut_creation_implementation | test_code": 6,
+    "FSM | comprehensive_verification_and_bug_analysis | bug_document": 6,
+    "Adder | evaluate_env_fixture | test_code": 5,
+    "FSM | test_case_implementation_in_batch | document": 5,
+    "uart_tx | dut_function_grouping | spec_check_document": 4
+  },
+  "failure_examples": {
+    "coverage_or_test_marks_missing": [
+      {
+        "dut": "Adder",
+        "stage_index": 10,
+        "stage_name": "implemente_function_checks_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "8ec1ff58145dede1"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_api_coverage.py:94-120::test_api_Adder_step_falling",
+          "unity_test/tests/test_Adder_api_coverage.py:123-148::test_api_Adder_carry_in_1",
+          "unity_test/tests/test_Adder_api_coverage.py:205-223::test_api_Adder_carry_out_carry_output"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED"
+        ],
+        "failure_signature": "c35b38452bbdb805"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_api_coverage.py:94-120::test_api_Adder_step_falling"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED",
+          "=================================== FAILURES =================================== _________________________ test_api_Adder_step_falling __________________________ env = <Adder_api.A"
+        ],
+        "failure_signature": "856c6dcff9e60fdf"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 9,
+        "stage_name": "coverage_group_creation",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Error occurred during check: Failed to import and process <REPO_ROOT>/output/unity_test/tests/uart_tx_function_coverage_def.py: invalid synt",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "51dcf863397e7fc5"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 16,
+        "stage_name": "evaluate_env_fixture",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Insufficient env fixture test coverage: 0 env test functions found, minimum required is 1. You have defined 0 env test functions:  in file 'unity_test/tests/test_uart_tx_env_fixtur",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "854528cef187ccee"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 16,
+        "stage_name": "evaluate_env_fixture",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Insufficient env fixture test coverage: 0 env test functions found, minimum required is 1. You have defined 0 env test functions:  in file 'unity_test/tests/test_uart_tx_env_fixtur",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "854528cef187ccee"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 16,
+        "stage_name": "evaluate_env_fixture",
+        "event_type": "check_result",
+        "tool": "Complete",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Insufficient env fixture test coverage: 0 env test functions found, minimum required is 1. You have defined 0 env test functions:  in file 'unity_test/tests/test_uart_tx_env_fixtur",
+          "Please fix the issues reported in 'last_check_result.check_info.last_msg.error' according to the suggestions, and then use the `Complete` tool again to complete this stage."
+        ],
+        "failure_signature": "149bd352b1144a85"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 16,
+        "stage_name": "evaluate_env_fixture",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Insufficient env fixture test coverage: 0 env test functions found, minimum required is 1. You have defined 0 env test functions:  in file 'unity_test/tests/test_uart_tx_env_fixtur",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "854528cef187ccee"
+      }
+    ],
+    "api_or_env_interface_mismatch": [
+      {
+        "dut": "Adder",
+        "stage_index": 16,
+        "stage_name": "evaluate_env_fixture",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_env_fixture.py:15-36::test_env_inputs_initialization",
+          "unity_test/tests/test_Adder_env_fixture.py:39-53::test_env_outputs_access",
+          "unity_test/tests/test_Adder_env_fixture.py:56-75::test_env_write_inputs"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED"
+        ],
+        "failure_signature": "029e5ca51d7d638b"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 16,
+        "stage_name": "evaluate_env_fixture",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "You need use tool `ReadTextFile` to read and understand the reference files",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "b6e0a9b84dd1f35f"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 16,
+        "stage_name": "evaluate_env_fixture",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "The Env test function 'test_env_cin_toggle' name must start with 'test_api_Adder_env_', but got 'test_env_cin_toggle'.",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "631936568068a6f5"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 18,
+        "stage_name": "basic_api_implementation",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_api_basic.py:7-34::test_api_Adder_add_basic",
+          "unity_test/tests/test_Adder_api_basic.py:37-58::test_api_Adder_add_small_numbers",
+          "unity_test/tests/test_Adder_api_basic.py:61-83::test_api_Adder_add_identity"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED",
+          "=================================== FAILURES =================================== ___________________________ test_api_Adder_add_basic ___________________________ env = <Adder_api.A"
+        ],
+        "failure_signature": "e67b1702c7f12bfb"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_api_basic.py:114-136::test_api_Adder_add_large_numbers"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED",
+          "=================================== FAILURES =================================== _______________________ test_api_Adder_add_large_numbers _______________________ env = <Adder_api.A"
+        ],
+        "failure_signature": "e9e54f23012dc105"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_api_basic.py:114-136::test_api_Adder_add_large_numbers"
+        ],
+        "failed_checkpoints_top": [
+          "FG-ARITHMETIC/FC-CARRY-IN/CK-CIN-1",
+          "FG-ARITHMETIC/FC-CARRY-OUT/CK-MAX-BOUNDARY",
+          "FG-BOUNDARY/FC-BOUNDARY/CK-MAX-INPUT"
+        ],
+        "error_top": [
+          "Missing test functions for 2 API(s): api_Adder_add_no_cin, api_Adder_add_one (Defined in file: unity_test/tests/Adder_api.py). Please create the missing functions: test_api_Adder_a",
+          "FAILED"
+        ],
+        "failure_signature": "3517248d6816a0e2"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_api_basic.py:114-136::test_api_Adder_add_large_numbers",
+          "unity_test/tests/test_Adder_api_basic.py:165-192::test_api_Adder_add_one"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED",
+          "=================================== FAILURES =================================== _______________________ test_api_Adder_add_large_numbers _______________________ env = <Adder_api.A"
+        ],
+        "failure_signature": "d016f9d9e4e61152"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_api_basic.py:114-136::test_api_Adder_add_large_numbers"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED",
+          "=================================== FAILURES =================================== _______________________ test_api_Adder_add_large_numbers _______________________ env = <Adder_api.A"
+        ],
+        "failure_signature": "48f99cc9518f3b78"
+      }
+    ],
+    "bug_doc_schema_or_marking": [
+      {
+        "dut": "Adder",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_api_basic.py:114-136::test_api_Adder_add_large_numbers"
+        ],
+        "failed_checkpoints_top": [
+          "FG-ARITHMETIC/FC-CARRY-IN/CK-CIN-1",
+          "FG-ARITHMETIC/FC-CARRY-OUT/CK-MAX-BOUNDARY",
+          "FG-BOUNDARY/FC-BOUNDARY/CK-MAX-INPUT"
+        ],
+        "error_top": [
+          "Bug analysis documentation parsing failed for file 'unity_test/Adder_bug_analysis.md': At line (11): Found TC tag '<TC-' but its parent BG tag '<BG-' was not found in previous line",
+          "You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK>, <BG-NAME-XX>, <TC-FAILEDTESTCASE>."
+        ],
+        "failure_signature": "dcf36334510c98ab"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_templates.py:161-190::test_api_step_falling",
+          "unity_test/tests/test_Adder_templates.py:281-300::test_arithmetic_add_large_numbers",
+          "unity_test/tests/test_Adder_templates.py:326-348::test_arithmetic_cin_1"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "FAILED"
+        ],
+        "failure_signature": "3a4096c0d3187c55"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 22,
+        "stage_name": "comprehensive_verification_and_bug_analysis",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "FAILED"
+        ],
+        "failure_signature": "dc42f0231a3afd54"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 22,
+        "stage_name": "comprehensive_verification_and_bug_analysis",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "FAILED"
+        ],
+        "failure_signature": "dc42f0231a3afd54"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "check_result",
+        "tool": "Complete",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-API/FC-API-INIT/CK-INIT-COVERAGE",
+          "FG-API/FC-API-INIT/CK-INIT-WAVEFORM",
+          "FG-FIFO/FC-FIFO-READ/CK-FIFO-READ-BASIC"
+        ],
+        "error_top": [
+          "Bug analysis documentation parsing failed for file 'unity_test/uart_tx_bug_analysis.md': At line (7): Found CK tag '<CK-' but its parent FC tag '<FC-' was not found in previous lin",
+          "You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK>, <BG-NAME-XX>, <TC-FAILEDTESTCASE>."
+        ],
+        "failure_signature": "4c2235e70d7c9f06"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-API/FC-API-INIT/CK-INIT-COVERAGE",
+          "FG-API/FC-API-INIT/CK-INIT-WAVEFORM",
+          "FG-FIFO/FC-FIFO-READ/CK-FIFO-READ-BASIC"
+        ],
+        "error_top": [
+          "Bug analysis documentation parsing failed for file 'unity_test/uart_tx_bug_analysis.md': At line (65): Found TC tag '<TC-' but its parent BG tag '<BG-' was not found in previous li",
+          "You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK>, <BG-NAME-XX>, <TC-FAILEDTESTCASE>."
+        ],
+        "failure_signature": "f4bceba63ffaebb2"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-API/FC-API-INIT/CK-INIT-COVERAGE",
+          "FG-API/FC-API-INIT/CK-INIT-WAVEFORM",
+          "FG-FIFO/FC-FIFO-READ/CK-FIFO-READ-BASIC"
+        ],
+        "error_top": [
+          "Bug analysis documentation parsing failed for file 'unity_test/uart_tx_bug_analysis.md': At line (71): Found TC tag '<TC-' but its parent BG tag '<BG-' was not found in previous li",
+          "You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK>, <BG-NAME-XX>, <TC-FAILEDTESTCASE>."
+        ],
+        "failure_signature": "378fa91ec86123cb"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "check_result",
+        "tool": "Complete",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-API/FC-API-INIT/CK-INIT-COVERAGE",
+          "FG-API/FC-API-INIT/CK-INIT-WAVEFORM",
+          "FG-FIFO/FC-FIFO-READ/CK-FIFO-READ-BASIC"
+        ],
+        "error_top": [
+          "2 unanalyzed failed checkpoints (its check function is not called/sampled or the return not true) detected: FG-API/FC-API-INIT/CK-INIT-COVERAGE, FG-API/FC-API-INIT/CK-INIT-WAVEFORM",
+          "1. Make sure you have called CovGroup.sample() to sample the failed check points in your test function or in StepRis/StepFail callback, otherwise the coverage cannot be collected c"
+        ],
+        "failure_signature": "adf32687b3dd36ba"
+      }
+    ],
+    "missing_assert": [
+      {
+        "dut": "Adder",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_api_basic.py:114-136::test_api_Adder_add_large_numbers",
+          "unity_test/tests/test_Adder_api_coverage.py:94-120::test_api_Adder_step_falling",
+          "unity_test/tests/test_Adder_api_coverage.py:123-148::test_api_Adder_carry_in_1"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "The following 1 test cases do not contain assert statements: unity_test/tests/test_Adder_api_coverage.py:391-411::test_api_Adder_special_all_ones. Note: A test case MUST contain at",
+          "FAILED"
+        ],
+        "failure_signature": "5a89e68d9ed0c753"
+      },
+      {
+        "dut": "ALU754",
+        "stage_index": 16,
+        "stage_name": "evaluate_env_fixture",
+        "event_type": "check_result",
+        "tool": "Complete",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "The following 1 test cases do not contain assert statements: unity_test/tests/test_ALU754_env_fixture.py:115-128::test_api_ALU754_env_basic_operation. Note: A test case MUST contai",
+          "Please fix the issues reported in 'last_check_result.check_info.last_msg.error' according to the suggestions, and then use the `Complete` tool again to complete this stage."
+        ],
+        "failure_signature": "ba05b90f8c2432da"
+      },
+      {
+        "dut": "FSM",
+        "stage_index": 24,
+        "stage_name": "generate_random_test_cases",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-RESET/FC-RESET-RESPONSE/CK-RESET-WHILE-PRESSED"
+        ],
+        "error_top": [
+          "The following 5 test cases do not contain assert statements: unity_test/tests/test_FSM_random_state_management.py:152-230::test_random_pulse_timing, unity_test/tests/test_FSM_rando",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "5ab83078b48ac656"
+      },
+      {
+        "dut": "FSM",
+        "stage_index": 24,
+        "stage_name": "generate_random_test_cases",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-RESET/FC-RESET-RESPONSE/CK-RESET-WHILE-PRESSED"
+        ],
+        "error_top": [
+          "The following 1 test cases do not contain assert statements: unity_test/tests/test_FSM_random_edge_cases.py:106-182::test_random_key_release_stuck. Note: A test case MUST contain a",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "54b3577174011569"
+      }
+    ],
+    "test_template_not_implemented": [
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_templates.py:7-23::test_api_initialize_basic",
+          "unity_test/tests/test_Adder_templates.py:26-43::test_api_port_write_input",
+          "unity_test/tests/test_Adder_templates.py:46-65::test_api_port_read_output"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED"
+        ],
+        "failure_signature": "26a60e2eebdcfbde"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_templates.py:7-23::test_api_initialize_basic"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED",
+          "=================================== FAILURES =================================== __________________________ test_api_initialize_basic ___________________________ env = <Adder_api.A"
+        ],
+        "failure_signature": "1b6b892a679618c0"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_templates.py:29-52::test_api_port_write_input",
+          "unity_test/tests/test_Adder_templates.py:55-86::test_api_port_read_output",
+          "unity_test/tests/test_Adder_templates.py:89-112::test_api_step_basic"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED"
+        ],
+        "failure_signature": "0ccb5fba739c6479"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_templates.py:60-97::test_api_port_read_output",
+          "unity_test/tests/test_Adder_templates.py:129-158::test_api_step_rising",
+          "unity_test/tests/test_Adder_templates.py:161-190::test_api_step_falling"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED"
+        ],
+        "failure_signature": "0c6bf9c32760e9d8"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_templates.py:60-97::test_api_port_read_output"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED",
+          "=================================== FAILURES =================================== __________________________ test_api_port_read_output ___________________________ env = <Adder_api.A"
+        ],
+        "failure_signature": "8d93e980d1d98d47"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_templates.py:161-190::test_api_step_falling",
+          "unity_test/tests/test_Adder_templates.py:281-300::test_arithmetic_add_large_numbers",
+          "unity_test/tests/test_Adder_templates.py:326-348::test_arithmetic_cin_1"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "FAILED"
+        ],
+        "failure_signature": "3a4096c0d3187c55"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_templates.py:161-190::test_api_step_falling",
+          "unity_test/tests/test_Adder_templates.py:281-300::test_arithmetic_add_large_numbers",
+          "unity_test/tests/test_Adder_templates.py:326-348::test_arithmetic_cin_1"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "FAILED"
+        ],
+        "failure_signature": "3a4096c0d3187c55"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_templates.py:161-190::test_api_step_falling",
+          "unity_test/tests/test_Adder_templates.py:281-300::test_arithmetic_add_large_numbers",
+          "unity_test/tests/test_Adder_templates.py:326-348::test_arithmetic_cin_1"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "FAILED"
+        ],
+        "failure_signature": "3a4096c0d3187c55"
+      }
+    ],
+    "label_or_report_mismatch": [
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_templates.py:161-190::test_api_step_falling",
+          "unity_test/tests/test_Adder_templates.py:281-300::test_arithmetic_add_large_numbers",
+          "unity_test/tests/test_Adder_templates.py:326-348::test_arithmetic_cin_1"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "FAILED"
+        ],
+        "failure_signature": "3a4096c0d3187c55"
+      },
+      {
+        "dut": "ALU754",
+        "stage_index": 22,
+        "stage_name": "comprehensive_verification_and_bug_analysis",
+        "event_type": "check_result",
+        "tool": "Complete",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-BASIC-OPERATION/FC-ADD/CK-ADD-NAN",
+          "FG-BASIC-OPERATION/FC-MUL/CK-MUL-NAN",
+          "FG-BASIC-OPERATION/FC-MUL/CK-MUL-UNDERFLOW"
+        ],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "FAILED"
+        ],
+        "failure_signature": "b0e55fa6a93a03ad"
+      },
+      {
+        "dut": "ALU754",
+        "stage_index": 22,
+        "stage_name": "comprehensive_verification_and_bug_analysis",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-BASIC-OPERATION/FC-MUL/CK-MUL-UNDERFLOW",
+          "FG-BASIC-OPERATION/FC-DIV/CK-DIV-NAN",
+          "FG-BASIC-OPERATION/FC-DIV/CK-DIV-UNDERFLOW"
+        ],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "FAILED"
+        ],
+        "failure_signature": "5f72080b9f0f78cd"
+      },
+      {
+        "dut": "FSM",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Bug analysis documentation 'unity_test/FSM_bug_analysis.md' contains 1 check points (FG-FUNCTYPE-A/FC-A1/CK-NAME1) which are not found in the test report. Ensure the check point la",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "9d1a1ab2e597586d"
+      },
+      {
+        "dut": "FSM",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Bug analysis documentation 'unity_test/FSM_bug_analysis.md' contains 1 check points (FG-FUNCTYPE-A/FC-A1/CK-NAME1) which are not found in the test report. Ensure the check point la",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "9d1a1ab2e597586d"
+      },
+      {
+        "dut": "FSM",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Bug analysis documentation 'unity_test/FSM_bug_analysis.md' contains 1 check points (FG-FUNCTYPE-A/FC-A1/CK-NAME1) which are not found in the test report. Ensure the check point la",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "9d1a1ab2e597586d"
+      },
+      {
+        "dut": "FSM",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Bug analysis documentation 'unity_test/FSM_bug_analysis.md' contains 1 check points (FG-FUNCTYPE-A/FC-A1/CK-NAME1) which are not found in the test report. Ensure the check point la",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "9d1a1ab2e597586d"
+      },
+      {
+        "dut": "FSM",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/templates/test_FSM_state_transition_templates.py:68-101::test_FSM_pressed_to_idle_no_trigger_bug",
+          "unity_test/tests/templates/test_FSM_state_transition_templates.py:131-169::test_FSM_pressed_hold_bug"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "<string>:13: (WARNING/2) Bullet list ends without a blank line; unexpected unindent. <string>:14: (WARNING/2) Bullet list ends without a blank line; unexpected unindent."
+        ],
+        "failure_signature": "e82c62a1ca18d117"
+      }
+    ],
+    "test_logic_or_case_implementation": [
+      {
+        "dut": "Adder",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "c1982634711400c4"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 24,
+        "stage_name": "generate_random_test_cases",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_Adder_random_extended.py:39-68::test_random_Adder_arithmetic_large_numbers"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED",
+          "=================================== FAILURES =================================== __________________ test_random_Adder_arithmetic_large_numbers __________________ env = <Adder_api.A"
+        ],
+        "failure_signature": "6ff4882db136a2d0"
+      },
+      {
+        "dut": "Adder",
+        "stage_index": 24,
+        "stage_name": "generate_random_test_cases",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "You need use tool `ReadTextFile` to read and understand the reference files",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "013e4d4f1c2dedd4"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_uart_tx_api_operation.py:84-112::test_api_step_multi",
+          "unity_test/tests/test_uart_tx_api_operation.py:115-154::test_api_step_during_send",
+          "unity_test/tests/test_uart_tx_config.py:14-48::test_config_data_width_5"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED",
+          "[/tmp/build-via-sdist-uyo5jzlp/xspcomm-0.0.1/src/xsignal_cfg.cpp:95] [error] signal name: tx_state not found [/tmp/build-via-sdist-uyo5jzlp/xspcomm-0.0.1/src/xsignal_cfg.cpp:95] [e"
+        ],
+        "failure_signature": "88f64ac6dec2f85a"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "test_run",
+        "tool": "RunTestCases",
+        "failed_cases_top": [
+          "unity_test/tests/test_uart_tx_api_operation.py:115-154::test_api_step_during_send",
+          "unity_test/tests/test_uart_tx_config.py:14-48::test_config_data_width_5",
+          "unity_test/tests/test_uart_tx_config.py:272-322::test_config_dynamic_change"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "FAILED",
+          "=================================== FAILURES =================================== __________________________ test_api_step_during_send ___________________________ env = <uart_tx_api"
+        ],
+        "failure_signature": "500cbe49616de7ad"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_uart_tx_api_operation.py:120-159::test_api_step_during_send",
+          "unity_test/tests/test_uart_tx_config.py:14-48::test_config_data_width_5",
+          "unity_test/tests/test_uart_tx_config.py:272-322::test_config_dynamic_change"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "\u001b[33mTOFFEE_WARNING @bundle.py:1430:\tThe signal names ['PWDATA', 'LCR'] in UartTxControlBundle's connection dictionary are invalid, because they cannot match any signals from the B"
+        ],
+        "failure_signature": "d9531f8819cc6673"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_uart_tx_api_operation.py:120-159::test_api_step_during_send",
+          "unity_test/tests/test_uart_tx_config.py:14-48::test_config_data_width_5",
+          "unity_test/tests/test_uart_tx_config.py:272-322::test_config_dynamic_change"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "\u001b[33mTOFFEE_WARNING @bundle.py:1430:\tThe signal names ['PWDATA', 'LCR'] in UartTxControlBundle's connection dictionary are invalid, because they cannot match any signals from the B"
+        ],
+        "failure_signature": "d9531f8819cc6673"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [
+          "unity_test/tests/test_uart_tx_api_operation.py:120-159::test_api_step_during_send",
+          "unity_test/tests/test_uart_tx_config.py:14-48::test_config_data_width_5",
+          "unity_test/tests/test_uart_tx_config.py:272-322::test_config_dynamic_change"
+        ],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "============================= test session starts ============================== platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0 rootdir: <REDACTED_MOUNT>/9E4E6CA64E6C7943/d",
+          "\u001b[33mTOFFEE_WARNING @bundle.py:1430:\tThe signal names ['PWDATA', 'LCR'] in UartTxControlBundle's connection dictionary are invalid, because they cannot match any signals from the B"
+        ],
+        "failure_signature": "d9531f8819cc6673"
+      }
+    ],
+    "test_import_error": [
+      {
+        "dut": "uart_tx",
+        "stage_index": 6,
+        "stage_name": "dut_creation_implementation",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Error occurred during check: cannot import name 'DUTUartTx' from 'uart_tx' (<REPO_ROOT>/output/uart_tx/__init__.py)  Traceback (most recent ",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "06e6e5b7758cd3dd"
+      }
+    ],
+    "duplicate_label_definition": [
+      {
+        "dut": "uart_tx",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-API/FC-API-INIT/CK-INIT-COVERAGE",
+          "FG-API/FC-API-INIT/CK-INIT-WAVEFORM",
+          "FG-FIFO/FC-FIFO-READ/CK-FIFO-READ-BASIC"
+        ],
+        "error_top": [
+          "Bug analysis documentation parsing failed for file 'unity_test/uart_tx_bug_analysis.md': At line (34): 'FG-API' is defined multiple times.. Common issues:",
+          "You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK>, <BG-NAME-XX>, <TC-FAILEDTESTCASE>."
+        ],
+        "failure_signature": "7f8af6c664b088ca"
+      },
+      {
+        "dut": "FSM",
+        "stage_index": 2,
+        "stage_name": "dut_function_grouping",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Documentation parsing failed for file 'unity_test/FSM_functions_and_checks.md': At line (299): 'FG-API' is defined multiple times..",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "6c50b84281dbb679"
+      }
+    ],
+    "bug_doc_incomplete_tc_label": [
+      {
+        "dut": "uart_tx",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "check_result",
+        "tool": "Complete",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-API/FC-API-INIT/CK-INIT-COVERAGE",
+          "FG-API/FC-API-INIT/CK-INIT-WAVEFORM",
+          "FG-FIFO/FC-FIFO-READ/CK-FIFO-READ-BASIC"
+        ],
+        "error_top": [
+          "Bug analysis documentation parsing failed for file 'unity_test/uart_tx_bug_analysis.md': Incomplete label '<TC-*>' detected: `FG-API/FC-INIT/CK-INIT-CLOCK at line 3 need sub node '",
+          "You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK>, <BG-NAME-XX>, <TC-FAILEDTESTCASE>."
+        ],
+        "failure_signature": "bb88ac0ba8c8ab8a"
+      },
+      {
+        "dut": "uart_tx",
+        "stage_index": 19,
+        "stage_name": "basic_api_functional_test",
+        "event_type": "check_result",
+        "tool": "Complete",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [
+          "FG-API/FC-API-INIT/CK-INIT-COVERAGE",
+          "FG-API/FC-API-INIT/CK-INIT-WAVEFORM",
+          "FG-FIFO/FC-FIFO-READ/CK-FIFO-READ-BASIC"
+        ],
+        "error_top": [
+          "Bug analysis documentation parsing failed for file 'unity_test/uart_tx_bug_analysis.md': Incomplete label '<TC-*>' detected: `FG-PROTOCOL/FC-DATA-BITS/CK-DATA-6BIT/BG-TODO-SAMPLE-0",
+          "You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK>, <BG-NAME-XX>, <TC-FAILEDTESTCASE>."
+        ],
+        "failure_signature": "924e50d0800ec07a"
+      },
+      {
+        "dut": "FSM",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Bug analysis documentation parsing failed for file 'unity_test/FSM_bug_analysis.md': Incomplete label '<TC-*>' detected: `FG-STATE-MGMT/FC-PRESSED-MANAGEMENT/CK-PRESSED-KEEP/BG-FSM",
+          "You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK>, <BG-NAME-XX>, <TC-FAILEDTESTCASE>."
+        ],
+        "failure_signature": "711171751be4bb50"
+      },
+      {
+        "dut": "FSM",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Bug analysis documentation parsing failed for file 'unity_test/FSM_bug_analysis.md': Incomplete label '<TC-*>' detected: `FG-STATE-MGMT/FC-PRESSED-MANAGEMENT/CK-PRESSED-KEEP/BG-FSM",
+          "You must use the format <FG-GROUP>, <FC-FUNCTION>, <CK-CHECK>, <BG-NAME-XX>, <TC-FAILEDTESTCASE>."
+        ],
+        "failure_signature": "7d0c99f191886b2c"
+      }
+    ],
+    "generic_checker_failure": [
+      {
+        "dut": "ALU754",
+        "stage_index": 2,
+        "stage_name": "dut_function_grouping",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Documentation parsing failed for file 'unity_test/ALU754_functions_and_checks.md': Invalid characters FG-* found in keys: FG-*.",
+          "Please fix the issues reported in 'check_info.last_msg.error' according to the suggestions, and then use the `Check` tool again to re-validate your work."
+        ],
+        "failure_signature": "c42e9ce20f72d2aa"
+      }
+    ],
+    "bug_doc_passed_tc_marked_as_bug": [
+      {
+        "dut": "FSM",
+        "stage_index": 21,
+        "stage_name": "test_case_implementation_in_batch",
+        "event_type": "check_result",
+        "tool": "Check",
+        "failed_cases_top": [],
+        "failed_checkpoints_top": [],
+        "error_top": [
+          "Bug analysis documentation 'unity_test/FSM_bug_analysis.md' contains 2 test cases (<TC-test_FSM_reset_templates.py::test_FSM_reset_while_pressed>(location: unity_test/tests/templat",
+          "2. Ensure the test cases is working correctly and 'FAILED' as expected."
+        ],
+        "failure_signature": "7087a743cb130ee7"
+      }
+    ]
+  }
+}

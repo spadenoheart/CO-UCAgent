@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "experiment": "adder_legacy_20260717_workflow_b0_b3_paired_e2e",
+  "seeds": [20260721, 20260722, 20260723],
+  "fixed_configuration": {
+    "dut": "Adder",
+    "workflow_profile": "legacy_20260717_compatible",
+    "agent_config": "benchmark/ucagent_experiments/configs/legacy_20260717_workflow.yaml",
+    "workflow_source_config": "benchmark/ucagent_experiments/configs/legacy_20260717_workflow_source.yaml",
+    "workflow_source_sha256": "f7d06ada894db85c8aaf2c8caa939e50af957a46fcb723ef4e2da1f6cb5b3497",
+    "legacy_checker_source_sha256": "7e35971597903ee57220401160cdc0a0bb05d5d936ab8f1ee0ec8a84731fbeb5",
+    "workflow_evidence_log": "log/Adder+20260717_165726/ucagent-msg.log",
+    "prompt_variant": "v1",
+    "model": "mdq100/qwen3.5-coder:122b-64k",
+    "source_model": "mdq100/qwen3.5-coder:122b",
+    "api_base": "http://127.0.0.1:11434/v1",
+    "num_ctx": 65536,
+    "summary_max_tokens": 49152,
+    "summary_max_output_tokens": 1024,
+    "embedding_api_base": "http://127.0.0.1:5000/v1",
+    "embedding_model": "Qwen/Qwen3-Embedding-0.6B",
+    "embedding_dims": 1024,
+    "observed_gpu_count": 5,
+    "quantization": "Q4_K_M",
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "top_k": 20,
+    "expected_server_environment": {
+      "OLLAMA_KEEP_ALIVE": "-1",
+      "OLLAMA_FLASH_ATTENTION": "1",
+      "OLLAMA_KV_CACHE_TYPE": "q8_0",
+      "OLLAMA_NUM_PARALLEL": "1",
+      "OLLAMA_MAX_LOADED_MODELS": "1",
+      "OLLAMA_SCHED_SPREAD": "false"
+    },
+    "llm_input_dump": true,
+    "data_collection": true,
+    "required_controls": [
+      "same legacy_20260717 workflow configuration",
+      "same current runtime code and test-result parser",
+      "same Ollama model and Q4_K_M quantization",
+      "same 65536-token Ollama context",
+      "same five-GPU server and Ollama options",
+      "same Prompt v1, summary, and embedding configuration",
+      "same seed within each B0/B3 pair",
+      "no concurrent inference workload",
+      "same frozen code and strategy-pack hashes"
+    ],
+    "excluded_upstream_workflow_stages": [
+      "functional_specification_refine",
+      "static_bug_analysis",
+      "mock_fixture_implementation",
+      "mock_functional_test",
+      "reference_model_implementation",
+      "reference_model_fixture_imp",
+      "refine_test_cases_based_on_functional_points",
+      "static_bug_validation"
+    ],
+    "note": "This profile restores the workflow and base prompts observed in the complete 2026-07-17 run while retaining the current compatible runtime, timeout classification fix, structured events, Prompt v1 overlay, and context-reuse implementation. It is a legacy-workflow compatibility baseline, not a byte-identical rollback of the whole dirty worktree. Post-sync 8-hour runs are retained separately and must not be pooled with this matrix."
+  },
+  "arms": [
+    {
+      "id": "B0",
+      "description": "Legacy 2026-07-17 workflow, Prompt v1, context reuse disabled",
+      "repeat": 3,
+      "environment": {
+        "UCAGENT_PROMPT_VARIANT": "v1"
+      },
+      "overrides": [
+        "context_upgrade.enable_context_reuse=false"
+      ]
+    },
+    {
+      "id": "B3",
+      "description": "Same legacy workflow and Prompt v1 with v2.2 utility plus semantic/risk hard gates",
+      "repeat": 3,
+      "environment": {
+        "UCAGENT_PROMPT_VARIANT": "v1",
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68",
+        "UCAGENT_CONTEXT_REUSE_UTILITY_GATE": "true",
+        "UCAGENT_CONTEXT_REUSE_MIN_UTILITY": "0.05",
+        "UCAGENT_CONTEXT_REUSE_STRICT_ACTION_MATCH": "true",
+        "UCAGENT_CONTEXT_REUSE_EXACT_PATTERN_GROUPS": "true",
+        "UCAGENT_CONTEXT_REUSE_GENERIC_SIGNATURE": "true",
+        "UCAGENT_CONTEXT_REUSE_SKIP_NON_REUSABLE": "true",
+        "UCAGENT_CONTEXT_REUSE_STRICT_HINT_MATCH": "true",
+        "UCAGENT_CONTEXT_REUSE_ALLOW_HINTS_ONLY": "false",
+        "UCAGENT_CONTEXT_REUSE_DESTRUCTIVE_SUPPORT_GATE": "true"
+      },
+      "overrides": [
+        "context_upgrade.enable_context_reuse=true"
+      ]
+    }
+  ],
+  "reporting_policy": {
+    "primary_comparison": "paired B3 minus B0 within seed",
+    "minimum_deadline_result": "one completed paired seed, reported as preliminary n=1",
+    "paper_result": "all three paired seeds with median, per-seed deltas, and uncertainty",
+    "do_not_pool": "adder_b0_b3_runs and adder_timeout_ttft_fix_20260722 use the post-sync workflow"
+  }
+}

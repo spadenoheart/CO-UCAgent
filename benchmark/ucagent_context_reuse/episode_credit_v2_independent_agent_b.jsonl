@@ -1,0 +1,40 @@
+{"episode_id":"credit-29352fe4c7a43cfe","annotator":"independent_subagent_B","credit_role":"progress","notes":"修改 FSM_bug_analysis.md 后以同一 Check 复验，原失败检查点被消除且 check_pass=true；comparable=true、net_reduction=1、无回归。"}
+{"episode_id":"credit-a767a5dd59302178","annotator":"independent_subagent_B","credit_role":"diagnostic","notes":"首次通配目标在收集前报 infrastructure_error，随后具体测试文件正确执行并暴露 5 个明确失败用例。该变化不可比较且没有修复动作，但形成了可行动诊断证据。"}
+{"episode_id":"credit-0ce7bcd42fb5527f","annotator":"independent_subagent_B","credit_role":"no_progress","notes":"仅从 RunTestCases 切换到 Check，未修改文件且 comparable=false；Check 的覆盖提示没有证明原 5 个接口失败减少，information_gain 也仅为 0.1。"}
+{"episode_id":"credit-858f6b39e60c1806","annotator":"independent_subagent_B","credit_role":"regression","notes":"同一 Check 范围内，原文档标记问题被新的不完整 TC 标签解析错误替代。net_reduction=0、regression_count=1，且未推进阶段。"}
+{"episode_id":"credit-35bacabfca4a7e5e","annotator":"independent_subagent_B","credit_role":"invalid","notes":"前后两次测试都在收集前因路径不存在而 infrastructure_error，测试未正确执行。没有获得有效验证结果。"}
+{"episode_id":"credit-41e65c0ffa6a98a5","annotator":"independent_subagent_B","credit_role":"progress","notes":"修改 random_fifo 测试后，原失败用例在针对性复验中 verified_nonempty_pass。失败集合可比，唯一失败被消除且无回归。"}
+{"episode_id":"credit-23a5738c447b5421","annotator":"independent_subagent_B","credit_role":"diagnostic","notes":"从 Complete 的“0 个 env 测试函数”切换到实际运行后，验证正确执行并定位出 5 个具体失败用例。范围不可比、尚无直接修复，但诊断证据具体且可行动。"}
+{"episode_id":"credit-dd020203b0c11d1b","annotator":"independent_subagent_B","credit_role":"regression","notes":"同一 Check 中 5 个检查点全部持续失败，且重写文档后错误由缺失父 BG 变为重复 FG 定义。没有净推进，并引入了新的具体解析失败。"}
+{"episode_id":"credit-75ee631daa8dde58","annotator":"independent_subagent_B","credit_role":"regression","notes":"同一 env fixture 测试范围内仍有 5 个失败，虽解决 init 用例却新增 step_with_input 失败。net_reduction=0、regression_count=1。"}
+{"episode_id":"credit-6181bb0e293a61d9","annotator":"independent_subagent_B","credit_role":"invalid","notes":"最终验证因错误拼接多个测试节点而 no_tests_collected。测试没有正确执行，表面的失败减少不可采信。"}
+{"episode_id":"credit-1c0cd4b7b769ecc8","annotator":"independent_subagent_B","credit_role":"no_progress","notes":"没有文件修改，只把整文件验证缩小到一个仍失败的用例。其余 4 个用例未运行，不能据此视为已解决。"}
+{"episode_id":"credit-4cefc3ffb92a9fd2","annotator":"independent_subagent_B","credit_role":"diagnostic","notes":"Check 的 reference_files_unread 与随后 RunTestCases 不可比较；后者正确执行并暴露 5 个具体接口失败。没有可验证修复，但新增证据具体且可行动。"}
+{"episode_id":"credit-16f32fedd7de21d5","annotator":"independent_subagent_B","credit_role":"no_progress","notes":"只从含 3 个失败检查点的 Check 切换到一个单测并通过，comparable=false 且 stage_advanced=false。该跨验证器局部成功不能证明原检查点得到修复。"}
+{"episode_id":"credit-e1aa77f248b383db","annotator":"independent_subagent_B","credit_role":"regression","notes":"同一 Check 范围内，模板未实现问题被新的检查点覆盖缺失替代。失败数没有净减少，regression_count=1。"}
+{"episode_id":"credit-a73b7076c3f6cfe6","annotator":"independent_subagent_B","credit_role":"invalid","notes":"最终 RunTestCases 因逗号化文件参数在收集前 infrastructure_error。验证未正确执行，不能用不可比的 net_reduction 判断推进。"}
+{"episode_id":"credit-d0cd8f77309e93c6","annotator":"independent_subagent_B","credit_role":"progress","notes":"修改 FSM API 模板后，以相同四测试目标复验并全部 verified_nonempty_pass。两个原失败均消除，comparable=true 且无回归。"}
+{"episode_id":"credit-464945eec7342139","annotator":"independent_subagent_B","credit_role":"diagnostic","notes":"从宽泛 Check 失败切换到具体模板文件运行后，定位出 3 个明确失败用例。范围不可比，不能判回归或推进，但诊断信息明显细化。"}
+{"episode_id":"credit-067bc73de9c85b72","annotator":"independent_subagent_B","credit_role":"no_progress","notes":"原单测失败后仅写入总结文档并切换到 Check 通过，comparable=false 且未推进阶段。跨验证器成功不能证明原 test_api_step_rising 已修复。"}
+{"episode_id":"credit-0694664bd3d7c654","annotator":"independent_subagent_B","credit_role":"regression","notes":"同一 Check 范围内，不完整 TC 标签错误被新的“已通过测试却标为 bug”错误替代。net_reduction=0、regression_count=1。"}
+{"episode_id":"credit-65251ec2e350e210","annotator":"independent_subagent_B","credit_role":"invalid","notes":"最终验证仍在收集前失败，原因从导入错误变成测试路径不存在。测试未正确执行，因此归为 invalid。"}
+{"episode_id":"credit-3da9a53cced062bb","annotator":"independent_subagent_B","credit_role":"no_progress","notes":"没有文件修改，只将整文件的 5 个失败缩小运行到一个仍失败的用例。未运行的 4 个失败不能算作 resolved，故无可验证推进。"}
+{"episode_id":"credit-99cf83585ef2f493","annotator":"independent_subagent_B","credit_role":"diagnostic","notes":"先前文件列表参数导致收集前失败，随后 Check 给出 5 个具体失败检查点。两种验证范围不可比且无修复，但新增检查点可直接指导后续处理。"}
+{"episode_id":"credit-5cd15302d58491d4","annotator":"independent_subagent_B","credit_role":"no_progress","notes":"未修改文件，仅由 RunTestCases 切换到 Check，且 Check 复述同一测试生成失败和信号名告警。comparable=false，没有新的具体诊断或可验证推进。"}
+{"episode_id":"credit-d246fe0c420ded65","annotator":"independent_subagent_B","credit_role":"progress","notes":"修改后运行范围从单个失败用例扩展到整文件，原 test_api_port_write_input 已从失败集合消失。扩展范围中新见的 5 个失败不能证明由本次修改引入，因此不按 regression 处理。"}
+{"episode_id":"credit-26e1d1cf2d81b2cd","annotator":"independent_subagent_B","credit_role":"invalid","notes":"最终指定的 bug 测试路径不存在，RunTestCases 在收集前 infrastructure_error。跨验证器的表面 net_reduction 不具有效性。"}
+{"episode_id":"credit-3a46453bc6f8b8a0","annotator":"independent_subagent_B","credit_role":"progress","notes":"修改覆盖定义后，以完全相同的单测目标复验并 verified_nonempty_pass。原唯一失败被消除，comparable=true、regression_count=0。"}
+{"episode_id":"credit-ee2106805db8ff00","annotator":"independent_subagent_B","credit_role":"diagnostic","notes":"修改后没有复验原 reset 用例，而是运行另一 press_key 用例并发现 current_state 信号缺失。comparable=false，不能判修复或回归，但产生了具体可行动的新诊断。"}
+{"episode_id":"credit-719b24b0430c98d1","annotator":"independent_subagent_B","credit_role":"regression","notes":"相同检查范围内 5 个检查点全部持续失败，文档错误由重复 FG 定义变为不完整 TC 标签。没有净推进，并引入新的解析失败。"}
+{"episode_id":"credit-5168b89694c307c8","annotator":"independent_subagent_B","credit_role":"no_progress","notes":"同一 Check 前后展示的核心输出均为相同的 PASSED 片段，未给出可识别的新失败细节。failure_pattern 变为泛化签名不足以证明真实回归，且没有净推进。"}
+{"episode_id":"credit-bbac86afbe7f918b","annotator":"independent_subagent_B","credit_role":"invalid","notes":"前后两次 RunTestCases 均在收集前 infrastructure_error，后一次还使用了无法识别的参数。测试始终未正确执行。"}
+{"episode_id":"credit-3eb41596bc5e760d","annotator":"independent_subagent_B","credit_role":"progress","notes":"修改同一 random_fifo 测试文件并复验相同目标后，失败从 2 个降至 1 个。test_random_fifo_full_behavior 被消除，且无新增失败。"}
+{"episode_id":"credit-016f8f9696984ecd","annotator":"independent_subagent_B","credit_role":"diagnostic","notes":"Check 的未分析检查点与随后单测失败不可直接比较；单测正确执行并定位到 test_FSM_pulse_width_next_cycle。没有直接修复，但新增证据具体且可行动。"}
+{"episode_id":"credit-fbf60f051d1aeb12","annotator":"independent_subagent_B","credit_role":"no_progress","notes":"从 Check 切换到单文件 RunTestCases 后，原有 3 个 ALU 用例仍然失败；comparable=false。检查点在新验证中不可见，不能据其消失判推进。"}
+{"episode_id":"credit-c647499516b7de12","annotator":"independent_subagent_B","credit_role":"no_progress","notes":"同一 Check 前后都只报告测试执行失败和 pytest 退出码 1，核心失败基本未变。新的泛化 signature 缺少具体新增错误，不能单凭 regression_count 判回归。"}
+{"episode_id":"credit-bcda23c68d480485","annotator":"independent_subagent_B","credit_role":"invalid","notes":"最终把测试函数名当作文件目标，导致收集前 infrastructure_error，且覆盖文件不存在。测试未正确执行，表面减少无效。"}
+{"episode_id":"credit-7002051dc791fc9c","annotator":"independent_subagent_B","credit_role":"progress","notes":"修改 Adder_api.py 后以相同 env fixture 文件复验，失败由 5 个降至 1 个。failure_set_delta 可比、净减少 4 且无回归。"}
+{"episode_id":"credit-cb0b4ddcbfff5353","annotator":"independent_subagent_B","credit_role":"diagnostic","notes":"先前指定的单测不存在而 no_tests_collected，随后 Check 有效给出 3 个具体失败检查点。范围不可比且无直接修复，但形成了新的可行动诊断。"}
+{"episode_id":"credit-8157844b07dc3674","annotator":"independent_subagent_B","credit_role":"no_progress","notes":"只把无效的通配测试参数改为三个实际文件并得到通过，没有文件修改且 comparable=false。该结果证明命令得到纠正，但不证明发生了修复推进。"}
+{"episode_id":"credit-3fac9d7c33a61142","annotator":"independent_subagent_B","credit_role":"progress","notes":"修改后从原单测扩展运行整文件，原 test_api_initialize_basic 已从失败集合消失。新见的 5 个失败来自扩展验证范围，不能据此认定由修改引入。"}
+{"episode_id":"credit-06ba097ef0f4c71b","annotator":"independent_subagent_B","credit_role":"invalid","notes":"修改后相同目标仍在测试收集阶段发生同一 ImportError。最终验证为 infrastructure_error，测试未正确执行。"}

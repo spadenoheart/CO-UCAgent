@@ -1,0 +1,65 @@
+[
+  {
+    "bucket": "20% RTL/debug/bug-fix",
+    "name": "architect-ubc-capstone/rtl-augmented-v3",
+    "url": "https://huggingface.co/datasets/architect-ubc-capstone/rtl-augmented-v3",
+    "license_note": "MIT shown on Hugging Face dataset card.",
+    "recommended_use": "RTL bug-fix / debug SFT and preference data; sample manually before mixing."
+  },
+  {
+    "bucket": "20% RTL/debug/bug-fix",
+    "name": "Zeeh-Lin/RtlDebugBenchDataset",
+    "url": "https://huggingface.co/datasets/Zeeh-Lin/RtlDebugBenchDataset",
+    "license_note": "Check current dataset card before redistribution.",
+    "recommended_use": "RTL debugging prompts and bug-localization style examples."
+  },
+  {
+    "bucket": "20% RTL/debug/bug-fix",
+    "name": "ahmedallam/RTL-Repo",
+    "url": "https://huggingface.co/datasets/ahmedallam/RTL-Repo",
+    "license_note": "Check current dataset card before redistribution.",
+    "recommended_use": "Large-codebase RTL completion/context-understanding examples."
+  },
+  {
+    "bucket": "10% RTLLM/VerilogEval/spec-to-RTL",
+    "name": "NVlabs/verilog-eval",
+    "url": "https://github.com/NVlabs/verilog-eval",
+    "license_note": "Check repository license and any mirrored dataset license.",
+    "recommended_use": "Spec-to-RTL and code-completion evaluation; small, clean benchmark-like data."
+  },
+  {
+    "bucket": "10% RTLLM/VerilogEval/spec-to-RTL",
+    "name": "RTLLM / RTLLM 2.0",
+    "url": "https://github.com/hkust-zhiyao/RTLLM",
+    "license_note": "Check repository license before training redistribution.",
+    "recommended_use": "Natural-language spec + testbench + correct RTL examples."
+  },
+  {
+    "bucket": "10% RTLLM/VerilogEval/spec-to-RTL",
+    "name": "OpenLLM-RTL paper data references",
+    "url": "https://huggingface.co/papers/2503.15112",
+    "license_note": "Use linked datasets according to their own licenses.",
+    "recommended_use": "Survey anchor for RTLLM 2.0, AssertEval, and RTLCoder-Data style mixtures."
+  },
+  {
+    "bucket": "10% CircuitNet/Verilog raw domain data",
+    "name": "SKLP-EDA-LAB/CircuitNet3.0",
+    "url": "https://huggingface.co/datasets/SKLP-EDA-LAB/CircuitNet3.0",
+    "license_note": "Apache-2.0 shown on Hugging Face dataset card.",
+    "recommended_use": "Domain continued pretraining or retrieval over RTL/netlist/timing/power metadata; not primary Agent SFT."
+  },
+  {
+    "bucket": "10% CircuitNet/Verilog raw domain data",
+    "name": "shailja/Verilog_GitHub",
+    "url": "https://huggingface.co/datasets/shailja/Verilog_GitHub",
+    "license_note": "MIT shown on Hugging Face dataset card.",
+    "recommended_use": "Raw Verilog style and syntax continued pretraining; filter aggressively."
+  },
+  {
+    "bucket": "10% CircuitNet/Verilog raw domain data",
+    "name": "bnadimi/PyraNet-Verilog",
+    "url": "https://huggingface.co/datasets/bnadimi/PyraNet-Verilog",
+    "license_note": "CC-BY-NC-SA-4.0 shown on Hugging Face dataset card; non-commercial constraints matter.",
+    "recommended_use": "Hierarchical Verilog corpus for non-commercial domain adaptation only."
+  }
+]

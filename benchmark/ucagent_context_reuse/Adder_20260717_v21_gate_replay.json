@@ -1,0 +1,590 @@
+{
+  "schema_version": 1,
+  "analysis_type": "context_reuse_gate_counterfactual_replay",
+  "causal_claim": false,
+  "pack_path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+  "injections_replayed": 32,
+  "changed_injections": 23,
+  "suppressed_injections": 15,
+  "original_prompt_items": 85,
+  "replay_prompt_items": 42,
+  "prompt_item_reduction": 43,
+  "prompt_item_reduction_rate": 0.5059,
+  "hard_gate_reasons": {
+    "exact_failure_pattern_mismatch": 284,
+    "action_category_mismatch": 128,
+    "low_support_destructive_action": 55,
+    "non_reusable_failure": 108,
+    "generic_signature_mismatch": 264
+  },
+  "records": [
+    {
+      "stage_index": 2,
+      "stage_name": "dut_function_grouping",
+      "failure_pattern": "duplicate_label_definition",
+      "failure_signature": "6474c58a4f08ab74",
+      "original_strategy_ids": [
+        "strategy-b38ed156ba205f17",
+        "strategy-515d94b32a14f390"
+      ],
+      "replay_strategy_ids": [
+        "strategy-b38ed156ba205f17"
+      ],
+      "original_hint_count": 0,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "exact_failure_pattern_mismatch": 32
+      }
+    },
+    {
+      "stage_index": 16,
+      "stage_name": "evaluate_env_fixture",
+      "failure_pattern": "api_or_env_interface_mismatch",
+      "failure_signature": "378414be94fb3710",
+      "original_strategy_ids": [
+        "strategy-2ec888516858a1a4",
+        "strategy-9e5938bcad3f5e77"
+      ],
+      "replay_strategy_ids": [
+        "strategy-2ec888516858a1a4",
+        "strategy-7cfa75646098dfcb"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 16,
+      "stage_name": "evaluate_env_fixture",
+      "failure_pattern": "reference_files_unread",
+      "failure_signature": "490551840b70c331",
+      "original_strategy_ids": [
+        "strategy-2ec888516858a1a4",
+        "strategy-3b80ef5e23c03bd0"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "non_reusable_failure": 36
+      }
+    },
+    {
+      "stage_index": 16,
+      "stage_name": "evaluate_env_fixture",
+      "failure_pattern": "api_or_env_interface_mismatch",
+      "failure_signature": "86fa56104190e63e",
+      "original_strategy_ids": [
+        "strategy-2ec888516858a1a4",
+        "strategy-9e5938bcad3f5e77"
+      ],
+      "replay_strategy_ids": [
+        "strategy-2ec888516858a1a4",
+        "strategy-7cfa75646098dfcb"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 16,
+      "stage_name": "evaluate_env_fixture",
+      "failure_pattern": "generic_checker_failure",
+      "failure_signature": "ce294f9e0215ab57",
+      "original_strategy_ids": [
+        "strategy-2ec888516858a1a4",
+        "strategy-9e5938bcad3f5e77"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "generic_signature_mismatch": 33
+      }
+    },
+    {
+      "stage_index": 18,
+      "stage_name": "basic_api_implementation",
+      "failure_pattern": "api_or_env_interface_mismatch",
+      "failure_signature": "1ad265c291c6f4cc",
+      "original_strategy_ids": [
+        "strategy-e379477472827c18",
+        "strategy-2ec888516858a1a4"
+      ],
+      "replay_strategy_ids": [
+        "strategy-e379477472827c18",
+        "strategy-2ec888516858a1a4"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 18,
+      "stage_name": "basic_api_implementation",
+      "failure_pattern": "api_or_env_interface_mismatch",
+      "failure_signature": "de192f97158675ae",
+      "original_strategy_ids": [
+        "strategy-e379477472827c18",
+        "strategy-2ec888516858a1a4"
+      ],
+      "replay_strategy_ids": [
+        "strategy-e379477472827c18",
+        "strategy-2ec888516858a1a4"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "failure_pattern": "api_or_env_interface_mismatch",
+      "failure_signature": "837d7e08a218f64f",
+      "original_strategy_ids": [
+        "strategy-ff57f9d87efe3ebc",
+        "strategy-2ec888516858a1a4"
+      ],
+      "replay_strategy_ids": [
+        "strategy-ff57f9d87efe3ebc",
+        "strategy-2ec888516858a1a4"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "failure_pattern": "api_or_env_interface_mismatch",
+      "failure_signature": "23799fe8ade914f2",
+      "original_strategy_ids": [
+        "strategy-ff57f9d87efe3ebc",
+        "strategy-2ec888516858a1a4"
+      ],
+      "replay_strategy_ids": [
+        "strategy-ff57f9d87efe3ebc",
+        "strategy-2ec888516858a1a4"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "failure_pattern": "reference_files_unread",
+      "failure_signature": "1ba7ab95ce971b8c",
+      "original_strategy_ids": [
+        "strategy-ff57f9d87efe3ebc",
+        "strategy-2ec888516858a1a4"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "non_reusable_failure": 36
+      }
+    },
+    {
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "failure_pattern": "generic_checker_failure",
+      "failure_signature": "4ad3bc6f80cf046b",
+      "original_strategy_ids": [
+        "strategy-ff57f9d87efe3ebc"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "generic_signature_mismatch": 33
+      }
+    },
+    {
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "failure_pattern": "generic_checker_failure",
+      "failure_signature": "71b85280f32402ed",
+      "original_strategy_ids": [
+        "strategy-ff57f9d87efe3ebc"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "generic_signature_mismatch": 33
+      }
+    },
+    {
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "failure_pattern": "bug_doc_passed_tc_marked_as_bug",
+      "failure_signature": "2924aa0118ba79fd",
+      "original_strategy_ids": [
+        "strategy-515d94b32a14f390",
+        "strategy-9b9cc99fbf6f4ba4"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "exact_failure_pattern_mismatch": 33
+      }
+    },
+    {
+      "stage_index": 19,
+      "stage_name": "basic_api_functional_test",
+      "failure_pattern": "bug_doc_incomplete_tc_label",
+      "failure_signature": "c5123c3731dcec51",
+      "original_strategy_ids": [
+        "strategy-515d94b32a14f390",
+        "strategy-9b9cc99fbf6f4ba4"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "exact_failure_pattern_mismatch": 31,
+        "low_support_destructive_action": 2
+      }
+    },
+    {
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "failure_pattern": "test_logic_or_case_implementation",
+      "failure_signature": "19cfb13f3ef5a0fc",
+      "original_strategy_ids": [
+        "strategy-adc1351791d43323",
+        "strategy-95264d683ae16692"
+      ],
+      "replay_strategy_ids": [
+        "strategy-adc1351791d43323",
+        "strategy-95264d683ae16692"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "failure_pattern": "test_logic_or_case_implementation",
+      "failure_signature": "ade2a14b8438ac5a",
+      "original_strategy_ids": [
+        "strategy-adc1351791d43323",
+        "strategy-95264d683ae16692"
+      ],
+      "replay_strategy_ids": [
+        "strategy-adc1351791d43323",
+        "strategy-95264d683ae16692"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "failure_pattern": "generic_checker_failure",
+      "failure_signature": "dfb3b85227181fa8",
+      "original_strategy_ids": [
+        "strategy-adc1351791d43323"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "generic_signature_mismatch": 33
+      }
+    },
+    {
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "failure_pattern": "test_import_error",
+      "failure_signature": "c39d33cdb6d53fb9",
+      "original_strategy_ids": [
+        "strategy-4743233ff58e7608",
+        "strategy-2ec888516858a1a4"
+      ],
+      "replay_strategy_ids": [
+        "strategy-4743233ff58e7608",
+        "strategy-2ec888516858a1a4"
+      ],
+      "original_hint_count": 0,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "failure_pattern": "test_import_error",
+      "failure_signature": "a0563684540b39a5",
+      "original_strategy_ids": [
+        "strategy-4743233ff58e7608",
+        "strategy-2ec888516858a1a4"
+      ],
+      "replay_strategy_ids": [
+        "strategy-4743233ff58e7608",
+        "strategy-2ec888516858a1a4"
+      ],
+      "original_hint_count": 0,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "failure_pattern": "label_or_report_mismatch",
+      "failure_signature": "c49ed276b41cf269",
+      "original_strategy_ids": [
+        "strategy-061c267e6fc8cb5e",
+        "strategy-515d94b32a14f390"
+      ],
+      "replay_strategy_ids": [
+        "strategy-061c267e6fc8cb5e"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "exact_failure_pattern_mismatch": 32
+      }
+    },
+    {
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "failure_pattern": "generic_checker_failure",
+      "failure_signature": "4ccb053a8dac0627",
+      "original_strategy_ids": [
+        "strategy-adc1351791d43323"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "generic_signature_mismatch": 33
+      }
+    },
+    {
+      "stage_index": 21,
+      "stage_name": "test_case_implementation_in_batch",
+      "failure_pattern": "coverage_or_test_marks_missing",
+      "failure_signature": "ee5e3deae78a7b59",
+      "original_strategy_ids": [
+        "strategy-af1446f5ff24c615",
+        "strategy-ce08d758874e827e"
+      ],
+      "replay_strategy_ids": [
+        "strategy-af1446f5ff24c615",
+        "strategy-ce08d758874e827e"
+      ],
+      "original_hint_count": 0,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 6,
+        "low_support_destructive_action": 5
+      }
+    },
+    {
+      "stage_index": 22,
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "failure_pattern": "generic_checker_failure",
+      "failure_signature": "a270573b47781cad",
+      "original_strategy_ids": [
+        "strategy-515d94b32a14f390",
+        "strategy-9b9cc99fbf6f4ba4"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "generic_signature_mismatch": 33
+      }
+    },
+    {
+      "stage_index": 22,
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "failure_pattern": "bug_doc_passed_tc_marked_as_bug",
+      "failure_signature": "d492f00c3a00252a",
+      "original_strategy_ids": [
+        "strategy-515d94b32a14f390",
+        "strategy-9b9cc99fbf6f4ba4"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "exact_failure_pattern_mismatch": 33
+      }
+    },
+    {
+      "stage_index": 22,
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "failure_pattern": "bug_doc_schema_or_marking",
+      "failure_signature": "4ad3c694839b0c1a",
+      "original_strategy_ids": [
+        "strategy-9b9cc99fbf6f4ba4",
+        "strategy-0d36510279b1f76d"
+      ],
+      "replay_strategy_ids": [
+        "strategy-0d36510279b1f76d",
+        "strategy-9174d99e9137c8d1"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "exact_failure_pattern_mismatch": 30,
+        "low_support_destructive_action": 1
+      }
+    },
+    {
+      "stage_index": 22,
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "failure_pattern": "bug_doc_incomplete_tc_label",
+      "failure_signature": "53a676cf6fb77f79",
+      "original_strategy_ids": [
+        "strategy-515d94b32a14f390",
+        "strategy-9b9cc99fbf6f4ba4"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "exact_failure_pattern_mismatch": 31,
+        "low_support_destructive_action": 2
+      }
+    },
+    {
+      "stage_index": 22,
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "failure_pattern": "generic_checker_failure",
+      "failure_signature": "5c67c4182d3b4c66",
+      "original_strategy_ids": [
+        "strategy-515d94b32a14f390",
+        "strategy-9b9cc99fbf6f4ba4"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "generic_signature_mismatch": 33
+      }
+    },
+    {
+      "stage_index": 22,
+      "stage_name": "comprehensive_verification_and_bug_analysis",
+      "failure_pattern": "bug_doc_schema_or_marking",
+      "failure_signature": "ac989a2636e111ba",
+      "original_strategy_ids": [
+        "strategy-9b9cc99fbf6f4ba4",
+        "strategy-0d36510279b1f76d"
+      ],
+      "replay_strategy_ids": [
+        "strategy-0d36510279b1f76d",
+        "strategy-9174d99e9137c8d1"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 1,
+      "hard_gate_reasons": {
+        "exact_failure_pattern_mismatch": 30,
+        "low_support_destructive_action": 1
+      }
+    },
+    {
+      "stage_index": 24,
+      "stage_name": "generate_random_test_cases",
+      "failure_pattern": "test_logic_or_case_implementation",
+      "failure_signature": "b5b2e43da2045cd0",
+      "original_strategy_ids": [
+        "strategy-f18405e114f991e8",
+        "strategy-adc1351791d43323"
+      ],
+      "replay_strategy_ids": [
+        "strategy-f18405e114f991e8",
+        "strategy-adc1351791d43323"
+      ],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "action_category_mismatch": 11,
+        "low_support_destructive_action": 4
+      }
+    },
+    {
+      "stage_index": 24,
+      "stage_name": "generate_random_test_cases",
+      "failure_pattern": "generic_checker_failure",
+      "failure_signature": "8b655874e499a225",
+      "original_strategy_ids": [],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "generic_signature_mismatch": 33
+      }
+    },
+    {
+      "stage_index": 24,
+      "stage_name": "generate_random_test_cases",
+      "failure_pattern": "duplicate_label_definition",
+      "failure_signature": "7f43c3be0baa6e73",
+      "original_strategy_ids": [
+        "strategy-b38ed156ba205f17",
+        "strategy-515d94b32a14f390"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 1,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "exact_failure_pattern_mismatch": 32,
+        "action_category_mismatch": 1
+      }
+    },
+    {
+      "stage_index": 25,
+      "stage_name": "verification_review_and_summary",
+      "failure_pattern": "reference_files_unread",
+      "failure_signature": "7856e3b3f91d58a8",
+      "original_strategy_ids": [
+        "strategy-2ec888516858a1a4",
+        "strategy-e379477472827c18"
+      ],
+      "replay_strategy_ids": [],
+      "original_hint_count": 0,
+      "replay_hint_count": 0,
+      "hard_gate_reasons": {
+        "non_reusable_failure": 36
+      }
+    }
+  ]
+}

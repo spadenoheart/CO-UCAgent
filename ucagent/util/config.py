@@ -1,10 +1,37 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
 import yaml
 from typing import Dict, Any, Optional, Union, List
-from .functions import render_template, dump_as_json, replace_bash_var
+from yaml.constructor import SafeConstructor
+from .functions import render_template, dump_as_json, replace_bash_var, get_abs_path_cwd_ucagent
 from .log import info
+import base64
+
+
+_NEGATED_BOOL_PATTERN = re.compile(
+    r"^(?:not[ \t]+|-)(?:yes|no|true|false|on|off)$",
+    re.IGNORECASE,
+)
+_DELETE_OVERRIDE = object()
+
+
+class UCAgentConfigLoader(yaml.SafeLoader):
+    """Safe YAML loader with support for negated boolean scalars."""
+
+
+def _construct_negated_bool(loader, node):
+    scalar_value = loader.construct_scalar(node).strip()
+    if scalar_value.startswith('-'):
+        bool_value = scalar_value[1:]
+    else:
+        bool_value = re.sub(r"^not[ \t]+", "", scalar_value, count=1, flags=re.IGNORECASE)
+    return not SafeConstructor.bool_values[bool_value.lower()]
+
+
+UCAgentConfigLoader.add_implicit_resolver('!negated_bool', _NEGATED_BOOL_PATTERN, ['-', 'n', 'N'])
+UCAgentConfigLoader.add_constructor('!negated_bool', _construct_negated_bool)
 
 class Config:
     """Configuration class for UCAgent settings."""
@@ -52,7 +79,7 @@ class Config:
         """
         result = {}
         for key, value in self.__dict__.items():
-            if key == "_freeze":
+            if key in {"_freeze", "_loaded_config_files"}:
                 continue
             if isinstance(value, Config):
                 result[key] = value.as_dict()
@@ -87,10 +114,12 @@ class Config:
                         list_val[i] = nval
                 elif isinstance(itm, list):
                     _update_list(itm)
+                elif isinstance(itm, (int, float, bool)) or itm is None:
+                    continue
                 else:
                     assert False, (
                         f"Unsupported list item type: {type(itm)}. "
-                        "Supported types are: str, Config, str, and list."
+                        "Supported types are: str, Config, list, int, float, bool, and None."
                     )
         for key, value in self.__dict__.items():
             if isinstance(value, Config):
@@ -178,49 +207,251 @@ class Config:
         """
         if not isinstance(other, Config):
             raise TypeError("Can only merge from another Config instance.")
-        for key, value in other.__dict__.items():
-            if isinstance(value, Config):
-                if self.has_attr(key) and isinstance(getattr(self, key), Config):
-                    getattr(self, key).merge_from(value)
-                else:
-                    setattr(self, key, value)
-            else:
-                setattr(self, key, value)
-        return self
+        return self.merge_from_dict(other.as_dict())
 
-    def merge_from_dict(self, data):
+    def merge_from_dict(self, data, skip_include=False):
         """
         Merge configuration from a dictionary.
         :param data: Dictionary containing configuration.
+        :param skip_include: Whether to treat top-level include as a loader directive.
         :return: self
         """
         if not isinstance(data, dict):
             raise TypeError("Can only merge from a dictionary.")
         for key, value in data.items():
-            if isinstance(value, dict):
+            if skip_include and key == "include":
+                continue
+            if self._should_apply_merge_override(key, value):
+                self.set_value(key, value)
+            elif isinstance(value, dict):
                 if self.has_attr(key) and isinstance(getattr(self, key), Config):
                     getattr(self, key).merge_from_dict(value)
                 else:
-                    setattr(self, key, Config(value))
+                    setattr(self, key, Config().merge_from_dict(value))
             else:
-                setattr(self, key, value)
+                setattr(self, key, self._to_config_value(value))
         return self
+
+    def _should_apply_merge_override(self, key, value):
+        if not isinstance(key, str):
+            return False
+        if "[" in key or "]" in key:
+            return True
+        if value == "@delete":
+            return self._override_target_exists(key)
+        if isinstance(value, str):
+            if (value.startswith("@@") or value.startswith("@base64:")) and self._override_target_exists(key):
+                return True
+            if value.startswith("+") and self._override_target_is_list(key):
+                return True
+        return False
+
+    def _override_target_exists(self, key):
+        try:
+            tokens = self._parse_override_key(key)
+            current = self
+            for token in tokens[:-1]:
+                if isinstance(token, str):
+                    if not isinstance(current, Config) or not current.has_attr(token):
+                        return False
+                    current = getattr(current, token)
+                else:
+                    if not isinstance(current, list):
+                        return False
+                    index = self._normalize_list_index(token["index"], len(current), False)
+                    if token["size"] != 1:
+                        return False
+                    current = current[index]
+
+            target = tokens[-1]
+            if isinstance(target, str):
+                return isinstance(current, Config) and current.has_attr(target)
+            if not isinstance(current, list):
+                return False
+            self._normalize_list_index(target["index"], len(current), target["size"] == 0)
+            return True
+        except Exception:
+            return False
+
+    def _override_target_is_list(self, key):
+        try:
+            tokens = self._parse_override_key(key)
+            current = self
+            for token in tokens[:-1]:
+                if isinstance(token, str):
+                    if not isinstance(current, Config) or not current.has_attr(token):
+                        return False
+                    current = getattr(current, token)
+                else:
+                    if not isinstance(current, list):
+                        return False
+                    index = self._normalize_list_index(token["index"], len(current), False)
+                    if token["size"] != 1:
+                        return False
+                    current = current[index]
+            target = tokens[-1]
+            return isinstance(target, str) and isinstance(current, Config) and current.has_attr(target) and isinstance(getattr(current, target), list)
+        except Exception:
+            return False
 
     def set_value(self, key, value):
         """
-        Set a value in the configuration.
+        Set a value in the configuration. Support extending list with string value
+            if the original value is a list and the new value is a string with '+' prefix.
+        Also support list item overrides with ``path[index[:size]]`` syntax.
         :param key: Key of the value to set. eg a.b.c
         :param value: Value to set.
         :return: self
         """
-        keys = key.split('.')
-        current = self
-        for k in keys[:-1]:
-            if not self.has_attr(k):
-                raise AttributeError(f"Configuration does not have attribute '{k}'")
-            current = getattr(current, k)
-        setattr(current, keys[-1], value)
+        if getattr(self, "_freeze", False) == True:
+            raise RuntimeError("Configuration is frozen, cannot modify.")
+        tokens = self._parse_override_key(key)
+        value = self._decode_override_value(value)
+        self._set_value_by_tokens(tokens, value)
         return self
+
+    def _set_value_by_tokens(self, tokens, value):
+        current = self
+        for token in tokens[:-1]:
+            if isinstance(token, str):
+                current = self._get_config_attr(current, token)
+            else:
+                current = self._get_list_item(current, token, allow_insert=False)
+
+        target = tokens[-1]
+        if isinstance(target, str):
+            self._set_attr_value(current, target, value)
+        elif value is _DELETE_OVERRIDE:
+            self._delete_list_items(current, target)
+        else:
+            self._set_list_items(current, target, value)
+
+    def _set_attr_value(self, current, target_key, value):
+        if not isinstance(current, Config):
+            raise TypeError(f"Cannot set attribute '{target_key}' on non-Config value.")
+        if value is _DELETE_OVERRIDE:
+            if not current.has_attr(target_key):
+                raise AttributeError(f"Configuration does not have attribute '{target_key}'")
+            delattr(current, target_key)
+            return
+        old_value = getattr(current, target_key, None)
+        if isinstance(old_value, list) and isinstance(value, str):
+            if value.startswith('+'):
+                value = old_value + [value[1:]]
+        setattr(current, target_key, self._to_config_value(value))
+
+    def _get_config_attr(self, current, attr_name):
+        if not isinstance(current, Config):
+            raise TypeError(f"Cannot access attribute '{attr_name}' on non-Config value.")
+        if not current.has_attr(attr_name):
+            raise AttributeError(f"Configuration does not have attribute '{attr_name}'")
+        return getattr(current, attr_name)
+
+    def _get_list_item(self, current, index_token, allow_insert):
+        if not isinstance(current, list):
+            raise TypeError("Configuration override target is not a list.")
+        index = self._normalize_list_index(index_token["index"], len(current), allow_insert)
+        if index_token["size"] != 1:
+            raise ValueError("Only single list indexes can be used before the final override path token.")
+        return current[index]
+
+    def _set_list_items(self, current, index_token, value):
+        if not isinstance(current, list):
+            raise TypeError("Configuration override target is not a list.")
+        index = self._normalize_list_index(index_token["index"], len(current), index_token["size"] == 0)
+        if index_token["size"] == 0:
+            current.insert(index, self._to_config_value(value))
+            return
+        end = index + index_token["size"]
+        if end > len(current):
+            raise IndexError("List override range is out of range.")
+        current[index:end] = [self._to_config_value(value) for _ in range(index_token["size"])]
+
+    def _delete_list_items(self, current, index_token):
+        if not isinstance(current, list):
+            raise TypeError("Configuration override target is not a list.")
+        index = self._normalize_list_index(index_token["index"], len(current), False)
+        if index_token["size"] == 0:
+            return
+        end = index + index_token["size"]
+        if end > len(current):
+            raise IndexError("List override range is out of range.")
+        del current[index:end]
+
+    def _normalize_list_index(self, index, list_len, allow_end):
+        if index < 0:
+            index += list_len
+        max_index = list_len if allow_end else list_len - 1
+        if index < 0 or index > max_index:
+            raise IndexError("List override index is out of range.")
+        return index
+
+    def _to_config_value(self, value):
+        if isinstance(value, dict):
+            return Config(value)
+        if isinstance(value, list):
+            return [self._to_config_value(item) for item in value]
+        return value
+
+    def _parse_override_key(self, key):
+        if not isinstance(key, str) or not key.strip():
+            raise ValueError("Configuration override key must be a non-empty string.")
+        tokens = []
+        for part in key.split('.'):
+            if not part:
+                raise ValueError(f"Invalid configuration override key '{key}'.")
+            name, selectors = self._parse_override_key_part(part, key)
+            if name:
+                tokens.append(name)
+            tokens.extend(selectors)
+        return tokens
+
+    def _parse_override_key_part(self, part, full_key):
+        match = re.match(r"^([^\[\]]*)", part)
+        name = match.group(1)
+        rest = part[len(name):]
+        selectors = []
+        while rest:
+            match = re.match(r"^\[(-?\d+)(?::(\d*))?\]", rest)
+            if not match:
+                raise ValueError(f"Invalid list override syntax in key '{full_key}'.")
+            size = 1 if match.group(2) is None or match.group(2) == "" else int(match.group(2))
+            selectors.append({"index": int(match.group(1)), "size": size})
+            rest = rest[match.end():]
+        if not name and not selectors:
+            raise ValueError(f"Invalid configuration override key '{full_key}'.")
+        return name, selectors
+
+    def _decode_override_value(self, value):
+        if not isinstance(value, str):
+            return value
+        if value == "@delete":
+            return _DELETE_OVERRIDE
+        if value.startswith("@base64:"):
+            return self._str_b64_decode(value[len("@base64:"):])
+        return self._unescape_override_string(value)
+
+    def _unescape_override_string(self, value):
+        result = []
+        index = 0
+        while index < len(value):
+            if value[index] != "@":
+                result.append(value[index])
+                index += 1
+                continue
+            if index + 1 < len(value) and value[index + 1] == "@":
+                result.append("@")
+                index += 2
+                continue
+            raise ValueError("Single '@' is reserved in override values; use '@@' for a literal '@'.")
+        return "".join(result)
+
+    def _str_b64_decode(self, value):
+        try:
+            decoded_bytes = base64.b64decode(value)
+            return decoded_bytes.decode('utf-8')
+        except Exception as e:
+            raise ValueError(f"Failed to decode base64 string: {e}")
 
     def get_value(self, key, default=None):
         """
@@ -232,7 +463,7 @@ class Config:
         keys = key.split('.')
         current = self
         for k in keys[:-1]:
-            if not self.has_attr(k):
+            if not current.has_attr(k):
                 raise AttributeError(f"Configuration does not have attribute '{k}'")
             current = getattr(current, k)
         if not current.has_attr(keys[-1]):
@@ -258,8 +489,13 @@ class Config:
         """
         if values is None:
             return self
-        for key, value in values.items():
-            self.set_value(key, value)
+        if not isinstance(values, list):
+            values = [values]
+        for v in values:
+            if not isinstance(v, dict):
+                raise TypeError("Configuration override values must be a dict or a list of dicts.")
+            for key, value in v.items():
+                self.set_value(key, value)
         return self
 
 
@@ -283,35 +519,96 @@ def find_file_in_paths(filename, search_paths):
     return None
 
 
-def get_config(config_file=None, cfg_override=None):
+def load_yaml_with_env_vars(file_path):
+    """Load YAML after environment-variable substitution.
+
+    Supports negated boolean scalars like ``not true`` and ``-false``.
+    """
+    with open(file_path, 'r', encoding='utf-8') as file:
+        content = file.read()
+        rendered_content = replace_bash_var(content, os.environ)
+        return yaml.load(rendered_content, Loader=UCAgentConfigLoader)
+
+
+def _normalize_include_value(include_value, config_file):
+    if include_value is None:
+        return []
+    if isinstance(include_value, str):
+        return [include_value]
+    if not isinstance(include_value, list):
+        raise TypeError(f"Config include in '{config_file}' must be a string or a list of strings.")
+    for include_file in include_value:
+        if not isinstance(include_file, str) or not include_file.strip():
+            raise TypeError(f"Config include in '{config_file}' must be a string or a list of strings.")
+    return include_value
+
+
+def _resolve_include_file(include_file, parent_config_file):
+    include_file = os.path.expanduser(include_file)
+    if os.path.isabs(include_file):
+        if os.path.isfile(include_file):
+            return os.path.abspath(include_file)
+        raise FileNotFoundError(f"Included config file '{include_file}' not found.")
+
+    parent_dir = os.path.dirname(os.path.abspath(parent_config_file))
+    found_file = find_file_in_paths(include_file, [parent_dir, os.getcwd()])
+    if found_file is not None:
+        return os.path.abspath(found_file)
+    raise FileNotFoundError(
+        f"Included config file '{include_file}' not found relative to "
+        f"'{parent_dir}' or current working directory '{os.getcwd()}'."
+    )
+
+
+def _merge_config_file(cfg, config_file, loaded_configs, loading_stack=None):
+    config_file = os.path.abspath(config_file)
+    if config_file in loaded_configs:
+        info(f"Config file '{config_file}' already loaded, ignore.")
+        return cfg
+    if loading_stack is None:
+        loading_stack = []
+    if config_file in loading_stack:
+        cycle = loading_stack[loading_stack.index(config_file):] + [config_file]
+        raise ValueError(f"Config include cycle detected: {' -> '.join(cycle)}")
+
+    loading_stack.append(config_file)
+    try:
+        data = load_yaml_with_env_vars(config_file) or {}
+        if not isinstance(data, dict):
+            raise TypeError(f"Config file '{config_file}' must contain a YAML mapping.")
+
+        for include_file in _normalize_include_value(data.get("include"), config_file):
+            include_config_file = _resolve_include_file(include_file, config_file)
+            _merge_config_file(cfg, include_config_file, loaded_configs, loading_stack)
+
+        cfg.merge_from_dict(data, skip_include=True)
+        loaded_configs.append(config_file)
+        info(f"Load config from '{config_file}' completed.")
+        return cfg
+    finally:
+        loading_stack.pop()
+
+
+def get_config(config_file=None, cfg_override=None, workspace=None):
     """
     Get the configuration for the agent.
     :param config_file: Path to the configuration file.
     :return: Configuration dictionary.
     """
-    def load_yaml_with_env_vars(file_path):
-        with open(file_path, 'r') as file:
-            content = file.read()
-            rendered_content = replace_bash_var(content, os.environ)
-            return yaml.safe_load(rendered_content)
-
     # ignore repeated loaded configs
     loaded_configs = []
 
     # 1. load default config
     default_config_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "../setting.yaml"))
     assert os.path.isfile(default_config_file), f"Default configuration file '{default_config_file}' not found."
-    cfg = Config(load_yaml_with_env_vars(default_config_file))
-    info(f"Load config from '{default_config_file}' completed.")
-    loaded_configs.append(default_config_file)
+    cfg = Config()
+    _merge_config_file(cfg, default_config_file, loaded_configs)
 
     # 2. load user config
     user_home = os.path.expanduser('~')
     user_config_file = os.path.abspath(os.path.join(user_home, '.ucagent/setting.yaml'))
     if os.path.isfile(user_config_file):
-        cfg.merge_from(Config(load_yaml_with_env_vars(user_config_file)))
-        info(f"Load config from '{user_config_file}' completed.")
-        loaded_configs.append(user_config_file)
+        _merge_config_file(cfg, user_config_file, loaded_configs)
     else:
         info(f"User config file '{user_config_file}' not found, touch an empty one.")
         os.makedirs(os.path.dirname(user_config_file), exist_ok=True)
@@ -324,10 +621,17 @@ def get_config(config_file=None, cfg_override=None):
     lang_config_file = os.path.abspath(os.path.join(os.path.dirname(__file__), f"../lang/{lang}/config/default.yaml"))
     info(f"Load config from '{lang_config_file}'")
     assert os.path.isfile(lang_config_file), f"Language configuration file '{lang_config_file}' not found."
-    cfg.merge_from(Config(load_yaml_with_env_vars(lang_config_file)))
-    loaded_configs.append(lang_config_file)
+    _merge_config_file(cfg, lang_config_file, loaded_configs)
 
-    # 4. find user specified config file
+    # 4. load workspace config
+    if workspace is not None:
+        cwd_setting_file = get_abs_path_cwd_ucagent(workspace, "setting.yaml")
+        if os.path.isfile(cwd_setting_file):
+            _merge_config_file(cfg, cwd_setting_file, loaded_configs)
+        else:
+            info(f"Workspace config file '{cwd_setting_file}' not found, ignore.")
+
+    # 5. find user specified config file
     target_file = config_file
     if config_file is None:
         target_file = 'config.yaml'  # Default configuration file
@@ -341,11 +645,9 @@ def get_config(config_file=None, cfg_override=None):
         info(f"Default user config file '{config_file}' not found, ignore.")
     else:
         user_config_file_path = os.path.abspath(user_config_file_path)
-        if user_config_file_path not in loaded_configs:
-            cfg.merge_from(Config(load_yaml_with_env_vars(user_config_file_path)))
-            info(f"Load config from '{user_config_file_path}' completed.")
-        else:
-            info(f"Config file '{user_config_file_path}' already loaded, ignore.")
+        _merge_config_file(cfg, user_config_file_path, loaded_configs)
 
     # set override values
-    return cfg.set_values(cfg_override).freeze()
+    cfg.set_values(cfg_override)
+    object.__setattr__(cfg, "_loaded_config_files", list(loaded_configs))
+    return cfg.freeze()

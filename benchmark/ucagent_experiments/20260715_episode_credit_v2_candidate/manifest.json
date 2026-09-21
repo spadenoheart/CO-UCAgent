@@ -1,0 +1,268 @@
+{
+  "schema_version": 1,
+  "experiment_baseline": "20260715_episode_credit_v2_candidate",
+  "created_at": "2026-07-15T20:19:07+08:00",
+  "repo_root": "<REPO_ROOT>",
+  "git_head": "b9c259b35d048e70cf4d0429d3b20a0077fed15d",
+  "git_branch": "main",
+  "worktree_dirty": true,
+  "python_version": "3.11.14 (main, Oct 21 2025, 18:31:21) [GCC 11.2.0]",
+  "files": [
+    {
+      "path": "ucagent/setting.yaml",
+      "source_sha256": "dd3b59a4e60f977b6736a01f3ff29ff7bc97ebd6835e679286eaf219dff24ca3",
+      "snapshot_sha256": "0cc5af6a09ab6d412744a107aabf9a296f783ff1fb9badefb9e0f496549603ba",
+      "bytes": 16287,
+      "redacted_snapshot": true
+    },
+    {
+      "path": "ucagent/util/test_result.py",
+      "source_sha256": "72f6251faae05f9054f0765c930c6c0a361fd4a343b3f211390db99fa40d83ad",
+      "snapshot_sha256": "72f6251faae05f9054f0765c930c6c0a361fd4a343b3f211390db99fa40d83ad",
+      "bytes": 7403,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/stage/vmanager.py",
+      "source_sha256": "9fc89f9a8b1e91bd04c08484e77ad6a7b38cc2426f1ea049cee8398cad1b2ffe",
+      "snapshot_sha256": "9fc89f9a8b1e91bd04c08484e77ad6a7b38cc2426f1ea049cee8398cad1b2ffe",
+      "bytes": 78308,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/tools/testops.py",
+      "source_sha256": "7ab1e1d675a63d285c8ea2c9a49fcdd6808334353fddd18439fb28deabec6210",
+      "snapshot_sha256": "7ab1e1d675a63d285c8ea2c9a49fcdd6808334353fddd18439fb28deabec6210",
+      "bytes": 11504,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/checkers/unity_test.py",
+      "source_sha256": "7e35971597903ee57220401160cdc0a0bb05d5d936ab8f1ee0ec8a84731fbeb5",
+      "snapshot_sha256": "7e35971597903ee57220401160cdc0a0bb05d5d936ab8f1ee0ec8a84731fbeb5",
+      "bytes": 69365,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/memory/context_reuse.py",
+      "source_sha256": "af001d35183da785464f5fe02eb821eee7733845cfee631de84beca7dcba2799",
+      "snapshot_sha256": "af001d35183da785464f5fe02eb821eee7733845cfee631de84beca7dcba2799",
+      "bytes": 30592,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/build_trace_tree.py",
+      "source_sha256": "2ec9521087f0c75417f95642399e278d940824675258846879905cb7d1ed4d15",
+      "snapshot_sha256": "2ec9521087f0c75417f95642399e278d940824675258846879905cb7d1ed4d15",
+      "bytes": 11709,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/build_context_reuse_pack.py",
+      "source_sha256": "c1bff902db28a0acff569887ad72b9eb222dc7a09b1fec22d164cfa1bdd6cdbc",
+      "snapshot_sha256": "c1bff902db28a0acff569887ad72b9eb222dc7a09b1fec22d164cfa1bdd6cdbc",
+      "bytes": 32482,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/curate_context_reuse_pack.py",
+      "source_sha256": "16e53ff57b552a63eb072dd4eddf9c5f85a57b45be73327fbf24e1381c6f6317",
+      "snapshot_sha256": "16e53ff57b552a63eb072dd4eddf9c5f85a57b45be73327fbf24e1381c6f6317",
+      "bytes": 18293,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/evaluate_episode_credit_annotations.py",
+      "source_sha256": "3830d86b2a1497e3a1950b4ba000a4d5fdc7e259b25a3b36ce8cede064a1924c",
+      "snapshot_sha256": "3830d86b2a1497e3a1950b4ba000a4d5fdc7e259b25a3b36ce8cede064a1924c",
+      "bytes": 4656,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/update_context_reuse_pack.py",
+      "source_sha256": "8e23829821f41230f52b9ace9edaf9a7b14f802773978fa32b8cfb0cc02811b5",
+      "snapshot_sha256": "8e23829821f41230f52b9ace9edaf9a7b14f802773978fa32b8cfb0cc02811b5",
+      "bytes": 12580,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/freeze_experiment_baseline.py",
+      "source_sha256": "64e92c1f0f5bd35f9c279ca8671d200b47c4707c56c4456e19cfc53fc6c3a848",
+      "snapshot_sha256": "64e92c1f0f5bd35f9c279ca8671d200b47c4707c56c4456e19cfc53fc6c3a848",
+      "bytes": 9131,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_test_result_classification.py",
+      "source_sha256": "4624c64290a06a033fa89c134804e0e66eb63e369a4ef8651723208cefeaf53b",
+      "snapshot_sha256": "4624c64290a06a033fa89c134804e0e66eb63e369a4ef8651723208cefeaf53b",
+      "bytes": 8294,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_episode_credit.py",
+      "source_sha256": "a3cf9f647d79b5e1497fc4ff8c3faeffec8aea83c74d27735b6ccb3b49dd8f1e",
+      "snapshot_sha256": "a3cf9f647d79b5e1497fc4ff8c3faeffec8aea83c74d27735b6ccb3b49dd8f1e",
+      "bytes": 6782,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_context_reuse_curation.py",
+      "source_sha256": "6a7d510f9b77b6c7e2303b08b877f624eca082b7f426f3debcdec2f0d81bd760",
+      "snapshot_sha256": "6a7d510f9b77b6c7e2303b08b877f624eca082b7f426f3debcdec2f0d81bd760",
+      "bytes": 5018,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_experiment_baseline.py",
+      "source_sha256": "a0799b6e7a7f5cc8f04b77033d568cca119a97cc587ae9100182aa042d053eee",
+      "snapshot_sha256": "a0799b6e7a7f5cc8f04b77033d568cca119a97cc587ae9100182aa042d053eee",
+      "bytes": 618,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+      "source_sha256": "a3705275f27e8fb6623745cde8921897b9d650ee9c20d9da23d742915c7578f4",
+      "snapshot_sha256": "a3705275f27e8fb6623745cde8921897b9d650ee9c20d9da23d742915c7578f4",
+      "bytes": 304901,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_source_v1.json",
+      "source_sha256": "f843053a69f10aeac9ff7f7b3ebb50da3f8dcac2a9fbc794527941ec19701b64",
+      "snapshot_sha256": "f843053a69f10aeac9ff7f7b3ebb50da3f8dcac2a9fbc794527941ec19701b64",
+      "bytes": 291340,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+      "source_sha256": "955eb594a106d257d12e492ad8fb9686f372dd528e3c15d527c8fe4ebbf8e986",
+      "snapshot_sha256": "955eb594a106d257d12e492ad8fb9686f372dd528e3c15d527c8fe4ebbf8e986",
+      "bytes": 419362,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_candidates.json",
+      "source_sha256": "fe3633b530fb7cf1f652cf166dc92bcb0b1e191098a444df1b003f42452734b2",
+      "snapshot_sha256": "fe3633b530fb7cf1f652cf166dc92bcb0b1e191098a444df1b003f42452734b2",
+      "bytes": 4624499,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_candidates.md",
+      "source_sha256": "d06410f6a14ed66fdd725984632da868d511f3653c1c5082e80edfe25803bad3",
+      "snapshot_sha256": "d06410f6a14ed66fdd725984632da868d511f3653c1c5082e80edfe25803bad3",
+      "bytes": 16712,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_curated_preview.json",
+      "source_sha256": "acc73833428a12fd26c86ca386c50a521b45d44ebae132f3da97554dae81e5aa",
+      "snapshot_sha256": "acc73833428a12fd26c86ca386c50a521b45d44ebae132f3da97554dae81e5aa",
+      "bytes": 773352,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_curated_preview.md",
+      "source_sha256": "297519f93d4ffac5f188373a702147c83e94a6b173fa14b773b925b9157bac78",
+      "snapshot_sha256": "297519f93d4ffac5f188373a702147c83e94a6b173fa14b773b925b9157bac78",
+      "bytes": 7100,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v2_annotation_40.jsonl",
+      "source_sha256": "fc8b34fd4067ba4068c3adb71ba071a5f54f91b5cf4ede1679a1495168a82cae",
+      "snapshot_sha256": "fc8b34fd4067ba4068c3adb71ba071a5f54f91b5cf4ede1679a1495168a82cae",
+      "bytes": 172828,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v2_research_protocol.md",
+      "source_sha256": "28199d1e9d7b090cf41dca9df6d1fee5e724c8cebaecb81e0083324e27d24bd6",
+      "snapshot_sha256": "28199d1e9d7b090cf41dca9df6d1fee5e724c8cebaecb81e0083324e27d24bd6",
+      "bytes": 5616,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_experiments/20260715_adder_regression_analysis.md",
+      "source_sha256": "9e1c35af307e360926fbf4c3aca0ac89162eaaef4620a50b83dc0c15e8fcd3f3",
+      "snapshot_sha256": "9e1c35af307e360926fbf4c3aca0ac89162eaaef4620a50b83dc0c15e8fcd3f3",
+      "bytes": 3195,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_trace_tree_v2/Adder_20260630_trace_tree.json",
+      "source_sha256": "c478b5a35b1cd506c580945a17efe12d0ed829a25e9d36f0e2c6f8f96279f487",
+      "snapshot_sha256": "c478b5a35b1cd506c580945a17efe12d0ed829a25e9d36f0e2c6f8f96279f487",
+      "bytes": 249213,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_trace_tree_v2/Adder_20260710_trace_tree.json",
+      "source_sha256": "9a60db211594f71796cba8be2541d5c4c1cf469d5f4d0c0b33316974fda2a621",
+      "snapshot_sha256": "9a60db211594f71796cba8be2541d5c4c1cf469d5f4d0c0b33316974fda2a621",
+      "bytes": 336463,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_trace_tree_v2/Adder_20260715_trace_tree.json",
+      "source_sha256": "0a943ed007038acc01f2e83d08fea56ab7bbb8b82394f086fa916d711b25213f",
+      "snapshot_sha256": "0a943ed007038acc01f2e83d08fea56ab7bbb8b82394f086fa916d711b25213f",
+      "bytes": 400274,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_trace_tree_v2/ALU754_20260701_trace_tree.json",
+      "source_sha256": "1b11ab5bf02a7321fedcacace37587a454fdee60f46e02336488e4b65ec1c962",
+      "snapshot_sha256": "1b11ab5bf02a7321fedcacace37587a454fdee60f46e02336488e4b65ec1c962",
+      "bytes": 470720,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_trace_tree_v2/FSM_20260702_trace_tree.json",
+      "source_sha256": "3674ac9abb690c91e0a4a966184abb0d60974fe49621ab0b38e4dd5e2001fafe",
+      "snapshot_sha256": "3674ac9abb690c91e0a4a966184abb0d60974fe49621ab0b38e4dd5e2001fafe",
+      "bytes": 531221,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_trace_tree_v2/uart_tx_20260630_trace_tree.json",
+      "source_sha256": "117f8e50e89153d5319a0014fcb343d7c86627bf7ba1b624a85b0c7c4b9e7e51",
+      "snapshot_sha256": "117f8e50e89153d5319a0014fcb343d7c86627bf7ba1b624a85b0c7c4b9e7e51",
+      "bytes": 600686,
+      "redacted_snapshot": false
+    }
+  ],
+  "comparison": {
+    "shared_code_snapshot": "snapshot/",
+    "v0_baseline": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+      "min_quality_score": 0.0,
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0"
+      }
+    },
+    "v1_candidate": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+      "min_quality_score": 0.68,
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68"
+      }
+    },
+    "v2_offline_candidate": {
+      "candidate_pack": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_candidates.json",
+      "curated_preview": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_curated_preview.json",
+      "annotation_sample": "benchmark/ucagent_context_reuse/episode_credit_v2_annotation_40.jsonl",
+      "runtime_deployed": true,
+      "acceptance_gate": "manual attribution audit before any runtime A/B"
+    }
+  },
+  "notes": [
+    "The repository worktree was dirty; this snapshot, not git HEAD alone, defines the baseline.",
+    "The setting snapshot is redacted. Its source_sha256 identifies the exact local configuration.",
+    "v0 is retained unchanged; v1 is the curated candidate pack.",
+    "v2 is an offline role-typed attribution candidate and is not deployed."
+  ]
+}

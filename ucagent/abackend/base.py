@@ -29,12 +29,6 @@ class AgentBackendBase(object):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
-    def interrupt_handler(self, *args, **kwargs):
-        """
-        Handle interruptions in the backend.
-        """
-        raise NotImplementedError("Subclasses must implement this method.")
-
     def get_human_message(self, text: str):
         """
         Create and return a human message with the given text.
@@ -153,3 +147,17 @@ class AgentBackendBase(object):
         :return: Temperature value.
         """
         return -1.0
+
+    def on_stage_complete(self, stage):
+        """
+        Callback method called when a stage is finished.
+
+        :param stage: The stage that has finished.
+        """
+        pass
+
+    def reset_chat(self, force=False):
+        """
+        Reset the chat state, if applicable.
+        """
+        pass

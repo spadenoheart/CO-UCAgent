@@ -1,0 +1,69 @@
+# UCAgent Context Reuse Pack v0
+
+- Trace count: 4
+- DUTs: ALU754, Adder, FSM, uart_tx
+- Effective repair items: 75
+- Compression hints: 29
+
+## Effective Repair Items
+- Adder stage 10 `implemente_function_checks_in_batch` pattern=coverage_or_test_marks_missing sig=8ec1ff58145dede1 action_categories=['coverage_code'] actions=[replace_string:unity_test/tests/Adder_function_coverage_def.py]
+- Adder stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=029e5ca51d7d638b action_categories=['test_code'] actions=[replace_string:unity_test/tests/Adder_api.py]
+- Adder stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=b6e0a9b84dd1f35f action_categories=['test_code'] actions=[delete_file:unity_test/tests/test_Adder_env_fixture.py, write:unity_test/tests/test_Adder_env_fixture.py]
+- Adder stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=631936568068a6f5 action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_Adder_env_fixture.py]
+- Adder stage 18 `basic_api_implementation` pattern=api_or_env_interface_mismatch sig=e67b1702c7f12bfb action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_Adder_api_basic.py]
+- Adder stage 21 `test_case_implementation_in_batch` pattern=test_template_not_implemented sig=17c24ce0c1a04b65 action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_Adder_templates.py]
+- Adder stage 22 `comprehensive_verification_and_bug_analysis` pattern=bug_doc_schema_or_marking sig=dc42f0231a3afd54 action_categories=['bug_document'] actions=[delete_file:unity_test/Adder_bug_analysis.md, write:unity_test/Adder_bug_analysis.md]
+- Adder stage 25 `verification_review_and_summary` pattern=test_template_not_implemented sig=6fd0e9fae94e0cf1 action_categories=['document'] actions=[write:unity_test/Adder_test_summary.md]
+- uart_tx stage 6 `dut_creation_implementation` pattern=test_import_error sig=06e6e5b7758cd3dd action_categories=['test_code'] actions=[replace_string:unity_test/tests/uart_tx_api.py]
+- uart_tx stage 9 `coverage_group_creation` pattern=coverage_or_test_marks_missing sig=51dcf863397e7fc5 action_categories=['coverage_code'] actions=[replace_string:unity_test/tests/uart_tx_function_coverage_def.py]
+- uart_tx stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=b6e0a9b84dd1f35f action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_env_fixture.py]
+- uart_tx stage 16 `evaluate_env_fixture` pattern=coverage_or_test_marks_missing sig=854528cef187ccee action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_env_fixture.py]
+- uart_tx stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=688c8f781f497480 action_categories=['test_code'] actions=[replace_string:unity_test/tests/uart_tx_api.py]
+- uart_tx stage 18 `basic_api_implementation` pattern=api_or_env_interface_mismatch sig=da78e2019ceffc6f action_categories=['test_code'] actions=[replace_string:unity_test/tests/uart_tx_api.py]
+- uart_tx stage 19 `basic_api_functional_test` pattern=bug_doc_schema_or_marking sig=adf32687b3dd36ba action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_api_basic.py]
+- uart_tx stage 19 `basic_api_functional_test` pattern=coverage_or_test_marks_missing sig=e8c8beb8a1bcc5d0 action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_api_basic.py]
+- uart_tx stage 20 `create_test_case_templates` pattern=coverage_or_test_marks_missing sig=7c096aa4a0cfc01b action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_env_fixture.py]
+- uart_tx stage 21 `test_case_implementation_in_batch` pattern=test_logic_or_case_implementation sig=eab7ce0f46a3b6f6 action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_control_state.py, replace_string:unity_test/tests/test_uart_tx_config.py]
+- uart_tx stage 21 `test_case_implementation_in_batch` pattern=test_logic_or_case_implementation sig=aa2df15984225c8d action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_config.py]
+- uart_tx stage 21 `test_case_implementation_in_batch` pattern=test_logic_or_case_implementation sig=bc87995f0d4d6cdf action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_config.py]
+- uart_tx stage 21 `test_case_implementation_in_batch` pattern=test_logic_or_case_implementation sig=9c694fe1129a4e9f action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_control_state.py]
+- uart_tx stage 21 `test_case_implementation_in_batch` pattern=test_logic_or_case_implementation sig=b342f512212879e3 action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_signals.py]
+- uart_tx stage 22 `comprehensive_verification_and_bug_analysis` pattern=bug_doc_schema_or_marking sig=8902ca5cdc710e24 action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_api_operation.py]
+- uart_tx stage 22 `comprehensive_verification_and_bug_analysis` pattern=bug_doc_schema_or_marking sig=8c69720212b04a66 action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_config.py]
+- uart_tx stage 22 `comprehensive_verification_and_bug_analysis` pattern=coverage_or_test_marks_missing sig=63459af344aca3d1 action_categories=['test_code'] actions=[replace_string:unity_test/tests/uart_tx_api.py]
+- uart_tx stage 22 `comprehensive_verification_and_bug_analysis` pattern=bug_doc_schema_or_marking sig=bce63456660fb632 action_categories=['coverage_code'] actions=[replace_string:unity_test/tests/uart_tx_function_coverage_def.py]
+- uart_tx stage 24 `generate_random_test_cases` pattern=test_logic_or_case_implementation sig=354feda2756a3909 action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_random_fifo.py]
+- uart_tx stage 24 `generate_random_test_cases` pattern=test_logic_or_case_implementation sig=7d5f4fc98ef3c4f9 action_categories=['test_code'] actions=[replace_string:unity_test/tests/test_uart_tx_random_fifo.py]
+- ALU754 stage 2 `dut_function_grouping` pattern=generic_checker_failure sig=c42e9ce20f72d2aa action_categories=['spec_check_document'] actions=[delete_file:unity_test/ALU754_functions_and_checks.md, write:unity_test/ALU754_functions_and_checks.md]
+- ALU754 stage 2 `dut_function_grouping` pattern=generic_checker_failure sig=c42e9ce20f72d2aa action_categories=['spec_check_document'] actions=[delete_file:unity_test/ALU754_functions_and_checks.md, write:unity_test/ALU754_functions_and_checks.md, replace_string:unity_test/ALU754_functions_and_checks.md]
+
+## Compression Hints
+- Adder stage 21 `test_case_implementation_in_batch` pattern=test_template_not_implemented sig=3a4096c0d3187c55 repeats=7: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- Adder stage 21 `test_case_implementation_in_batch` pattern=test_template_not_implemented sig=0c6bf9c32760e9d8 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- Adder stage 22 `comprehensive_verification_and_bug_analysis` pattern=bug_doc_schema_or_marking sig=dc42f0231a3afd54 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- uart_tx stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=bbdcbbf04fb673fd repeats=5: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- uart_tx stage 16 `evaluate_env_fixture` pattern=coverage_or_test_marks_missing sig=854528cef187ccee repeats=3: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- uart_tx stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=8f98eb0377305a98 repeats=3: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- uart_tx stage 19 `basic_api_functional_test` pattern=bug_doc_schema_or_marking sig=adf32687b3dd36ba repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- uart_tx stage 20 `create_test_case_templates` pattern=coverage_or_test_marks_missing sig=7c096aa4a0cfc01b repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- uart_tx stage 21 `test_case_implementation_in_batch` pattern=test_logic_or_case_implementation sig=9146fa8d8d64e0a6 repeats=9: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- uart_tx stage 21 `test_case_implementation_in_batch` pattern=test_logic_or_case_implementation sig=d9531f8819cc6673 repeats=3: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- uart_tx stage 21 `test_case_implementation_in_batch` pattern=test_logic_or_case_implementation sig=c1982634711400c4 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- uart_tx stage 22 `comprehensive_verification_and_bug_analysis` pattern=bug_doc_schema_or_marking sig=bce63456660fb632 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- ALU754 stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=b6e0a9b84dd1f35f repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- ALU754 stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=52a9ee51d636ce3d repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- ALU754 stage 16 `evaluate_env_fixture` pattern=coverage_or_test_marks_missing sig=0fef5af6eaa83ba0 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- ALU754 stage 19 `basic_api_functional_test` pattern=coverage_or_test_marks_missing sig=fdb3ddb7c298f995 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- ALU754 stage 22 `comprehensive_verification_and_bug_analysis` pattern=bug_doc_schema_or_marking sig=5f72080b9f0f78cd repeats=10: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- ALU754 stage 22 `comprehensive_verification_and_bug_analysis` pattern=label_or_report_mismatch sig=b0e55fa6a93a03ad repeats=6: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=c4c64dae87879fa0 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 16 `evaluate_env_fixture` pattern=api_or_env_interface_mismatch sig=573766d59f37f578 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 20 `create_test_case_templates` pattern=test_template_not_implemented sig=08bd3c25e30ddfeb repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 21 `test_case_implementation_in_batch` pattern=test_template_not_implemented sig=0babb9a74d75e94a repeats=4: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 21 `test_case_implementation_in_batch` pattern=label_or_report_mismatch sig=9d1a1ab2e597586d repeats=4: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 21 `test_case_implementation_in_batch` pattern=test_logic_or_case_implementation sig=c1982634711400c4 repeats=3: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 21 `test_case_implementation_in_batch` pattern=test_template_not_implemented sig=e82c62a1ca18d117 repeats=3: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 21 `test_case_implementation_in_batch` pattern=bug_doc_schema_or_marking sig=f359c4b94b041b97 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 21 `test_case_implementation_in_batch` pattern=bug_doc_schema_or_marking sig=0c939803924b5441 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 22 `comprehensive_verification_and_bug_analysis` pattern=coverage_or_test_marks_missing sig=f92b711c0f0c4ce2 repeats=2: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature
+- FSM stage 25 `verification_review_and_summary` pattern=bug_doc_schema_or_marking sig=ef14ebe0621f9e02 repeats=7: keep_latest_failure_summary_and_last_3_actions; drop older raw outputs with same signature

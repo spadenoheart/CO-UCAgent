@@ -4,22 +4,326 @@
 UCAgent Command Line Interface
 
 This module provides the command line interface for UCAgent, 
-wrapping the functionality from verify.py into a proper CLI module.
+wrapping the functionality from verify_agent.py into a proper CLI module.
 """
 
 import os
 import sys
 import argparse
 import bdb
-from typing import Dict, List, Any, Optional
-from .version import __version__
+import base64
+import ast
+import ntpath
+import posixpath
+import shutil
+import stat
+import tarfile
+from typing import Dict, List, Any, Optional, Union
+import tempfile
+import traceback
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 # Add the current directory to path for imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
-    sys.path.append(parent_dir)
+    sys.path.insert(0, parent_dir)
 os.environ['PYTHONPYCACHEPREFIX'] = os.path.join(os.path.expanduser('~'), ".ucagent/__pycache__")
+
+from ucagent.version import __version__
+
+def info(*k, **w):
+    print(*k, **w)
+
+
+class WorkspaceArchiveError(ValueError):
+    """Raised when a workspace archive cannot be downloaded, extracted, or validated."""
+
+
+def _normalize_archive_member_path(name: str) -> str:
+    raw = name or ""
+    raw_parts = raw.split("/")
+    normalized = posixpath.normpath(raw)
+    if (
+        "\\" in raw
+        or normalized in ("", ".")
+        or ".." in raw_parts
+        or normalized.startswith("../")
+        or normalized == ".."
+        or posixpath.isabs(normalized)
+        or ntpath.isabs(raw)
+    ):
+        raise WorkspaceArchiveError(f"Unsafe archive entry path: {name}")
+    parts = normalized.split("/")
+    if not parts or parts[0] != "workspace":
+        raise WorkspaceArchiveError(
+            "Invalid workspace archive layout: archive root must contain a direct 'workspace' directory"
+        )
+    return normalized
+
+
+def _validate_archive_symlink(member: tarfile.TarInfo, normalized_name: str) -> None:
+    linkname = member.linkname or ""
+    if (
+        not linkname
+        or "\\" in linkname
+        or posixpath.isabs(linkname)
+        or ntpath.isabs(linkname)
+    ):
+        raise WorkspaceArchiveError(f"Unsafe archive symlink target: {member.name} -> {linkname}")
+
+    target = posixpath.normpath(posixpath.join(posixpath.dirname(normalized_name), linkname))
+    if (
+        target in ("", ".", "..")
+        or target.startswith("../")
+        or posixpath.isabs(target)
+        or not (target == "workspace" or target.startswith("workspace/"))
+    ):
+        raise WorkspaceArchiveError(f"Unsafe archive symlink target: {member.name} -> {linkname}")
+
+
+def _extractall_workspace_archive(tf: tarfile.TarFile, extract_dir: str) -> None:
+    data_filter = getattr(tarfile, "data_filter", None)
+    extractall_kwargs = getattr(tarfile.TarFile.extractall, "__kwdefaults__", {}) or {}
+    if data_filter is not None and "filter" in extractall_kwargs:
+        tf.extractall(extract_dir, filter=data_filter)
+    else:
+        tf.extractall(extract_dir)
+
+
+def _extract_web_console_capture_path(argv: Optional[List[str]] = None) -> str:
+    source_argv = list(sys.argv if argv is None else argv)
+    raw_args = source_argv[1:]
+    for i, arg in enumerate(raw_args):
+        if arg == "--web-console-capture-path":
+            if i + 1 < len(raw_args):
+                return raw_args[i + 1]
+            return ""
+        if arg.startswith("--web-console-capture-path="):
+            return arg.split("=", 1)[1]
+    return ""
+
+
+def _is_workspace_archive_source(workspace: str) -> bool:
+    raw = str(workspace or "").strip()
+    if not raw:
+        return False
+    parsed = urlparse(raw)
+    if parsed.scheme in ("http", "https"):
+        return parsed.path.lower().endswith(".tar.gz")
+    return raw.lower().endswith(".tar.gz")
+
+
+def _archive_name_from_source(source: str) -> str:
+    parsed = urlparse(source)
+    if parsed.scheme in ("http", "https"):
+        name = posixpath.basename(parsed.path)
+    else:
+        name = os.path.basename(source)
+    if not name.lower().endswith(".tar.gz"):
+        raise WorkspaceArchiveError(
+            f"Workspace archive must be a .tar.gz file or http(s) .tar.gz URL: {source}"
+        )
+    stem = name[:-7]
+    cleaned = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in stem).strip("._-")
+    if not cleaned:
+        raise WorkspaceArchiveError(f"Cannot infer extraction directory name from workspace archive: {source}")
+    return cleaned
+
+
+def _download_workspace_archive(source_url: str, archive_path: str) -> None:
+    parsed = urlparse(source_url)
+    headers = {"User-Agent": f"UCAgent/{__version__}"}
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    access_keys = query.pop("key", [])
+    if access_keys and access_keys[0]:
+        headers["X-Access-Key"] = access_keys[0]
+    elif os.environ.get("UCAGENT_WORKSPACE_ARCHIVE_KEY"):
+        headers["X-Access-Key"] = os.environ["UCAGENT_WORKSPACE_ARCHIVE_KEY"]
+    if os.environ.get("UCAGENT_WORKSPACE_ARCHIVE_PASSWORD"):
+        token = base64.b64encode(f":{os.environ['UCAGENT_WORKSPACE_ARCHIVE_PASSWORD']}".encode("utf-8")).decode("ascii")
+        headers["Authorization"] = f"Basic {token}"
+    clean_query = urlencode([(key, value) for key, values in query.items() for value in values])
+    request_url = urlunparse(parsed._replace(query=clean_query))
+    display_url = urlunparse(parsed._replace(query=clean_query))
+    request = Request(request_url, headers=headers)
+    try:
+        with urlopen(request, timeout=60) as response:
+            status = getattr(response, "status", 200)
+            if status and int(status) >= 400:
+                raise WorkspaceArchiveError(f"Failed to download workspace archive: HTTP {status} {display_url}")
+            with open(archive_path, "wb") as fh:
+                shutil.copyfileobj(response, fh)
+    except HTTPError as exc:
+        raise WorkspaceArchiveError(
+            f"Failed to download workspace archive from {display_url}: HTTP {exc.code} {exc.reason}"
+        ) from exc
+    except URLError as exc:
+        raise WorkspaceArchiveError(
+            f"Failed to download workspace archive from {display_url}: {exc.reason}"
+        ) from exc
+    except TimeoutError as exc:
+        raise WorkspaceArchiveError(f"Timed out downloading workspace archive from {display_url}") from exc
+    except OSError as exc:
+        raise WorkspaceArchiveError(
+            f"Failed to save downloaded workspace archive to {archive_path}: {exc}"
+        ) from exc
+    if not os.path.isfile(archive_path) or os.path.getsize(archive_path) == 0:
+        raise WorkspaceArchiveError(f"Downloaded workspace archive is empty: {display_url}")
+
+
+def _make_path_removable(path: str) -> None:
+    try:
+        st = os.lstat(path)
+    except OSError:
+        return
+    if stat.S_ISLNK(st.st_mode):
+        return
+    chflags = getattr(os, "chflags", None)
+    if chflags is not None:
+        try:
+            chflags(path, 0)
+        except OSError:
+            pass
+    mode = stat.S_IMODE(st.st_mode) | stat.S_IRUSR | stat.S_IWUSR
+    if stat.S_ISDIR(st.st_mode):
+        mode |= stat.S_IXUSR
+    try:
+        os.chmod(path, mode)
+    except OSError:
+        return
+
+
+def _make_tree_removable(path: str) -> None:
+    _make_path_removable(path)
+    for root, dirs, files in os.walk(path, topdown=True, followlinks=False):
+        _make_path_removable(root)
+        for name in dirs:
+            _make_path_removable(os.path.join(root, name))
+        for name in files:
+            _make_path_removable(os.path.join(root, name))
+
+
+def _remove_workspace_archive_extract(extract_dir: str) -> None:
+    def _on_remove_error(func, failed_path, exc_info):
+        _make_path_removable(os.path.dirname(failed_path))
+        _make_path_removable(failed_path)
+        func(failed_path)
+
+    if os.path.islink(extract_dir) or os.path.isfile(extract_dir):
+        _make_path_removable(os.path.dirname(extract_dir))
+        _make_path_removable(extract_dir)
+        os.unlink(extract_dir)
+        return
+    _make_tree_removable(extract_dir)
+    shutil.rmtree(extract_dir, onerror=_on_remove_error)
+
+
+def _write_workspace_archive_marker(marker_path: str, workspace: str, effective_workspace: str = "") -> None:
+    try:
+        with open(marker_path, "w", encoding="utf-8") as fh:
+            fh.write(f"source={workspace}\n")
+            if effective_workspace:
+                fh.write(f"workspace={effective_workspace}\n")
+    except OSError:
+        pass
+
+
+def _safe_extract_workspace_archive(archive_path: str, extract_dir: str, dut_name: str) -> str:
+    workspace_dir = os.path.join(extract_dir, "workspace")
+    try:
+        with tarfile.open(archive_path, "r:gz") as tf:
+            members = tf.getmembers()
+            if not members:
+                raise WorkspaceArchiveError("Workspace archive is empty")
+            has_workspace_root = False
+            for member in members:
+                name = member.name or ""
+                normalized = _normalize_archive_member_path(name)
+                if member.islnk():
+                    raise WorkspaceArchiveError(f"Unsupported archive hard link entry: {name}")
+                if member.issym():
+                    _validate_archive_symlink(member, normalized)
+                elif not (member.isdir() or member.isfile()):
+                    raise WorkspaceArchiveError(f"Unsupported archive entry type: {name}")
+                if member.isdir() and normalized == "workspace":
+                    has_workspace_root = True
+                if normalized == "workspace" or normalized.startswith("workspace/"):
+                    has_workspace_root = True
+            if not has_workspace_root:
+                raise WorkspaceArchiveError(
+                    "Invalid workspace archive layout: missing root 'workspace' directory"
+                )
+            _extractall_workspace_archive(tf, extract_dir)
+    except WorkspaceArchiveError:
+        raise
+    except tarfile.TarError as exc:
+        raise WorkspaceArchiveError(f"Invalid or unreadable .tar.gz workspace archive: {archive_path}: {exc}") from exc
+    except OSError as exc:
+        raise WorkspaceArchiveError(f"Failed to extract workspace archive to {extract_dir}: {exc}") from exc
+
+    if not os.path.isdir(workspace_dir):
+        raise WorkspaceArchiveError(
+            f"Invalid workspace archive layout: extracted directory is missing '{workspace_dir}'"
+        )
+    dut_path = os.path.join(workspace_dir, dut_name)
+    if not os.path.isdir(dut_path):
+        raise WorkspaceArchiveError(
+            f"Invalid workspace archive layout: expected DUT directory '{dut_name}' under '{workspace_dir}'"
+        )
+    return workspace_dir
+
+
+def _prepare_workspace_archive_source(workspace: str, dut_name: str, workspace_base: str) -> str:
+    parsed = urlparse(str(workspace or ""))
+    if parsed.scheme in ("http", "https") and not _is_workspace_archive_source(workspace):
+        raise WorkspaceArchiveError(f"Remote workspace URL must point to a .tar.gz archive: {workspace}")
+    if not _is_workspace_archive_source(workspace):
+        return workspace
+    if not dut_name:
+        raise WorkspaceArchiveError("DUT name is required when workspace is a .tar.gz archive")
+
+    archive_name = _archive_name_from_source(workspace)
+    base_dir = os.path.abspath(os.path.expanduser(workspace_base or "/tmp/ucagent_workspace_base"))
+    extract_dir = os.path.join(base_dir, archive_name)
+    marker_path = os.path.join(extract_dir, ".ucagent_archive_extract")
+    try:
+        os.makedirs(base_dir, exist_ok=True)
+    except OSError as exc:
+        raise WorkspaceArchiveError(f"Failed to create --workspace-base directory '{base_dir}': {exc}") from exc
+
+    if os.path.lexists(extract_dir):
+        try:
+            _remove_workspace_archive_extract(extract_dir)
+        except OSError as exc:
+            raise WorkspaceArchiveError(f"Failed to clean previous extracted workspace '{extract_dir}': {exc}") from exc
+    try:
+        os.makedirs(extract_dir, exist_ok=False)
+        _write_workspace_archive_marker(marker_path, workspace)
+        with tempfile.TemporaryDirectory(prefix="ucagent_workspace_archive_") as tmp_dir:
+            archive_path = workspace
+            if parsed.scheme in ("http", "https"):
+                archive_path = os.path.join(tmp_dir, f"{archive_name}.tar.gz")
+                _download_workspace_archive(workspace, archive_path)
+            else:
+                archive_path = os.path.abspath(os.path.expanduser(workspace))
+                if not os.path.isfile(archive_path):
+                    raise WorkspaceArchiveError(f"Workspace archive file not found: {archive_path}")
+            effective_workspace = _safe_extract_workspace_archive(archive_path, extract_dir, dut_name)
+    except Exception:
+        try:
+            _remove_workspace_archive_extract(extract_dir)
+        except OSError:
+            pass
+        raise
+
+    _write_workspace_archive_marker(marker_path, workspace, effective_workspace)
+    info(f"Workspace archive extracted to: {extract_dir}")
+    info(f"Effective workspace: {effective_workspace}")
+    return effective_workspace
+
 
 class CheckAction(argparse.Action):
     """Custom action for --check flag that exits after checking."""
@@ -54,7 +358,7 @@ class HookMessageAction(argparse.Action):
             need_agent_exit=self.need_agent_exit,
         )
         if msg:
-            print(msg.strip())
+            info(msg.strip())
             sys.exit(0)
         parser.exit(1)
 
@@ -69,27 +373,51 @@ class UpgradeAction(argparse.Action):
         parser.exit()
 
 
-def get_override_dict(override_str: Optional[str]) -> Dict[str, Any]:
+OverrideDict = Dict[str, Any]
+OverrideValues = Union[OverrideDict, List[OverrideDict]]
+
+
+def _append_override(overrides: Optional[OverrideValues], key: str, value: Any) -> List[OverrideDict]:
+    if overrides is None:
+        result: List[OverrideDict] = []
+    elif isinstance(overrides, list):
+        result = list(overrides)
+    else:
+        result = [overrides]
+    result.append({key: value})
+    return result
+
+
+def get_override_dict(override_str: Optional[str]) -> OverrideValues:
     """Parse override string into dictionary.
 
     Args:
         override_str: String containing override settings in format A.B.C=value
 
     Returns:
-        Dict containing parsed override settings
+        Dict containing parsed override settings, or a list of dicts when
+        one override string contains repeated keys.
     """
     if override_str is None:
         return {}
-    overrides = {}
+    overrides: List[OverrideDict] = []
+    seen = set()
     for item in override_str.split(","):
-        key, value = item.split("=")
+        key, value = item.split("=", 1)
+        key = key.strip()
         value = value.strip()
         if value.startswith('"') or value.startswith("'"):
             assert value.endswith('"') or value.endswith("'"), "Value must be enclosed in quotes"
             value = value[1:-1]  # Remove quotes
         else:
-            value = eval(value)  # Evaluate the value to convert it to the appropriate type
-        overrides[key.strip()] = value
+            try:
+                value = ast.literal_eval(value)  # Convert Python literals while leaving raw strings alone.
+            except (ValueError, SyntaxError):
+                value = value.strip()
+        overrides.append({key: value})
+        seen.add(key)
+    if len(overrides) == len(seen):
+        return {key: value for override in overrides for key, value in override.items()}
     return overrides
 
 
@@ -107,33 +435,68 @@ def get_list_from_str(list_str: Optional[str]) -> List[str]:
     return [item.strip() for item in list_str.split(",") if item.strip()]
 
 
+def get_meta_pair(meta_str: Optional[str]):
+    """Parse a hidden --meta key=value argument."""
+    if meta_str is None or "=" not in meta_str:
+        raise argparse.ArgumentTypeError("--meta expects key=value")
+    key, value = meta_str.split("=", 1)
+    key = key.strip()
+    if not key:
+        raise argparse.ArgumentTypeError("--meta key must not be empty")
+    return key, value.strip()
+
+
+def get_meta_dict(meta_args) -> Dict[str, str]:
+    meta: Dict[str, str] = {}
+    for key, value in meta_args or []:
+        meta[str(key)] = str(value)
+    return meta
+
+
 def get_args() -> argparse.Namespace:
     """Parse command line arguments.
 
     Returns:
         Parsed command line arguments
     """
-    # Determine the program name based on how it's called
-    prog_name = "ucagent"
-    if sys.argv[0].endswith("ucagent.py"):
-        prog_name = "ucagent.py"
+    # Keep help output aligned with the installed entry point while retaining
+    # the historical ``ucagent`` compatibility command.
+    invoked_as = os.path.basename(sys.argv[0])
+    prog_name = invoked_as if invoked_as in {"co-ucagent", "ucagent", "ucagent.py"} else "co-ucagent"
     
     parser = argparse.ArgumentParser(
-        description="UCAgent - UnityChip Verification Agent",
+        description="CO-UCAgent - evidence-grounded context engineering for chip verification",
         prog=prog_name,
-        epilog="For more information, visit: https://github.com/XS-MLVP/UCAgent"
+        epilog="For more information, visit: https://github.com/spadenoheart/CO-UCAgent"
     )
 
     parser.add_argument(
-        "workspace", 
-        type=str, 
-        default=os.getcwd(), 
-        help="Workspace directory to run the agent in"
+        "workspace",
+        type=str,
+        nargs="?",
+        default=None,
+        help=(
+            "Workspace directory, local .tar.gz archive, or http(s) .tar.gz URL to run the agent in. "
+            "Optional when '--as-master/--upgrade' is used."
+        )
     )
     parser.add_argument(
-        "dut", 
-        type=str, 
-        help="DUT name (sub-directory name in workspace), e.g., DualPort, Adder, ALU"
+        "dut",
+        type=str,
+        nargs="?",
+        default=None,
+        help="DUT name (sub-directory name in workspace), e.g., DualPort, Adder, ALU. Optional when '--as-master/--upgrade' is used."
+    )
+    parser.add_argument(
+        "--workspace-base",
+        type=str,
+        default="/tmp/ucagent_workspace_base",
+        help=(
+            "Base directory used when workspace is a .tar.gz archive or an http(s) .tar.gz URL. "
+            "The archive is extracted under this directory and the effective workspace becomes "
+            "<workspace-base>/<archive-name>/workspace. Defaults to /tmp/ucagent_workspace_base "
+            "and is created automatically if missing."
+        )
     )
     
     # Configuration arguments
@@ -170,9 +533,10 @@ def get_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--override", 
+        action="append",
         type=get_override_dict, 
-        default=None, 
-        help="Override configuration settings in the format A.B.C=value"
+        default=[],
+        help="Override configuration settings in the format A.B.C=value (can be used multiple times)"
     )
     
     # Execution mode arguments
@@ -207,6 +571,26 @@ def get_args() -> argparse.Namespace:
         default=False,
         help="Enable ToDo related tools"
     )
+    parser.add_argument(
+        "--emulate-config",
+        action="store_true",
+        default=False,
+        help="Emulate configuration process only, without really run the stages"
+    )
+
+    # SKILL arguments
+    parser.add_argument(
+        "--use-skill",
+        action="store_true",
+        default=False,
+        help="Enable skill support"
+    )
+    parser.add_argument(
+        "--extra-skill-path",
+        type=str,
+        default=None,
+        help="Path to an additional skills directory. Requires '--use-skill'."
+    )
      # Miscellaneous arguments
     parser.add_argument(
         "--seed", 
@@ -218,7 +602,41 @@ def get_args() -> argparse.Namespace:
         "--tui", 
         action="store_true", 
         default=False, 
-        help="Run in TUI (Text User Interface) mode"
+        help="Enable TUI mode (Textual UI by default)"
+    )
+    parser.add_argument(
+        "--web-console",
+        type=str,
+        nargs="?",
+        const="",
+        default=None,
+        metavar="[host[:port]] [password]",
+        help=(
+            "Start browser-based terminal. "
+            "Bare '--web-console' uses defaults (localhost:8000, no auth). "
+            "Use '--web-console [host[:port]] [password]' to customize host/port "
+            "and optionally enable HTTP Basic Auth. "
+            "e.g. --web-console '0.0.0.0:8000 mysecret' "
+            "NOTE: --web-console runs in standalone mode and does NOT provide "
+            "local command-line interaction."
+        )
+    )
+    parser.add_argument(
+        "--web-terminal",
+        type=str,
+        nargs="?",
+        const="",
+        default=None,
+        metavar="[host[:port]][ password]",
+        help=(
+            "Start Web Terminal server (terminal_api_start) at agent startup. "
+            "Bare '--web-terminal' uses defaults (127.0.0.1:8818, no auth). "
+            "Use '--web-terminal [host[:port]] [password]' to customize address "
+            "and optionally enable HTTP Basic Auth. "
+            "e.g. --web-terminal '0.0.0.0:8818 mysecret' "
+            "Unlike --web-console, --web-terminal provides BOTH web-based terminal "
+            "AND local command-line interaction simultaneously."
+        )
     )
     parser.add_argument(
         "--sys-tips", 
@@ -233,9 +651,12 @@ def get_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--no-embed-tools",
-        action="store_true", 
-        default=False, 
-        help="Disable embedded tools in the agent"
+        nargs="?",
+        const=True,
+        default=True,
+        metavar="true_or_false",
+        type=lambda x: x.lower() not in ("false", "0", "no"),
+        help="Disable embedded tools in the agent. Bare '--no-embed-tools' (or '--no-embed-tools true') disables them; '--no-embed-tools false' keeps them enabled."
     )
     
     # Loop and message arguments
@@ -303,7 +724,7 @@ def get_args() -> argparse.Namespace:
         "--force-stage-index", 
         type=int, 
         default=0, 
-        help="Force the stage index to start from a specific stage"
+        help="Force the stage index to start from a specific stage. If this rewinds saved progress, saved data from that stage onward is reset."
     )
     parser.add_argument(
         "--no-write", "-nw", 
@@ -316,7 +737,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--gen-instruct-file", "-gif",
         type=str,
-        default=None,
+        default="AGENTS.md",
         help="Generate instruction file at the specified workspace path. If the file exists, it will be overwritten. eg: --gen-instruct-file GEMINI.md"
     )
 
@@ -348,6 +769,96 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--icmd", action="append", default=[], type=str,
                         help="Initial command(s) to run at the start of the agent (can be used multiple times)")
 
+    parser.add_argument(
+        "--as-master",
+        type=str,
+        nargs="?",
+        const="",
+        default=None,
+        metavar="[host[:port]]",
+        help=(
+            "Start this agent as a Master API server. "
+            "Bare '--as-master' uses the default host/port. "
+            "'--as-master host[:port]' binds the server to the given address. "
+            "workspace and dut positional args are optional when this flag is used."
+        )
+    )
+
+    parser.add_argument(
+        "--master",
+        nargs="+",
+        action="append",
+        default=[],
+        metavar="host[:port]",
+        help=(
+            "Connect this agent to a Master API server (can be used multiple times). "
+            "Format: host[:port] [access_key]. "
+            "E.g. --master 192.168.1.10:8800 --master 192.168.1.20:8800 secretkey"
+        )
+    )
+    parser.add_argument(
+        "--client-id",
+        type=str,
+        default=None,
+        help="Client identifier used when connecting to a master. Passed to connect_master_to --id."
+    )
+    parser.add_argument(
+        "--meta",
+        action="append",
+        default=[],
+        type=get_meta_pair,
+        metavar="key=value",
+        help=argparse.SUPPRESS,
+    )
+
+    parser.add_argument(
+        "--as-master-key",
+        type=str,
+        default=None,
+        metavar="key",
+        help="Access key that clients must supply to register with this master "
+             "(used with --as-master). Passed as --key to master_api_start."
+    )
+
+    parser.add_argument(
+        "--as-master-password",
+        type=str,
+        default=None,
+        metavar="password",
+        help="HTTP Basic Auth password to protect the Master API dashboard and all API endpoints "
+             "(used with --as-master). Passed as --password to master_api_start."
+    )
+
+    parser.add_argument(
+        "--as-master-persist",
+        type=str,
+        nargs="?",
+        const="/tmp/ucagent_master",
+        default=None,
+        metavar="path",
+        help=(
+            "Use persistent workspace directory when running as master (instead of temporary directory). "
+            "If path is provided, use it as the workspace directory. "
+            "If no path is provided, default to /tmp/ucagent_master."
+        )
+    )
+
+    parser.add_argument(
+        "--export-cmd-api",
+        type=str,
+        nargs="?",
+        const="",
+        default=None,
+        metavar="[host[:port]][ password]",
+        help=(
+            "Start the CMD API server (PdbCmdApiServer) as part of agent startup. "
+            "Bare '--export-cmd-api' uses default host/port (127.0.0.1:8765). "
+            "'--export-cmd-api host[:port]' binds to the given address. "
+            "Append a password after a space to enable HTTP Basic Auth, "
+            "e.g. --export-cmd-api '0.0.0.0:8765 mysecret'."
+        )
+    )
+
     parser.add_argument("--no-history", action="store_true", default=False,
                         help="Disable history loading from previous runs in the workspace")
 
@@ -361,13 +872,18 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--version", 
         action="version", 
-        version="UCAgent Version: " + __version__,
+        version="CO-UCAgent Version: " + __version__,
     )
 
     parser.add_argument(
         "--upgrade",
-        action=UpgradeAction,
-        help="Upgrade UCAgent to the latest version from GitHub main branch"
+        nargs="?",
+        const="",
+        default=None,
+        metavar="pip_extra_args",
+        help="Upgrade CO-UCAgent to the latest version from its GitHub main branch. "
+             "Optional value is passed as extra arguments to pip install (e.g. --upgrade '--index-url https://...'). "
+             "workspace and dut positional args are not required when this flag is used."
     )
 
     parser.add_argument(
@@ -386,34 +902,66 @@ def get_args() -> argparse.Namespace:
               )
     )
 
-    return parser.parse_args()
+    parser.add_argument(
+        "--web-console-session-host",
+        type=str,
+        default=None,
+        help=argparse.SUPPRESS,
+    )
+
+    parser.add_argument(
+        "--web-console-session-port",
+        type=int,
+        default=None,
+        help=argparse.SUPPRESS,
+    )
+
+    parser.add_argument(
+        "--web-console-capture-path",
+        type=str,
+        default="",
+        help=argparse.SUPPRESS,
+    )
+
+    args = parser.parse_args()
+    merged_override = []
+    for override in args.override or []:
+        if isinstance(override, list):
+            merged_override.extend(override)
+        else:
+            merged_override.append(override)
+    args.override = merged_override
+    args.meta = get_meta_dict(args.meta)
+    return args
 
 
-def upgrade() -> None:
+def upgrade(extra_pip_args: str = "") -> None:
     import subprocess
-    print(f"Upgrading UCAgent from GitHub main branch using Python {sys.version.split()[0]}...")
-    print(f"Python executable: {sys.executable}")
-    for url in ["https://github.com",
-                "https://www.gitlink.org.cn",
-                "https://gitee.com/XS-MLVP"
-                ]:
-        try:
-            # Use the same Python interpreter that is currently running
-            source_url = f'git+{url}/XS-MLVP/UCAgent@main'
-            print(f"Trying to upgrade from {source_url} ...")
-            result = subprocess.run(
-                [sys.executable, '-m', 'pip', 'install', '--upgrade',
-                source_url],
-                check=True,
-                text=True
-            )
-            print("\nUCAgent upgraded successfully!")
-            print("Please restart your terminal or run 'hash -r' to refresh the command cache.")
-            sys.exit(0)
-        except Exception as e:
-            print(f"\nUnexpected error during upgrade: {e}")
-            print(f"Failed to upgrade UCAgent from {url}. Trying next source...")
-    sys.exit(1)
+    exargs = extra_pip_args.split() if extra_pip_args.strip() else []
+    info(f"Upgrading CO-UCAgent from GitHub main branch using Python {sys.version.split()[0]}...")
+    info(f"Python executable: {sys.executable}")
+    source_url = "git+https://github.com/spadenoheart/CO-UCAgent@main"
+    info(f"Trying to upgrade from {source_url} ...")
+    cmd = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--timeout",
+        "30",
+        "--upgrade",
+        source_url,
+        *exargs,
+    ]
+    info(f"Running command: {' '.join(cmd)}")
+    try:
+        subprocess.run(cmd, check=True, text=True)
+    except subprocess.CalledProcessError as exc:
+        info(f"\nCO-UCAgent upgrade failed with return code {exc.returncode}.")
+        sys.exit(exc.returncode or 1)
+    info("\nCO-UCAgent upgraded successfully!")
+    info("Please restart your terminal or run 'hash -r' to refresh the command cache.")
+    sys.exit(0)
 
 
 def parse_reference_files(ref_args: List[str]) -> Dict[int, List[str]]:
@@ -444,9 +992,9 @@ def do_check() -> None:
     """Check current default configurations."""
     import glob
     def echo_g(msg: str):
-        print(f"\033[92m{msg}\033[0m")
+        info(f"\033[92m{msg}\033[0m")
     def echo_r(msg: str):
-        print(f"\033[91m{msg}\033[0m")
+        info(f"\033[91m{msg}\033[0m")
     def check_exist(msg, file_path: str, indent=0):
         indent_str = '  ' * indent
         file_list = glob.glob(file_path)  # expand wildcards
@@ -457,7 +1005,7 @@ def do_check() -> None:
     # 1. Check default config file
     default_config_path = os.path.join(current_dir, "setting.yaml")
     default_user_config_path = os.path.join(os.path.expanduser("~"), ".ucagent/setting.yaml")
-    echo_g("UCAgent version: " + __version__)
+    echo_g("CO-UCAgent version: " + __version__)
     check_exist("sys_config", default_config_path)
     check_exist("user_config", default_user_config_path)
 
@@ -484,9 +1032,63 @@ def run() -> None:
     """Main entry point for UCAgent CLI."""
     args = get_args()
 
-    from .verify_agent import VerifyAgent
-    from .util.log import init_log_logger, init_msg_logger
-    from .util.functions import append_python_path, find_available_port
+    # --upgrade: run before workspace/dut validation, then exit
+    if getattr(args, 'upgrade', None) is not None:
+        upgrade(args.upgrade)
+        sys.exit(0)
+
+    if args.web_console is not None and \
+       args.web_console_session_host is None and \
+       args.web_console_session_port is None:
+        from ucagent.server.api_terminal import _serve_web_console
+        try:
+            return _serve_web_console(sys.argv)
+        except Exception as e:
+            info(f"Failed to start Web UI: {e}")
+            sys.exit(1)
+
+    # --as-master with no positional args → spin up a fake DUT under /tmp or persistent directory
+    if getattr(args, 'as_master', None) is not None and args.workspace is None:
+        if getattr(args, 'as_master_persist', None) is not None:
+            # Use persistent directory
+            args.workspace = args.as_master_persist
+            os.makedirs(args.workspace, exist_ok=True)
+            args.dut = "empty"
+            args.human = True
+        else:
+            # Use temporary directory
+            temp_dir = tempfile.TemporaryDirectory(prefix="ucagent_master_")
+            args.workspace = temp_dir.name
+            args.dut = "empty"
+            args.human = True
+            args._temp_dir = temp_dir
+        if args.config is None:
+            args.config = "master.yaml"
+
+    if args.emulate_config:
+        if args.config is None:
+            info("Error: --emulate-config requires --config argument")
+            sys.exit(1)
+        temp_dir = tempfile.TemporaryDirectory(prefix="ucagent_emulate_")
+        args.workspace = temp_dir.name
+        args.dut = "DUT_TEST"
+        dut_path = os.path.join(temp_dir.name, args.dut)
+        os.makedirs(dut_path, exist_ok=True)
+        open(os.path.join(dut_path, "__init__.py"), "w+").close()
+        args._temp_dir = temp_dir
+        info(f"Check config file: {args.config}")
+
+    # Validate required positional args for normal (non-as-master) usage
+    if args.workspace is None or args.dut is None:
+        import argparse as _argparse
+        _p = _argparse.ArgumentParser(prog="ucagent")
+        _p.error("the following arguments are required: workspace, dut")
+
+    args.workspace = _prepare_workspace_archive_source(args.workspace, args.dut, args.workspace_base)
+
+    from ucagent.verify_agent import VerifyAgent
+    from ucagent.util.log import init_log_logger, init_msg_logger
+    from ucagent.util.functions import append_python_path, find_available_port
 
     # Initialize logging if requested
     if args.log_file or args.msg_file or args.log:
@@ -501,10 +1103,25 @@ def run() -> None:
     
     # Prepare initial commands
     init_cmds = []
-    if args.tui:
-        init_cmds += ["tui"]
+    if getattr(args, 'web_terminal', None) is not None:
+        extra_web_term_opts = ""
+        addr_part = args.web_terminal.strip()
+        passwd_part = ""
+        if " " in addr_part:
+            addr_part, passwd_part = addr_part.split(" ", 1)
+            passwd_part = passwd_part.strip()
+        if passwd_part:
+            extra_web_term_opts += f" --passwd {passwd_part}"
+        if addr_part == "":
+            init_cmds += [f"terminal_api_start{extra_web_term_opts}".strip()]
+        elif ":" in addr_part:
+            t_host, t_port = addr_part.rsplit(":", 1)
+            init_cmds += [f"terminal_api_start {t_host} {t_port}{extra_web_term_opts}"]
+        else:
+            init_cmds += [f"terminal_api_start {addr_part}{extra_web_term_opts}"]
     
     # Handle MCP server commands
+    args.override = args.override or []
     if args.mcp_server_port == -1:
         args.mcp_server_port = find_available_port()
     mcp_cmd = None
@@ -513,19 +1130,28 @@ def run() -> None:
     if args.mcp_server_no_file_tools:
         mcp_cmd = "start_mcp_server_no_file_ops"
     if mcp_cmd is not None:
-        init_cmds += [f"{mcp_cmd} {args.mcp_server_host} {args.mcp_server_port} &"]
-
+        init_cmds += [f"{mcp_cmd} {args.mcp_server_host} {args.mcp_server_port}"]
     if args.mcp_server_port is not None:
-        args.override = args.override or {}
-        args.override["mcp_server.port"] = args.mcp_server_port
-
+        args.override = _append_override(args.override, "mcp_server.port", args.mcp_server_port)
     if args.mcp_server_host is not None:
-        args.override = args.override or {}
-        args.override["mcp_server.host"] = args.mcp_server_host
+        args.override = _append_override(args.override, "mcp_server.host", args.mcp_server_host)
 
     if args.backend:
-        args.override = args.override or {}
-        args.override["backend.key_name"] = args.backend
+        args.override = _append_override(args.override, "backend.key_name", args.backend)
+
+    if args.extra_skill_path and not args.use_skill:
+        raise ValueError("--extra-skill-path requires --use-skill is True")
+
+    if args.extra_skill_path and not os.path.exists(args.extra_skill_path):
+        raise ValueError(f"--extra-skill-path does not exist: {args.extra_skill_path}")
+
+    if args.use_skill:
+        args.override = _append_override(args.override, "skill.use_skill", args.use_skill)
+        args.override = _append_override(args.override, "skill.extra_skill_path", args.extra_skill_path or "")
+
+    # Make sure mcp server is started before tui
+    if args.tui:
+        init_cmds += ["tui"]
 
     template_cfg_overrides = {}
     if args.template_cfg_override:
@@ -536,6 +1162,58 @@ def run() -> None:
                 cfg_data = yaml.safe_load(f)
                 template_cfg_overrides.update(cfg_data)
 
+    # Handle --as-master: start this agent as a Master API server
+    if args.as_master is not None:
+        extra_master_opts = ""
+        if getattr(args, 'as_master_key', None):
+            extra_master_opts += f" --key {args.as_master_key}"
+        if getattr(args, 'as_master_password', None):
+            extra_master_opts += f" --password {args.as_master_password}"
+        if args.as_master == "":
+            init_cmds += [f"master_api_start{extra_master_opts}".strip()]
+        else:
+            addr = args.as_master
+            if ":" in addr:
+                m_host, m_port = addr.rsplit(":", 1)
+                init_cmds += [f"master_api_start {m_host} {m_port}{extra_master_opts}"]
+            else:
+                init_cmds += [f"master_api_start {addr}{extra_master_opts}"]
+
+    # Handle --export-cmd-api: start the CMD API server
+    if args.export_cmd_api is not None:
+        extra_cmd_api_opts = ""
+        addr_part = args.export_cmd_api.strip()
+        passwd_part = ""
+        # Allow embedded password after a space: "host[:port] passwd" or just "passwd"
+        if " " in addr_part:
+            addr_part, passwd_part = addr_part.split(" ", 1)
+            passwd_part = passwd_part.strip()
+        if passwd_part:
+            extra_cmd_api_opts += f" --passwd {passwd_part}"
+        if addr_part == "":
+            init_cmds += [f"cmd_api_start{extra_cmd_api_opts}".strip()]
+        elif ":" in addr_part:
+            c_host, c_port = addr_part.rsplit(":", 1)
+            init_cmds += [f"cmd_api_start {c_host} {c_port}{extra_cmd_api_opts}"]
+        else:
+            init_cmds += [f"cmd_api_start {addr_part}{extra_cmd_api_opts}"]
+
+    # Handle --master: connect to one or more Master API servers
+    # Each entry is a list: [host[:port]] or [host[:port], access_key]
+    for master_tokens in args.master:
+        master_addr = master_tokens[0]
+        access_key = master_tokens[1] if len(master_tokens) > 1 else ""
+        extra_client_opts = f" --key {access_key}" if access_key else ""
+        if args.client_id:
+            extra_client_opts += f" --id {args.client_id}"
+        if ":" in master_addr:
+            m_host, m_port = master_addr.rsplit(":", 1)
+            master_cmd = f"connect_master_to {m_host} {m_port}{extra_client_opts}"
+        else:
+            master_cmd = f"connect_master_to {master_addr}{extra_client_opts}"
+        init_cmds += [master_cmd]
+
+    init_cmds.append("logo_and_version")
     if args.icmd:
         init_cmds += args.icmd
     
@@ -579,18 +1257,33 @@ def run() -> None:
         no_history=args.no_history,
         enable_context_manage_tools=args.enable_context_manage_tools,
         exit_on_completion=args.exit_on_completion,
+        meta=args.meta,
     )
-    
+    if args.web_console_session_host is not None or \
+       args.web_console_session_port is not None:
+        agent.web_console_session_info = {
+            "host": args.web_console_session_host,
+            "port": args.web_console_session_port,
+        }
+
     # Set break mode if human interaction or TUI is requested
     if args.human or args.tui:
         agent.set_break(True)
     
     # Run the agent
     try:
-        agent.run()
+        if args.emulate_config:
+            agent.emulate_config()
+        else:
+            agent.run()
     except AssertionError as e:
-        print(f"Fail: {e}")
+        info(f"Fail: {e}")
         sys.exit(1)
+    finally:
+        try:
+            agent.exit()
+        except Exception as e:
+            info(f"Warning: failed during agent exit cleanup: {e}")
 
 
 def main() -> None:
@@ -599,15 +1292,29 @@ def main() -> None:
         run()
     except bdb.BdbQuit:
         pass
+    except WorkspaceArchiveError as e:
+        info(f"Workspace archive error: {e}")
+        sys.exit(1)
     except KeyboardInterrupt:
-        print("\nUCAgent interrupted by user.")
+        info("\nUCAgent interrupted by user.")
         sys.exit(1)
     except Exception as e:
-        import traceback
-        print(f"UCAgent encountered an error: {e}")
-        traceback.print_exc()
+        info(f"UCAgent encountered an error: {e}")
+        formatted = traceback.format_exc()
+        info(formatted, end="")
+        capture_path = _extract_web_console_capture_path().strip()
+        if capture_path:
+            try:
+                os.makedirs(os.path.dirname(os.path.abspath(capture_path)), exist_ok=True)
+                with open(capture_path, "a", encoding="utf-8", errors="replace") as fh:
+                    fh.write(f"UCAgent encountered an error: {e}\n")
+                    fh.write(formatted)
+                    if not formatted.endswith("\n"):
+                        fh.write("\n")
+            except OSError:
+                pass
         sys.exit(1)
-    print("UCAgent is exited.")
+    info("UCAgent is exited.")
 
 
 if __name__ == "__main__":

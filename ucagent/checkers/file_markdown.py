@@ -5,8 +5,43 @@
 from ucagent.checkers.base import Checker, UnityChipBatchTask
 import ucagent.util.functions as fc
 from ucagent.util.log import info
-import copy
+from collections import OrderedDict
 import os
+
+
+def check_file_path_xml_tags(workspace, target_files) -> list:
+    """Check for XML tags in the specified files and return a list of file paths found within those tags."""
+    ret_files = {}
+    check_passed = True
+    for pfile in target_files:
+        if pfile not in ret_files:
+            ret_files[pfile] = []
+        try:
+            file_list = fc.get_xml_tag_list(workspace, pfile, "ref_file")
+        except Exception as e:
+            info(f"Error parsing XML in file '{pfile}': {e}")
+            ret_files[pfile].append(f"Error parsing XML: {e}")
+            check_passed = False
+            continue
+        for f in file_list:
+            fpath, _ = f, None
+            try:
+                if ':' in f:
+                    fpath, line_part = f.split(':', 1)
+                    start_line, end_line = line_part.split('-', 1)
+                    lines = (int(start_line), int(end_line))
+                    assert lines[0] > 0 and lines[1] >= lines[0], "Line numbers must be positive and in correct order."
+            except Exception as e:
+                info(f"Error parsing line numbers in tag '{f}' in file '{pfile}': {e}")
+                ret_files[pfile].append(f"Parse '{f}' with lines  failed: {e}, please check format '<ref_file>relative_path[:line-line]</ref_file>'")
+                check_passed = False
+                continue
+            abs_path = os.path.abspath(workspace + os.path.sep + fpath)
+            if not os.path.isfile(abs_path):
+                info(f"Referenced file '{abs_path}' does not exist.")
+                ret_files[pfile].append(f"Referenced file '{fpath}' does not exist.")
+                check_passed = False
+    return check_passed, ret_files
 
 
 class BatchFileProcess(Checker):
@@ -139,6 +174,14 @@ class BatchMarkDownHeadChecker(BatchFileProcess):
             return False, {
                 "error" f"File '{file_path}' is missing {len(missed_headers)} headers from template '{source_file}'. " + note_msg
             }
+        file_ref_pass, file_ref_msg = check_file_path_xml_tags(
+            self.workspace, [file_path]
+        )
+        if not file_ref_pass:
+            return False, {
+                "error": f"File '{file_path}' has invalid file references",
+                "details": file_ref_msg
+            }
         return True, ""
 
 
@@ -168,6 +211,151 @@ class MarkDownHeadChecker(Checker):
             return False, {
                 "error": f"File '{self.file_path}' is missing {len(missed_headers)} headers from template '{self.template_file}'. " + note_msg
             }
+        file_ref_pass, file_ref_msg = check_file_path_xml_tags(
+            self.workspace, [self.file_path]
+        )
+        if not file_ref_pass:
+            return False, {
+                "error": f"File '{self.file_path}' has invalid file references",
+                "details": file_ref_msg
+            }
         return True, {
             "note": f"File '{self.file_path}' contains all required headers from template '{self.template_file}'."
+        }
+
+
+class MustHaveCKs(Checker):
+    """Ensure every CK in source files exists in the functions-and-checks doc.
+
+    Role:
+        Use ``funcs_and_checks_doc`` as the allowed CK set, then verify every
+        matched file in ``source_files`` only contains ``leaf_node`` labels that
+        also exist in that document. Missing labels are reported with their
+        source file line numbers.
+
+    Args:
+        source_files: A file path, glob/regex pattern, or list of patterns.
+        funcs_and_checks_doc: Markdown doc that defines the required labels.
+        leaf_node: Label level to compare, usually ``"CK"``; also supports
+            levels accepted by ``get_unity_chip_doc_marks``.
+
+    Example:
+        checker:
+          - name: must_have_cks
+            clss: "MustHaveCKs"
+            args:
+              source_files: "{DUT}/*.md"
+              funcs_and_checks_doc: "{OUT}/{DUT}_functions_and_checks.md"
+              leaf_node: "CK"
+    """
+
+    def __init__(self,
+                 source_files:str,
+                 funcs_and_checks_doc:str,
+                 leaf_node:str="CK",
+                 **kw):
+        self.source_files = source_files if isinstance(source_files, list) else [source_files]
+        self.funcs_and_checks_doc = funcs_and_checks_doc
+        self.leaf_node = leaf_node
+
+    def _load_labels(self, doc_file, return_line_block=False, file_kind="documentation file"):
+        try:
+            return fc.get_unity_chip_doc_marks(
+                self.get_path(doc_file),
+                self.leaf_node,
+                0,
+                return_line_block=return_line_block,
+            )
+        except Exception as e:
+            raise ValueError(f"Error parsing {file_kind} '{doc_file}': {e}") from e
+
+    def _get_label_line_map(self, label_blocks):
+        label_line_map = {}
+        for label, lines in label_blocks.items():
+            leaf_tag = f"<{label.split('/')[-1]}>"
+            for line in lines:
+                if ": " not in line:
+                    continue
+                line_no, content = line.split(": ", 1)
+                if content == "...":
+                    continue
+                if leaf_tag in "".join(content.split()):
+                    label_line_map[label] = int(line_no)
+                    break
+        return label_line_map
+
+    def _label_with_line(self, label, label_line_map, file_path=None):
+        line_no = label_line_map.get(label)
+        if line_no is None:
+            return label
+        label_file = file_path or self.funcs_and_checks_doc
+        return f"{label} ({label_file}:{line_no})"
+
+    def do_check(self, is_complete=False, **kw) -> tuple[bool, object]:
+        """Check markdown source files only contain labels from the functions-and-checks doc."""
+        fc_ck_file = self.get_path(self.funcs_and_checks_doc)
+        if not os.path.isfile(fc_ck_file):
+            return False, {
+                "error": f"Funcs and checks doc file '{self.funcs_and_checks_doc}' does not exist in workspace. Please check your configuration."
+            }
+        try:
+            allowed_label_list = self._load_labels(self.funcs_and_checks_doc)
+        except ValueError as e:
+            return False, {
+                "error": str(e)
+            }
+        allowed_label_set = set(allowed_label_list)
+
+        source_label_map = {}
+        source_file_list = sorted(fc.find_files_by_pattern(self.workspace, self.source_files))
+        if len(source_file_list) == 0:
+            return False, {
+                "error": f"No source files found for patterns: {', '.join(self.source_files)}."
+            }
+
+        for dfile in source_file_list:
+            if not os.path.exists(self.get_path(dfile)):
+                return False, {"error": f"Source file '{dfile}' does not exist."}
+            try:
+                data_sub, data_blocks = self._load_labels(
+                    dfile, return_line_block=True, file_kind="source file"
+                )
+            except ValueError as e:
+                return False, {
+                    "error": str(e)
+                }
+            source_label_map[dfile] = {
+                "labels": data_sub,
+                "line_map": self._get_label_line_map(data_blocks),
+            }
+
+        missing_label_map = {}
+        for dfile, label_data in source_label_map.items():
+            label_list = label_data["labels"]
+            missing_label_list = [
+                label for label in label_list
+                if label not in allowed_label_set
+            ]
+            if len(missing_label_list) > 0:
+                missing_label_map[dfile] = [
+                    self._label_with_line(label, label_data["line_map"], dfile)
+                    for label in missing_label_list
+                ]
+        if len(missing_label_map) > 0:
+            missing_source_file_count = len(missing_label_map)
+            missing_label_count = sum(len(label_list) for label_list in missing_label_map.values())
+            error_details = "\n".join([
+                f"File '{dfile}' contains {len(label_list)} {self.leaf_node} labels not defined in "
+                f"'{self.funcs_and_checks_doc}': {', '.join(label_list[:20])}"
+                f"{'' if len(label_list) <= 20 else '...(%s more)' % (len(label_list) - 20)}"
+                for dfile, label_list in missing_label_map.items()
+            ])
+            return False, OrderedDict({
+                "error": f"Some {missing_source_file_count} source file(s) contain {missing_label_count} {self.leaf_node} " + \
+                         f"labels not defined in '{self.funcs_and_checks_doc}' (contained {len(allowed_label_list)} {self.leaf_node} labels).",
+                "details": error_details,
+                "suggestion": f"Please ensure all {self.leaf_node} labels in the source files are defined in '{self.funcs_and_checks_doc}'."
+            })
+        return True, {
+            "note": f"All source files contain only {self.leaf_node} labels defined in '{self.funcs_and_checks_doc}'."
         }

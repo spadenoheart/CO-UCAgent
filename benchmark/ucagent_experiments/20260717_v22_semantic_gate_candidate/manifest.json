@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "experiment_baseline": "20260717_v22_semantic_gate_candidate",
+  "created_at": "2026-07-17T16:46:59+08:00",
+  "repo_root": "<REPO_ROOT>",
+  "git_head": "b9c259b35d048e70cf4d0429d3b20a0077fed15d",
+  "git_branch": "main",
+  "worktree_dirty": true,
+  "python_version": "3.11.14 (main, Oct 21 2025, 18:31:21) [GCC 11.2.0]",
+  "files": [
+    {
+      "path": "ucagent/setting.yaml",
+      "source_sha256": "6d5a80a6a2deef692c859026bcffdf4c7fbb6ff4e5efbe3a56bcb36cf84c26f5",
+      "snapshot_sha256": "b645114d6fb7fadf4262bd80db06c136f1b4d5361174936487f75f2ecde20f53",
+      "bytes": 17397,
+      "redacted_snapshot": true
+    },
+    {
+      "path": "ucagent/memory/context_reuse.py",
+      "source_sha256": "3b2fe46f3a26e35dc0023ee108568edb8d7c366f5fa292858b825e2f5808ef34",
+      "snapshot_sha256": "3b2fe46f3a26e35dc0023ee108568edb8d7c366f5fa292858b825e2f5808ef34",
+      "bytes": 45860,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/stage/vmanager.py",
+      "source_sha256": "db2e0d75ad076d540fbf228927d969d9f304ad21e7437429c3e739edff75f6e4",
+      "snapshot_sha256": "db2e0d75ad076d540fbf228927d969d9f304ad21e7437429c3e739edff75f6e4",
+      "bytes": 84941,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/verify_agent.py",
+      "source_sha256": "049c6156bd478e0325504d081ad80a93ca291c8fbf3f2b58a2f069144f77ad81",
+      "snapshot_sha256": "049c6156bd478e0325504d081ad80a93ca291c8fbf3f2b58a2f069144f77ad81",
+      "bytes": 67344,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/analyze_context_reuse_decisions.py",
+      "source_sha256": "c284163b38a845e07dd5774ff5cba91370c7ebd7680bb9da335260bd2ef639ca",
+      "snapshot_sha256": "c284163b38a845e07dd5774ff5cba91370c7ebd7680bb9da335260bd2ef639ca",
+      "bytes": 8904,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/replay_context_reuse_gate.py",
+      "source_sha256": "75588212b78a2be868d5c480bc4c3154ce98ffd33206bc910fbbb2fe84518a5a",
+      "snapshot_sha256": "75588212b78a2be868d5c480bc4c3154ce98ffd33206bc910fbbb2fe84518a5a",
+      "bytes": 8270,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_test_result_classification.py",
+      "source_sha256": "45fcb5d04b8e5fc76d5c50cc3358e68952ce064236dde937a0daa8d1690b6925",
+      "snapshot_sha256": "45fcb5d04b8e5fc76d5c50cc3358e68952ce064236dde937a0daa8d1690b6925",
+      "bytes": 25728,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_episode_credit.py",
+      "source_sha256": "9bcebf588cf099372be5cca2e1e2e51971c94b0710c5202760d649c95b8504d9",
+      "snapshot_sha256": "9bcebf588cf099372be5cca2e1e2e51971c94b0710c5202760d649c95b8504d9",
+      "bytes": 17544,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+      "source_sha256": "f38af26c8354f70ad3d306e3df33f695bac4a11ab06f535f8b7d1e8352ac1997",
+      "snapshot_sha256": "f38af26c8354f70ad3d306e3df33f695bac4a11ab06f535f8b7d1e8352ac1997",
+      "bytes": 877832,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/Adder_20260717_v21_utility_gate_decisions.json",
+      "source_sha256": "2958a231e4ee2c0ef597d2fbae1b12c3b52fe570bdd0cb596279c59755df2727",
+      "snapshot_sha256": "2958a231e4ee2c0ef597d2fbae1b12c3b52fe570bdd0cb596279c59755df2727",
+      "bytes": 370381,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/Adder_20260717_v21_gate_replay.json",
+      "source_sha256": "8db31ac49f281e76b379590e70eb2402a380b014318980da01151c161bbcf3c0",
+      "snapshot_sha256": "8db31ac49f281e76b379590e70eb2402a380b014318980da01151c161bbcf3c0",
+      "bytes": 17823,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/Adder_20260717_v21_gate_replay.md",
+      "source_sha256": "dd34b1244663c9bd37f1b9a1f84f69a9c5963eccf16657088fa9f7c68dec9d25",
+      "snapshot_sha256": "dd34b1244663c9bd37f1b9a1f84f69a9c5963eccf16657088fa9f7c68dec9d25",
+      "bytes": 4439,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "output/.ucagent_info.json",
+      "source_sha256": "483336bb2bd46b173d98e7df4257202b2f53935f3f4aec2be0f6864a639a9df2",
+      "snapshot_sha256": "483336bb2bd46b173d98e7df4257202b2f53935f3f4aec2be0f6864a639a9df2",
+      "bytes": 67940,
+      "redacted_snapshot": false
+    }
+  ],
+  "comparison": {
+    "shared_code_snapshot": "snapshot/",
+    "v21_observed": {
+      "run": "log/Adder+20260717_104648",
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68",
+        "UCAGENT_CONTEXT_REUSE_UTILITY_GATE": "true",
+        "UCAGENT_CONTEXT_REUSE_MIN_UTILITY": "0.05",
+        "UCAGENT_CONTEXT_REUSE_STRICT_ACTION_MATCH": "false",
+        "UCAGENT_CONTEXT_REUSE_EXACT_PATTERN_GROUPS": "false",
+        "UCAGENT_CONTEXT_REUSE_GENERIC_SIGNATURE": "false",
+        "UCAGENT_CONTEXT_REUSE_SKIP_NON_REUSABLE": "false",
+        "UCAGENT_CONTEXT_REUSE_STRICT_HINT_MATCH": "false",
+        "UCAGENT_CONTEXT_REUSE_ALLOW_HINTS_ONLY": "true",
+        "UCAGENT_CONTEXT_REUSE_DESTRUCTIVE_SUPPORT_GATE": "false"
+      }
+    },
+    "v22_candidate": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68",
+        "UCAGENT_CONTEXT_REUSE_UTILITY_GATE": "true",
+        "UCAGENT_CONTEXT_REUSE_MIN_UTILITY": "0.05"
+      },
+      "semantic_gate_defaults": true,
+      "allow_hints_only": false
+    }
+  },
+  "notes": [
+    "The repository worktree was dirty; this snapshot, not git HEAD alone, defines the baseline.",
+    "The setting snapshot is redacted. Its source_sha256 identifies the exact local configuration.",
+    "The v2.1 run is observational and used the utility gate without the new semantic gates.",
+    "The gate replay is counterfactual retrieval evidence, not a causal agent-quality estimate."
+  ]
+}

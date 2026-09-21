@@ -1,0 +1,317 @@
+{
+  "schema_version": 1,
+  "experiment_baseline": "20260721_upstream_sync_v22_candidate",
+  "created_at": "2026-07-21T12:57:07+08:00",
+  "repo_root": "<REPO_ROOT>",
+  "git_head": "b9c259b35d048e70cf4d0429d3b20a0077fed15d",
+  "git_branch": "main",
+  "worktree_dirty": true,
+  "python_version": "3.11.14 (main, Oct 21 2025, 18:31:21) [GCC 11.2.0]",
+  "files": [
+    {
+      "path": "README.md",
+      "source_sha256": "4513b7c9853970fe45f47bc3cfbbaf5c883de2fd259548cd5ea0b53cb26cbf5e",
+      "snapshot_sha256": "4513b7c9853970fe45f47bc3cfbbaf5c883de2fd259548cd5ea0b53cb26cbf5e",
+      "bytes": 21196,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "Makefile",
+      "source_sha256": "129e1ff3e10adcd0f0ba56c8169c6b073e191975b2830813bd995a1e2887b993",
+      "snapshot_sha256": "129e1ff3e10adcd0f0ba56c8169c6b073e191975b2830813bd995a1e2887b993",
+      "bytes": 11865,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "config.yaml",
+      "source_sha256": "a0824928d337faec716a2b517cd3006617c44fd3b9fa6cc553893131205b5e8c",
+      "snapshot_sha256": "a0824928d337faec716a2b517cd3006617c44fd3b9fa6cc553893131205b5e8c",
+      "bytes": 3768,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/setting.yaml",
+      "source_sha256": "cdad7c451228c489b1577f1c8a1251441b05c1e394be8cb1006829b1b5b579db",
+      "snapshot_sha256": "78651333f14607e26161827650cd92387190081443ef62b6d251e8a2759961b5",
+      "bytes": 29782,
+      "redacted_snapshot": true
+    },
+    {
+      "path": "ucagent/abackend/langchain/agent.py",
+      "source_sha256": "210d154f669d056b23145ae3fa0196e469c5a195f4e59ae70f186bf687812eb9",
+      "snapshot_sha256": "210d154f669d056b23145ae3fa0196e469c5a195f4e59ae70f186bf687812eb9",
+      "bytes": 18889,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/abackend/langchain/message/conversation.py",
+      "source_sha256": "ea30e2ef41665ba70fe8ce3859dd5883833172025083c806c2e61400bc875f58",
+      "snapshot_sha256": "ea30e2ef41665ba70fe8ce3859dd5883833172025083c806c2e61400bc875f58",
+      "bytes": 85723,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/checkers/base.py",
+      "source_sha256": "34535f943e71dd7ea8ad76f09dcdcb242001bbf054980880de5055805c4d8cdd",
+      "snapshot_sha256": "34535f943e71dd7ea8ad76f09dcdcb242001bbf054980880de5055805c4d8cdd",
+      "bytes": 34899,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/util/test_result.py",
+      "source_sha256": "72f6251faae05f9054f0765c930c6c0a361fd4a343b3f211390db99fa40d83ad",
+      "snapshot_sha256": "72f6251faae05f9054f0765c930c6c0a361fd4a343b3f211390db99fa40d83ad",
+      "bytes": 7403,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/util/config.py",
+      "source_sha256": "52eedcaa2d4cbfc9394dad76a95a0c0eb886e0a3cfa090b61fadb77a7a3b8eb5",
+      "snapshot_sha256": "52eedcaa2d4cbfc9394dad76a95a0c0eb886e0a3cfa090b61fadb77a7a3b8eb5",
+      "bytes": 26189,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/stage/vmanager.py",
+      "source_sha256": "afde0649cdced09082d56a97f4651f75839cf3808e1be692dd05b36947728347",
+      "snapshot_sha256": "afde0649cdced09082d56a97f4651f75839cf3808e1be692dd05b36947728347",
+      "bytes": 108468,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/verify_agent.py",
+      "source_sha256": "da703146b515f12bb008e2a1c16479a1ad0a5588c3c3b7fefb4e35a4c8eb4ca4",
+      "snapshot_sha256": "da703146b515f12bb008e2a1c16479a1ad0a5588c3c3b7fefb4e35a4c8eb4ca4",
+      "bytes": 75745,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/tools/fileops.py",
+      "source_sha256": "5d1f1df0bc7aad94459461cf886107d8638fbe622ee985f131a402113faca9a8",
+      "snapshot_sha256": "5d1f1df0bc7aad94459461cf886107d8638fbe622ee985f131a402113faca9a8",
+      "bytes": 71405,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/tools/testops.py",
+      "source_sha256": "86d27c6d7144fbaec3fc1722567f917e3cc8ab11f8daa83727c5dd6c73a736a2",
+      "snapshot_sha256": "86d27c6d7144fbaec3fc1722567f917e3cc8ab11f8daa83727c5dd6c73a736a2",
+      "bytes": 12380,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/checkers/unity_test.py",
+      "source_sha256": "4d7ac07aece1cf0729393d6cb8437424bc98dcfe61520c33726578f972c1ecbc",
+      "snapshot_sha256": "4d7ac07aece1cf0729393d6cb8437424bc98dcfe61520c33726578f972c1ecbc",
+      "bytes": 106737,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "ucagent/memory/context_reuse.py",
+      "source_sha256": "3b2fe46f3a26e35dc0023ee108568edb8d7c366f5fa292858b825e2f5808ef34",
+      "snapshot_sha256": "3b2fe46f3a26e35dc0023ee108568edb8d7c366f5fa292858b825e2f5808ef34",
+      "bytes": 45860,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/build_trace_tree.py",
+      "source_sha256": "cd60526b722f8516e66b6cb2d6867a3e2d870dadba458cdf9fa74fd44f8a5ba5",
+      "snapshot_sha256": "cd60526b722f8516e66b6cb2d6867a3e2d870dadba458cdf9fa74fd44f8a5ba5",
+      "bytes": 12877,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/build_context_reuse_pack.py",
+      "source_sha256": "924b5562e6cf56e2206a6e856d76dac78cb204845475e49ce76679450013d4fd",
+      "snapshot_sha256": "924b5562e6cf56e2206a6e856d76dac78cb204845475e49ce76679450013d4fd",
+      "bytes": 40794,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/curate_context_reuse_pack.py",
+      "source_sha256": "b45aadcfdb9106e0fb9301e624afc5379b70efff4758987410ed1207153bdd33",
+      "snapshot_sha256": "b45aadcfdb9106e0fb9301e624afc5379b70efff4758987410ed1207153bdd33",
+      "bytes": 24363,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/evaluate_episode_credit_annotations.py",
+      "source_sha256": "eb4bba6364c04627faf311f750c2fa9a40402e4afe484999a75134e5b3a9c6a3",
+      "snapshot_sha256": "eb4bba6364c04627faf311f750c2fa9a40402e4afe484999a75134e5b3a9c6a3",
+      "bytes": 10125,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/update_context_reuse_pack.py",
+      "source_sha256": "8e23829821f41230f52b9ace9edaf9a7b14f802773978fa32b8cfb0cc02811b5",
+      "snapshot_sha256": "8e23829821f41230f52b9ace9edaf9a7b14f802773978fa32b8cfb0cc02811b5",
+      "bytes": 12580,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/analyze_context_reuse_decisions.py",
+      "source_sha256": "c284163b38a845e07dd5774ff5cba91370c7ebd7680bb9da335260bd2ef639ca",
+      "snapshot_sha256": "c284163b38a845e07dd5774ff5cba91370c7ebd7680bb9da335260bd2ef639ca",
+      "bytes": 8904,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/replay_context_reuse_gate.py",
+      "source_sha256": "75588212b78a2be868d5c480bc4c3154ce98ffd33206bc910fbbb2fe84518a5a",
+      "snapshot_sha256": "75588212b78a2be868d5c480bc4c3154ce98ffd33206bc910fbbb2fe84518a5a",
+      "bytes": 8270,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "scripts/freeze_experiment_baseline.py",
+      "source_sha256": "6cb11d36fe2a04fc82bbc98cc4306259b8375ee03daf00123fe8f48d62e1ebb3",
+      "snapshot_sha256": "6cb11d36fe2a04fc82bbc98cc4306259b8375ee03daf00123fe8f48d62e1ebb3",
+      "bytes": 10769,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_test_result_classification.py",
+      "source_sha256": "45fcb5d04b8e5fc76d5c50cc3358e68952ce064236dde937a0daa8d1690b6925",
+      "snapshot_sha256": "45fcb5d04b8e5fc76d5c50cc3358e68952ce064236dde937a0daa8d1690b6925",
+      "bytes": 25728,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_episode_credit.py",
+      "source_sha256": "9bcebf588cf099372be5cca2e1e2e51971c94b0710c5202760d649c95b8504d9",
+      "snapshot_sha256": "9bcebf588cf099372be5cca2e1e2e51971c94b0710c5202760d649c95b8504d9",
+      "bytes": 17544,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_context_reuse_curation.py",
+      "source_sha256": "6de43802a8799acaf1b114b3fe420a0ce1a584104f1142cf19d3a6719be9b7df",
+      "snapshot_sha256": "6de43802a8799acaf1b114b3fe420a0ce1a584104f1142cf19d3a6719be9b7df",
+      "bytes": 6440,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_experiment_baseline.py",
+      "source_sha256": "a0799b6e7a7f5cc8f04b77033d568cca119a97cc587ae9100182aa042d053eee",
+      "snapshot_sha256": "a0799b6e7a7f5cc8f04b77033d568cca119a97cc587ae9100182aa042d053eee",
+      "bytes": 618,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "tests/test_message_lifecycle.py",
+      "source_sha256": "48a8e5e0b5b23d917bd66ffeb6b23e51ba8a5e8bb5025a6d1a419a8647bfd0f3",
+      "snapshot_sha256": "48a8e5e0b5b23d917bd66ffeb6b23e51ba8a5e8bb5025a6d1a419a8647bfd0f3",
+      "bytes": 1542,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_v0.json",
+      "source_sha256": "a3705275f27e8fb6623745cde8921897b9d650ee9c20d9da23d742915c7578f4",
+      "snapshot_sha256": "a3705275f27e8fb6623745cde8921897b9d650ee9c20d9da23d742915c7578f4",
+      "bytes": 304901,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+      "source_sha256": "955eb594a106d257d12e492ad8fb9686f372dd528e3c15d527c8fe4ebbf8e986",
+      "snapshot_sha256": "955eb594a106d257d12e492ad8fb9686f372dd528e3c15d527c8fe4ebbf8e986",
+      "bytes": 419362,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+      "source_sha256": "f38af26c8354f70ad3d306e3df33f695bac4a11ab06f535f8b7d1e8352ac1997",
+      "snapshot_sha256": "f38af26c8354f70ad3d306e3df33f695bac4a11ab06f535f8b7d1e8352ac1997",
+      "bytes": 877832,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.md",
+      "source_sha256": "bfc997ae01bb96d03d7ace9f89111eb33b71eb558accbd16e48d11f4dedba565",
+      "snapshot_sha256": "bfc997ae01bb96d03d7ace9f89111eb33b71eb558accbd16e48d11f4dedba565",
+      "bytes": 7847,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v2_research_protocol.md",
+      "source_sha256": "55cf2d7f8e65c962dc88f4e72b82545bc7b66b7b185e9d7dab43aa7a5f31e065",
+      "snapshot_sha256": "55cf2d7f8e65c962dc88f4e72b82545bc7b66b7b185e9d7dab43aa7a5f31e065",
+      "bytes": 8270,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v2_annotation_metrics.json",
+      "source_sha256": "9a0e49c6e328f4b7b1989a322b35a6658b8a870b9d7d4a2e11317f610da7285e",
+      "snapshot_sha256": "9a0e49c6e328f4b7b1989a322b35a6658b8a870b9d7d4a2e11317f610da7285e",
+      "bytes": 1458,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/episode_credit_v2_holdout_adder_20260716_metrics.json",
+      "source_sha256": "f7321a7ad2777aae22fa549c848ac398fcbe528d48a152df046e2f7ef63a67c2",
+      "snapshot_sha256": "f7321a7ad2777aae22fa549c848ac398fcbe528d48a152df046e2f7ef63a67c2",
+      "bytes": 1785,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/Adder_20260717_v21_gate_replay.json",
+      "source_sha256": "8db31ac49f281e76b379590e70eb2402a380b014318980da01151c161bbcf3c0",
+      "snapshot_sha256": "8db31ac49f281e76b379590e70eb2402a380b014318980da01151c161bbcf3c0",
+      "bytes": 17823,
+      "redacted_snapshot": false
+    },
+    {
+      "path": "benchmark/ucagent_context_reuse/Adder_20260717_v21_gate_replay.md",
+      "source_sha256": "dd34b1244663c9bd37f1b9a1f84f69a9c5963eccf16657088fa9f7c68dec9d25",
+      "snapshot_sha256": "dd34b1244663c9bd37f1b9a1f84f69a9c5963eccf16657088fa9f7c68dec9d25",
+      "bytes": 4439,
+      "redacted_snapshot": false
+    }
+  ],
+  "comparison": {
+    "shared_code_snapshot": "snapshot/",
+    "B0_no_context_reuse": {
+      "args": "--override context_upgrade.enable_context_reuse=false"
+    },
+    "B1_v1_retrieval": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+      "min_quality_score": 0.68,
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_v1.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68"
+      }
+    },
+    "B2_v21_utility_gate": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68",
+        "UCAGENT_CONTEXT_REUSE_UTILITY_GATE": "true",
+        "UCAGENT_CONTEXT_REUSE_MIN_UTILITY": "0.05",
+        "UCAGENT_CONTEXT_REUSE_STRICT_ACTION_MATCH": "false",
+        "UCAGENT_CONTEXT_REUSE_EXACT_PATTERN_GROUPS": "false",
+        "UCAGENT_CONTEXT_REUSE_GENERIC_SIGNATURE": "false",
+        "UCAGENT_CONTEXT_REUSE_SKIP_NON_REUSABLE": "false",
+        "UCAGENT_CONTEXT_REUSE_STRICT_HINT_MATCH": "false",
+        "UCAGENT_CONTEXT_REUSE_ALLOW_HINTS_ONLY": "true",
+        "UCAGENT_CONTEXT_REUSE_DESTRUCTIVE_SUPPORT_GATE": "false"
+      }
+    },
+    "B3_v22_semantic_risk_gate": {
+      "pack": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+      "environment": {
+        "UCAGENT_CONTEXT_REUSE_PACK": "benchmark/ucagent_context_reuse/context_reuse_credit_v2_rule_v2_curated_preview.json",
+        "UCAGENT_CONTEXT_REUSE_MIN_QUALITY": "0.68",
+        "UCAGENT_CONTEXT_REUSE_UTILITY_GATE": "true",
+        "UCAGENT_CONTEXT_REUSE_MIN_UTILITY": "0.05"
+      }
+    }
+  },
+  "notes": [
+    "The repository worktree was dirty; this snapshot, not git HEAD alone, defines the baseline.",
+    "The setting snapshot is redacted. Its source_sha256 identifies the exact local configuration.",
+    "B0/B1/B2/B3 must use the same model, hardware, prompt variant, DUT input, seed, and timeout.",
+    "B2 reproduces the observed v2.1 switches; B3 enables the v2.2 semantic/risk defaults.",
+    "Historical gate replay is retrieval evidence, not a causal end-to-end performance result."
+  ]
+}

@@ -31,7 +31,7 @@ def test_mock_checker_file_not_exists():
     checker = UnityChipCheckerMockComponent(target_file, min_mock=1).set_workspace(workspace)
     p, m = checker.do_check()
     assert p is False
-    assert "does not exist" in m.get("error", "")
+    assert "Insufficient Mock component coverage" in m.get("error", "")
 
 
 def test_mock_checker_bad_prefix():
@@ -42,7 +42,7 @@ def test_mock_checker_bad_prefix():
     assert p is False
     # Since classes are filtered by pattern 'Mock*', a file without any Mock* classes
     # should trigger insufficient coverage instead of bad prefix message.
-    assert "Insufficient Mock component coverage" in m.get("error", "")
+    assert "No Mock component class found" in m.get("error", "")
 
 
 def test_mock_checker_missing_method():

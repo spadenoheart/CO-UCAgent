@@ -13,13 +13,13 @@
 openai:
   model_name: "$(OPENAI_MODEL: Qwen/Qwen3-Coder-30B-A3B-Instruct)" # 模型名称
   openai_api_key: "$(OPENAI_API_KEY: YOUR_API_KEY)" # API密钥
-  openai_api_base: "$(OPENAI_API_BASE: http://10.156.154.242:8000/v1)" # API基础URL
+  openai_api_base: "$(OPENAI_API_BASE: http://127.0.0.1:8000/v1)" # API基础URL
 # 向量嵌入模型配置
 # 用于文档搜索和记忆功能，不需要可通过 --no-embed-tools 关闭
 embed:
   model_name: "$(EMBED_MODEL: Qwen/Qwen3-Embedding-0.6B)" # 嵌入模型名称
   openai_api_key: "$(EMBED_OPENAI_API_KEY: YOUR_API_KEY)" # 嵌入模型API密钥
-  openai_api_base: "$(EMBED_OPENAI_API_BASE: http://10.156.154.242:8001/v1)" # 嵌入模型API URL
+  openai_api_base: "$(EMBED_OPENAI_API_BASE: http://127.0.0.1:8001/v1)" # 嵌入模型API URL
   dims: 4096 # 嵌入维度
 ```
 

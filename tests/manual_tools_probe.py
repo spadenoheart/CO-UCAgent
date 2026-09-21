@@ -1,4 +1,4 @@
-w#code: utf-8
+#code: utf-8
 
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))

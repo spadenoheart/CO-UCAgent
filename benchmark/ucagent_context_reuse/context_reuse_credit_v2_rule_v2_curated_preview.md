@@ -1,0 +1,47 @@
+# UCAgent Context Reuse Pack v1 (Curated)
+
+- Source episodes: 69
+- Validated episodes: 62
+- Deduplicated episodes: 62
+- Runtime strategies: 36
+- Quality threshold: 0.68
+- Drop reasons: `{"action_category_mismatch": 7, "below_strategy_quality_threshold": 1, "generic_single_dut_strategy": 3}`
+- Legacy v0 audit: `{"episode_count": 39, "invalid_episode_count": 0, "invalid_reason_counts": {}, "pack_type": "ucagent_context_reuse_v1_curated", "structurally_valid_episode_count": 39}`
+
+## Strategies
+- `strategy-2ec888516858a1a4` stage=`evaluate_env_fixture` pattern=`api_or_env_interface_mismatch` quality=0.9828 utility=0.2749 support=6 DUTs=['ALU754', 'Adder', 'uart_tx'] plan=[replace_string:test_code]
+- `strategy-af1446f5ff24c615` stage=`implemente_function_checks_in_batch` pattern=`coverage_or_test_marks_missing` quality=0.95 utility=0.2671 support=3 DUTs=['ALU754', 'Adder'] plan=[replace_string:coverage_code]
+- `strategy-ff57f9d87efe3ebc` stage=`basic_api_functional_test` pattern=`api_or_env_interface_mismatch` quality=0.9281 utility=0.1091 support=3 DUTs=['Adder', 'FSM'] plan=[replace_string:test_code]
+- `strategy-adc1351791d43323` stage=`test_case_implementation_in_batch` pattern=`test_logic_or_case_implementation` quality=0.9254 utility=0.1689 support=8 DUTs=['Adder', 'uart_tx'] plan=[replace_string:test_code]
+- `strategy-932c9561c348d935` stage=`create_test_case_templates` pattern=`coverage_or_test_marks_missing` quality=0.875 utility=0.2449 support=2 DUTs=['ALU754', 'FSM'] plan=[replace_lines:test_code]
+- `strategy-0d36510279b1f76d` stage=`comprehensive_verification_and_bug_analysis` pattern=`bug_doc_schema_or_marking` quality=0.875 utility=0.2363 support=2 DUTs=['ALU754', 'FSM'] plan=[replace_string:bug_document]
+- `strategy-e379477472827c18` stage=`basic_api_implementation` pattern=`api_or_env_interface_mismatch` quality=0.8703 utility=0.1858 support=2 DUTs=['Adder', 'uart_tx'] plan=[replace_string:test_code]
+- `strategy-76eeeb057974ebdd` stage=`generate_random_test_cases` pattern=`api_or_env_interface_mismatch` quality=0.8469 utility=0.0893 support=2 DUTs=['FSM', 'uart_tx'] plan=[replace_string:test_code]
+- `strategy-4fb8616cf13be2bb` stage=`comprehensive_verification_and_bug_analysis` pattern=`coverage_or_test_marks_missing` quality=0.8263 utility=0.0814 support=2 DUTs=['FSM', 'uart_tx'] plan=[replace_string:test_code]
+- `strategy-95264d683ae16692` stage=`test_case_implementation_in_batch` pattern=`test_logic_or_case_implementation` quality=0.7969 utility=0.0717 support=2 DUTs=['FSM'] plan=[replace_lines:test_code]
+- `strategy-9174d99e9137c8d1` stage=`verification_review_and_summary` pattern=`bug_doc_schema_or_marking` quality=0.75 utility=0.1234 support=1 DUTs=['FSM'] plan=[replace_string:bug_document]
+- `strategy-061c267e6fc8cb5e` stage=`test_case_implementation_in_batch` pattern=`label_or_report_mismatch` quality=0.75 utility=0.1214 support=1 DUTs=['FSM'] plan=[replace_string:bug_document]
+- `strategy-7cfa75646098dfcb` stage=`evaluate_env_fixture` pattern=`api_or_env_interface_mismatch` quality=0.75 utility=0.1255 support=1 DUTs=['ALU754'] plan=[move:test_code]
+- `strategy-b38ed156ba205f17` stage=`dut_function_grouping` pattern=`duplicate_label_definition` quality=0.75 utility=0.1211 support=1 DUTs=['FSM'] plan=[replace_string:spec_check_document]
+- `strategy-fbc1a23e2425a7df` stage=`dut_creation_implementation` pattern=`api_or_env_interface_mismatch` quality=0.75 utility=0.1156 support=1 DUTs=['ALU754'] plan=[replace_lines:test_code]
+- `strategy-54b5ea5f36478b7e` stage=`dut_creation_implementation` pattern=`test_import_error` quality=0.75 utility=0.1181 support=1 DUTs=['uart_tx'] plan=[replace_string:test_code]
+- `strategy-ad28c9a0d873ef5e` stage=`create_test_case_templates` pattern=`coverage_or_test_marks_missing` quality=0.75 utility=0.3247 support=1 DUTs=['uart_tx'] plan=[replace_string:test_code]
+- `strategy-e033f1bf371abbe5` stage=`coverage_group_creation` pattern=`coverage_or_test_marks_missing` quality=0.75 utility=0.123 support=1 DUTs=['uart_tx'] plan=[replace_string:coverage_code]
+- `strategy-515d94b32a14f390` stage=`comprehensive_verification_and_bug_analysis` pattern=`bug_doc_incomplete_tc_label` quality=0.75 utility=0.1235 support=1 DUTs=['Adder'] plan=[delete_file:bug_document]
+- `strategy-4743233ff58e7608` stage=`bundle_wrapper_design` pattern=`test_import_error` quality=0.75 utility=0.1095 support=1 DUTs=['Adder'] plan=[replace_string:test_code]
+- `strategy-472e1832c62676f9` stage=`bundle_wrapper_design` pattern=`coverage_or_test_marks_missing` quality=0.75 utility=0.1072 support=1 DUTs=['ALU754'] plan=[replace_string:test_code]
+- `strategy-f18405e114f991e8` stage=`generate_random_test_cases` pattern=`test_logic_or_case_implementation` quality=0.7406 utility=0.109 support=1 DUTs=['uart_tx'] plan=[replace_string:test_code]
+- `strategy-ce08d758874e827e` stage=`evaluate_env_fixture` pattern=`coverage_or_test_marks_missing` quality=0.7406 utility=0.1111 support=1 DUTs=['FSM'] plan=[replace_string:coverage_code]
+- `strategy-60a7a77d5e858dc4` stage=`evaluate_env_fixture` pattern=`coverage_or_test_marks_missing` quality=0.7406 utility=0.1173 support=1 DUTs=['FSM'] plan=[replace_string:test_code]
+- `strategy-f8ddd550543905d2` stage=`comprehensive_verification_and_bug_analysis` pattern=`api_or_env_interface_mismatch` quality=0.7406 utility=0.1154 support=1 DUTs=['ALU754'] plan=[replace_string:test_code]
+- `strategy-7587da998c135dd2` stage=`create_test_case_templates` pattern=`template_validation_or_runner_contract` quality=0.7219 utility=0.215 support=1 DUTs=['Adder'] plan=[replace_lines:test_code]
+- `strategy-35348fd2f728a7df` stage=`coverage_group_creation` pattern=`coverage_or_test_marks_missing` quality=0.7219 utility=0.0611 support=1 DUTs=['ALU754'] plan=[delete_file:coverage_code, write:coverage_code]
+- `strategy-9b9cc99fbf6f4ba4` stage=`comprehensive_verification_and_bug_analysis` pattern=`bug_doc_schema_or_marking` quality=0.7219 utility=0.0683 support=1 DUTs=['Adder'] plan=[delete_file:bug_document, write:bug_document]
+- `strategy-3b80ef5e23c03bd0` stage=`evaluate_env_fixture` pattern=`api_or_env_interface_mismatch` quality=0.7125 utility=0.0748 support=1 DUTs=['Adder'] plan=[delete_file:test_code, write:test_code]
+- `strategy-553a96342c1ffe31` stage=`test_case_implementation_in_batch` pattern=`test_template_not_implemented` quality=0.7031 utility=0.063 support=1 DUTs=['Adder'] plan=[replace_string:test_code]
+- `strategy-42038eced10b6f5f` stage=`test_case_implementation_in_batch` pattern=`api_or_env_interface_mismatch` quality=0.7031 utility=0.0603 support=1 DUTs=['Adder'] plan=[replace_string:test_code]
+- `strategy-26d691aee7d90a80` stage=`test_case_implementation_in_batch` pattern=`bug_doc_incomplete_tc_label` quality=0.6994 utility=0.0421 support=1 DUTs=['Adder'] plan=[delete_file:bug_document, write:bug_document, delete_file:bug_document, write:bug_document]
+- `strategy-b17c90975068444e` stage=`coverage_group_creation` pattern=`coverage_or_test_marks_missing` quality=0.6994 utility=0.0023 support=1 DUTs=['ALU754'] plan=[write:coverage_code, replace_string:test_code, delete_file:test_code, write:test_code]
+- `strategy-9e5938bcad3f5e77` stage=`evaluate_env_fixture` pattern=`api_or_env_interface_mismatch` quality=0.69 utility=0.256 support=1 DUTs=['Adder'] plan=[replace_string:coverage_code, delete_file:test_code, write:test_code]
+- `strategy-32bbc6d803950882` stage=`basic_api_functional_test` pattern=`api_or_env_interface_mismatch` quality=0.69 utility=0.0376 support=1 DUTs=['FSM'] plan=[replace_string:test_code, replace_lines:test_code, replace_string:test_code]
+- `strategy-98412c2d0622d9dc` stage=`test_case_implementation_in_batch` pattern=`test_logic_or_case_implementation` quality=0.6844 utility=0.0706 support=1 DUTs=['FSM'] plan=[delete_file:test_code, write:test_code]

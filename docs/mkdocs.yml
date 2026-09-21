@@ -9,11 +9,11 @@
 ###############################################################
 
 # 站点基础信息
-site_name: UCAgent 开发者手册 # 站点名称，导航左上角展示
-site_description: 面向开发者的 UCAgent 文档与扩展指南 # 站点描述（SEO）
-site_url: https://xs-mlvp.github.io/UCAgent/ # 站点 URL，用于生成绝对链接
-repo_name: XS-MLVP/UCAgent # 顶部仓库名展示
-repo_url: https://github.com/XS-MLVP/UCAgent # 仓库地址
+site_name: CO-UCAgent 开发者手册 # 站点名称，导航左上角展示
+site_description: 面向开发者的 CO-UCAgent 文档与扩展指南 # 站点描述（SEO）
+site_url: https://spadenoheart.github.io/CO-UCAgent/ # 站点 URL，用于生成绝对链接
+repo_name: spadenoheart/CO-UCAgent # 顶部仓库名展示
+repo_url: https://github.com/spadenoheart/CO-UCAgent # 仓库地址
 edit_uri: "" # 编辑按钮地址（留空则隐藏）
 
 # 文档和输出路径配置
@@ -61,11 +61,19 @@ nav:
       - 参数说明: content/02_usage/03_option.md
       - TUI: content/02_usage/04_tui.md
       - FAQ: content/02_usage/05_faq.md
+      - LLM Check & Refinement: content/02_usage/06_llm_check.md
+      - Web Master 使用指南: content/02_usage/07_web_master.md
+      - Skill: content/02_usage/08_skill.md
   - 定制开发:
-      - 模板文件: content/03_develop/00_template.md
-      - 定制功能: content/03_develop/01_customize.md
-      - 工具列表: content/03_develop/02_tool_list.md
+      - 概览: content/03_develop/00_index.md
+      - 定制开发入门: content/03_develop/01_quick_start.md
+      - 架构与工作原理: content/03_develop/02_architecture.md
       - 工作流: content/03_develop/03_workflow.md
+      - 模板文件: content/03_develop/04_template.md
+      - 定制工具: content/03_develop/05_customize.md
+      - 工具列表: content/03_develop/06_tool_list.md
+      - 检查器: content/03_develop/07_checkers.md
+      - Mini 示例: content/03_develop/08_mini_example.md
   - 实践案例:
       - 规范生成: content/04_case/00_genspec.md
       - 多实例并发执行: content/04_case/01_multirun.md
@@ -82,6 +90,7 @@ plugins:
   - search
   - mermaid2
   - git-revision-date-localized:
+      enabled: !ENV [CI, false]
       enable_creation_date: true
       fallback_to_build_date: true
       enable_parallel_processing: false
@@ -118,9 +127,12 @@ markdown_extensions:
       pygments_lang_class: true # 添加语言对应的 CSS 类
 
   - pymdownx.inlinehilite # 行内代码高亮 `code`{.lang}
-  - pymdownx.superfences # 高级围栏代码块（支持嵌套、mermaid 等）
+  - pymdownx.superfences: # 高级围栏代码块（支持嵌套、mermaid 等）
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format # 其他功能扩展
 
-  # 其他功能扩展
   - pymdownx.emoji: # 表情符号支持 :smile:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
@@ -144,7 +156,7 @@ extra_javascript:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/XS-MLVP/UCAgent
+      link: https://github.com/spadenoheart/CO-UCAgent
       name: GitHub
   generator: false
   copyright: "© 2025 XS-MLVP. All rights reserved."

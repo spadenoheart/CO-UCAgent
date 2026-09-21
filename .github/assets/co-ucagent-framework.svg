@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="820" viewBox="0 0 1440 820" role="img" aria-labelledby="title desc">
+  <title id="title">CO-UCAgent system architecture</title>
+  <desc id="desc">Evidence-grounded context engineering and verification-aware agent harness for hardware verification.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#eef2ff"/>
+    </linearGradient>
+    <linearGradient id="context" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eff6ff"/>
+      <stop offset="1" stop-color="#e0e7ff"/>
+    </linearGradient>
+    <linearGradient id="harness" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ecfdf5"/>
+      <stop offset="1" stop-color="#d1fae5"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="7" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .panel { stroke-width: 1.6; filter: url(#shadow); }
+      .box { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.3; rx: 12; }
+      .title { font: 700 24px system-ui, -apple-system, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 14px system-ui, -apple-system, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #475569; }
+      .label { font: 650 17px system-ui, -apple-system, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #0f172a; }
+      .small { font: 500 13px system-ui, -apple-system, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #475569; }
+      .tiny { font: 500 12px system-ui, -apple-system, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #64748b; }
+      .arrow { fill: none; stroke: #334155; stroke-width: 2.2; marker-end: url(#arrow); }
+      .feedback { fill: none; stroke: #2563eb; stroke-width: 2.5; marker-end: url(#arrow-blue); }
+      .offline { fill: none; stroke: #7c3aed; stroke-width: 2.2; stroke-dasharray: 8 6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1440" height="820" rx="24" fill="url(#bg)"/>
+  <text x="50" y="48" class="title">CO-UCAgent：证据驱动的 Context Engineering 与验证 Harness</text>
+  <text x="50" y="73" class="subtitle">Evidence-grounded context construction for long-horizon, local-LLM hardware verification</text>
+
+  <!-- Inputs -->
+  <rect x="40" y="120" width="230" height="388" rx="18" fill="#fff" stroke="#cbd5e1" class="panel"/>
+  <text x="65" y="155" class="label">验证任务证据</text>
+  <text x="65" y="177" class="small">Task Evidence</text>
+
+  <rect x="65" y="205" width="180" height="72" class="box"/>
+  <text x="85" y="234" class="label">设计契约</text>
+  <text x="85" y="256" class="small">Spec / RTL / API</text>
+
+  <rect x="65" y="296" width="180" height="72" class="box"/>
+  <text x="85" y="325" class="label">阶段目标</text>
+  <text x="85" y="347" class="small">Stage contract</text>
+
+  <rect x="65" y="387" width="180" height="88" class="box"/>
+  <text x="85" y="416" class="label">运行时轨迹</text>
+  <text x="85" y="438" class="small">Actions / tests /</text>
+  <text x="85" y="458" class="small">checker feedback</text>
+
+  <!-- Context engineering -->
+  <rect x="320" y="100" width="465" height="438" rx="20" fill="url(#context)" stroke="#818cf8" class="panel"/>
+  <text x="350" y="138" class="label">证据驱动的 Context Engineering</text>
+  <text x="350" y="161" class="small">select, transform, retrieve, and assemble</text>
+
+  <rect x="350" y="187" width="405" height="82" class="box"/>
+  <circle cx="381" cy="228" r="18" fill="#dbeafe"/>
+  <text x="375" y="234" class="label">1</text>
+  <text x="415" y="218" class="label">证据规范化</text>
+  <text x="415" y="241" class="small">结构化事件 · 六类测试终态 · 验证范围</text>
+
+  <rect x="350" y="286" width="405" height="96" class="box"/>
+  <circle cx="381" cy="334" r="18" fill="#e0e7ff"/>
+  <text x="375" y="340" class="label">2</text>
+  <text x="415" y="319" class="label">多时间尺度状态管理</text>
+  <text x="415" y="342" class="small">近期窗口 · 结构化摘要 · Batch/Stage 状态</text>
+  <text x="415" y="363" class="small">失败证据缓冲 · 长期记忆预取</text>
+
+  <rect x="350" y="399" width="405" height="106" class="box"/>
+  <circle cx="381" cy="451" r="18" fill="#ede9fe"/>
+  <text x="375" y="457" class="label">3</text>
+  <text x="415" y="431" class="label">验证条件化的经验选择</text>
+  <text x="415" y="454" class="small">失败模式 · 动作对象 · 历史效用 · 回归风险</text>
+  <text x="415" y="475" class="small">检索、适用性判定与注入节流</text>
+
+  <!-- Working context and model -->
+  <rect x="845" y="145" width="235" height="172" rx="18" fill="#fff7ed" stroke="#fb923c" class="panel"/>
+  <text x="870" y="181" class="label">模型工作上下文</text>
+  <text x="870" y="204" class="small">Model Working Context</text>
+  <line x1="870" y1="220" x2="1055" y2="220" stroke="#fed7aa"/>
+  <text x="870" y="247" class="small">阶段契约 + 近期证据</text>
+  <text x="870" y="271" class="small">压缩状态 + 相关经验</text>
+  <text x="870" y="295" class="small">固定 token 预算内组装</text>
+
+  <rect x="1150" y="165" width="245" height="132" rx="20" fill="#fef2f2" stroke="#f87171" class="panel"/>
+  <text x="1180" y="207" class="label">本地 LLM Agent</text>
+  <text x="1180" y="232" class="small">reasoning and tool calling</text>
+  <text x="1180" y="264" class="tiny">Qwen3.5-Coder-122B</text>
+
+  <!-- Procedural memory -->
+  <rect x="40" y="590" width="230" height="155" rx="18" fill="#faf5ff" stroke="#a78bfa" class="panel"/>
+  <text x="65" y="628" class="label">跨 DUT 过程记忆</text>
+  <text x="65" y="651" class="small">Procedural Experience Memory</text>
+  <text x="65" y="684" class="small">归因后的 repair episodes</text>
+  <text x="65" y="707" class="small">支持度 · 效用 · 风险统计</text>
+
+  <!-- Harness -->
+  <rect x="320" y="590" width="1075" height="155" rx="20" fill="url(#harness)" stroke="#34d399" class="panel"/>
+  <text x="350" y="628" class="label">验证感知的 Agent Harness</text>
+  <text x="350" y="651" class="small">tool execution, state transition, executable feedback, and telemetry</text>
+
+  <rect x="350" y="674" width="208" height="47" class="box"/>
+  <text x="375" y="704" class="small">文件与代码操作工具</text>
+  <rect x="578" y="674" width="220" height="47" class="box"/>
+  <text x="603" y="704" class="small">RunTestCases / Checker</text>
+  <rect x="818" y="674" width="225" height="47" class="box"/>
+  <text x="843" y="704" class="small">阶段控制与状态迁移</text>
+  <rect x="1063" y="674" width="302" height="47" class="box"/>
+  <text x="1088" y="704" class="small">Token / TTFT / TPS / Trace 采集</text>
+
+  <!-- Online paths -->
+  <path d="M 270 310 L 320 310" class="arrow"/>
+  <path d="M 785 230 L 845 230" class="arrow"/>
+  <path d="M 1080 230 L 1150 230" class="arrow"/>
+  <path d="M 1272 297 L 1272 570 L 1220 590" class="arrow"/>
+  <text x="1284" y="432" class="tiny">工具行动</text>
+
+  <!-- Feedback path -->
+  <path d="M 805 590 C 805 552, 830 550, 830 520 C 830 485, 802 472, 785 472" class="feedback"/>
+  <text x="820" y="548" class="tiny" fill="#2563eb">可执行验证反馈</text>
+
+  <!-- Memory paths -->
+  <path d="M 270 660 C 295 660, 300 482, 320 462" class="offline"/>
+  <text x="278" y="573" class="tiny" fill="#7c3aed">经验检索</text>
+  <path d="M 575 745 C 500 790, 250 790, 190 745" class="offline"/>
+  <text x="300" y="788" class="tiny" fill="#7c3aed">运行后归因、去重与效用更新</text>
+
+  <!-- Legend -->
+  <line x1="1025" y1="783" x2="1075" y2="783" stroke="#334155" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <text x="1085" y="788" class="tiny">在线推理/验证路径</text>
+  <line x1="1230" y1="783" x2="1280" y2="783" stroke="#7c3aed" stroke-width="2.2" stroke-dasharray="8 6" marker-end="url(#arrow)"/>
+  <text x="1290" y="788" class="tiny">离线更新路径</text>
+</svg>

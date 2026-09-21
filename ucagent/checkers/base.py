@@ -10,6 +10,13 @@ import ucagent.util.functions as fc
 from ucagent.util.log import info, error, warning
 import time
 import traceback
+import hashlib
+
+
+CB_KEY_SET_WORKSPACE = "after_set_workspace"
+CB_KEY_ON_INIT = "after_on_init"
+CB_KEY_SET_STAGE_MANAGER = "after_set_stage_manager"
+CB_KEY_SET_STAGE = "after_set_stage"
 
 
 class Checker:
@@ -21,36 +28,36 @@ class Checker:
     _timeout = None
     _process = None
     stage_manager = None
+    stage = None
     dut_name = None
     _is_init = False
     _need_human_check = False
-    _human_check_passed = None
-    _human_check_message = ""
-    _human_check_count = 0
+    _cb_list = {}
 
-    def is_wait_human_check(self):
-        return self._need_human_check and \
-               self._human_check_count > 0 and \
-               self._human_check_passed is not True
+    def __init__(self):
+        # Callback registrations belong to one checker instance. Sharing this
+        # mapping leaks batch-task callbacks into subsequently created stages.
+        self._cb_list = {}
 
-    def human_set_pass_msg(self, msg: str):
-        self._human_check_passed = True
-        self._human_check_message = msg
-        return True
-
-    def human_set_fail_msg(self, msg: str):
-        self._human_check_passed = False
-        self._human_check_message = msg
-        return True
+    def add_cb(self, key, cb):
+        assert key in [CB_KEY_SET_WORKSPACE,
+                       CB_KEY_ON_INIT,
+                       CB_KEY_SET_STAGE_MANAGER,
+                       CB_KEY_SET_STAGE,
+                       ]
+        # Several legacy checker subclasses do not call ``super().__init__``.
+        # Lazily materialize an instance mapping before registering callbacks.
+        if "_cb_list" not in self.__dict__:
+            self._cb_list = {}
+        if key not in self._cb_list:
+            self._cb_list[key] = []
+        self._cb_list[key].append(cb)
 
     def set_human_check_needed(self, need: bool):
         self._need_human_check = need
 
     def is_human_check_needed(self) -> bool:
         return self._need_human_check
-
-    def get_last_human_check_result(self) -> Tuple[bool, str]:
-        return self._human_check_passed, self._human_check_message
 
     def update_dut_name(self, cfg):
         if isinstance(cfg, dict):
@@ -62,6 +69,8 @@ class Checker:
 
     def on_init(self):
         self._is_init = True
+        for cb in self._cb_list.get(CB_KEY_ON_INIT, []):
+            cb(self)
         return self
 
     def get_tool_by_name(self, tool_name: str):
@@ -98,10 +107,30 @@ class Checker:
     def filter_vstage_task(self, stage_detail):
         return fill_template(stage_detail, self.get_template_data())
 
+    def reset_continue_fail_count_with_batch_pass(self):
+        if self.stage_manager is None:
+            return
+        vstage = self.stage_manager.get_current_stage()
+        if vstage is None:
+            return
+        vstage.reset_continue_fail_count_with_batch_pass()
+
     def set_stage_manager(self, manager):
         assert manager is not None, "Stage Manager cannot be None."
         self.stage_manager = manager
+        for cb in self._cb_list.get(CB_KEY_SET_STAGE_MANAGER, []):
+            cb(self)
         return self
+
+    def set_stage(self, stage):
+        assert stage is not None, "Stage cannot be None."
+        self.stage = stage
+        for cb in self._cb_list.get(CB_KEY_SET_STAGE, []):
+            cb(self)
+        return self
+
+    def get_stage(self):
+        return self.stage
 
     def smanager_set_value(self, key, value):
         if self.stage_manager is not None:
@@ -182,20 +211,6 @@ class Checker:
         self.time_start = time.time()
         try:
             p, m = self.do_check(*a, **w)
-            # Handle human check result
-            if self.is_human_check_needed() and p:
-                if self._human_check_passed is not True:
-                    p = False
-                    if self._human_check_passed is False:
-                        m = {"error": f"Human check failed: `{self._human_check_message if self._human_check_message else 'No additional message.'}`. " + \
-                             "If you have fixed the issue, you should notify human to set pass and then re-run the tool 'Check' to continue."}
-                    else:
-                        m = {"error": f"Tool({self.__class__.__name__}) check has passed. But this stage needs human check, please give a brief outcome description of this stage. " + \
-                            "Then notify human to verify your work and wait until human confirmation. " + \
-                            "The human need use command 'hmcheck_pass [msg]' or 'hmcheck_fail [msg]' to set the check result. After that, re-run the tool 'Check' to continue."}
-                    self.stage_manager.agent._need_human = True
-                    self._human_check_count += 1
-                    self.stage_manager.save_stage_info()
         except Exception as e:
             self.is_in_check = False
             estack = traceback.format_exc()
@@ -268,6 +283,8 @@ class Checker:
         self.workspace = os.path.abspath(workspace)
         assert os.path.exists(self.workspace), \
             f"Workspace {self.workspace} does not exist. Please provide a valid workspace path."
+        for cb in self._cb_list.get(CB_KEY_SET_WORKSPACE, []):
+            cb(self)
         return self
 
     def get_path(self, path: str) -> str:
@@ -310,16 +327,120 @@ class NopChecker(Checker):
 class UnityChipBatchTask:
     """Batch task manager for Unity chip verification tasks.
 
-    This class manages a batch of verification tasks, tracking their progress
-    and handling synchronization between source tasks and generated tasks.
+    Manages a work list that is divided into batches and processed
+    incrementally by the LLM.  Each call to ``Checker.do_check()`` inspects
+    the current state, tells the LLM what to do next, and returns ``False``
+    until all items are complete.
+
+    ── Lifecycle ────────────────────────────────────────────────────────────
+
+    Instantiate inside the checker's ``__init__``::
+
+        self.batch_size = N          # required attribute
+        self.batch_task = UnityChipBatchTask("items", self)
+
+    The constructor registers a ``CB_KEY_SET_STAGE`` callback so that when
+    ``Checker.set_stage()`` is called by the framework, ``on_init()`` runs
+    automatically.  ``on_init()`` computes a stable checkpoint path and
+    loads any previously saved state from disk via ``loadpoint_file()``.
+
+    ── Usage Pattern A — stateful, checkpoint-backed ────────────────────────
+
+    For checkers whose source list and generated list are derived afresh on
+    every ``do_check()`` call (e.g. from a file scan or a doc parse)::
+
+        def on_init(self):
+            # Pre-populate source list from data stored in stage manager.
+            self.batch_task.source_task_list = self.smanager_get_value(...)
+            self.batch_task.update_current_tbd()
+            return super().on_init()
+
+        def do_check(self, is_complete=False, **kw):
+            current_source = <derive from external state>
+            current_gen    = <derive from external state>
+            note_msg = []
+            # Reconcile lists; also calls update_tbd_and_cmp() if changed.
+            self.batch_task.sync_source_task(current_source, note_msg, "source changed")
+            self.batch_task.sync_gen_task(current_gen,    note_msg, "gen changed")
+            # Handle batch lifecycle: complete current batch or report progress.
+            # do_complete() calls savepoint_file() and
+            # reset_continue_fail_count_with_batch_pass() automatically.
+            return self.batch_task.do_complete(
+                note_msg, is_complete,
+                "expected location of source items",
+                "expected location of gen items",
+                " extra hint for LLM",
+            )
+
+    ── Usage Pattern B — document-driven with do_complete enrichment ──────
+
+    For checkers that re-derive source and generated lists from a document
+    (the document is the single source of truth) on every ``do_check()``
+    call, use ``sync_source_task`` / ``sync_gen_task`` + ``do_complete()``
+    and enrich the return dict with custom task instructions::
+
+        def on_init(self):
+            source = <scan filesystem>
+            gen    = <parse document for completion markers>
+            self.batch_task.source_task_list = source
+            self.batch_task.gen_task_list    = gen
+            # Retain only still-valid tbd items (in source, not yet done).
+            self.batch_task.tbd_task_list = [
+                f for f in self.batch_task.tbd_task_list
+                if f in source and f not in gen
+            ]
+            self.batch_task.cmp_task_list = []
+            self.batch_task.update_current_tbd()
+            return super().on_init()
+
+        def do_check(self, is_complete=False, **kw):
+            source = <re-derive from filesystem>
+            gen    = <re-derive from document>
+            note_msg = []
+            self.batch_task.sync_source_task(source, note_msg, "source changed")
+            self.batch_task.sync_gen_task(gen,    note_msg, "gen changed")
+
+            passed, result = self.batch_task.do_complete(
+                note_msg, is_complete,
+                "source location", "gen location",
+                " See 'task' field for details.",
+            )
+            if passed:
+                return self._final_validation(**kw)   # custom final check
+
+            # Enrich do_complete result with structured task instructions
+            if isinstance(result, dict) and self.batch_task.tbd_task_list:
+                result["task"] = [<rich analysis steps>]
+            return passed, result
+
+    Key differences from Pattern A:
+    * Source and gen lists are re-derived from the filesystem / document on
+      every call, instead of relying purely on the checkpoint.
+    * The ``on_init()`` override cleans up stale ``tbd_task_list`` items
+      loaded from the checkpoint (items already in gen are removed).
+    * ``do_complete()`` IS still called — its return dict is extended with
+      extra keys (``task``, ``current_batch``, etc.) for richer LLM prompts.
+
+    ── Important notes ───────────────────────────────────────────────────────
+
+    * ``checker.batch_size`` **must** exist before constructing this class.
+    * ``update_current_tbd()`` is a no-op when ``tbd_task_list`` is already
+      non-empty (it never replaces a live batch mid-run).
+    * ``do_complete()`` internally calls ``reset_continue_fail_count_with_batch_pass()``
+      when a batch completes and more remain — this resets the stage fail-counter
+      so multi-batch progress doesn't prematurely exhaust the retry limit.
+    * ``savepoint_file()`` writes the four task lists to a JSON checkpoint under
+      the UCAgent working directory so runs can be inspected and resumed.
     """
 
     def __init__(self, name: str, checker: Checker) -> None:
         """Initialize the batch task manager.
 
         Args:
-            name: Name identifier for the task type.
-            checker: The checker instance associated with these tasks.
+            name: Name identifier for the task type (used in log messages and
+                  checkpoint filenames).
+            checker: The checker instance that owns this batch task.
+                     Must have a ``batch_size`` attribute.
         """
         self.name = name
         self.checker = checker
@@ -327,7 +448,50 @@ class UnityChipBatchTask:
         self.cmp_task_list = []  # Completed task list
         self.source_task_list = []  # Source task list (ground truth)
         self.gen_task_list = []  # Generated task list (actual results)
+        self.checkpoint_file = None
+        checker.add_cb(CB_KEY_SET_STAGE, lambda c: self.on_init())
         assert hasattr(checker, "batch_size")
+
+    def on_init(self):
+        stage_name = self.checker.get_stage().name.lower().replace(" ", "_")
+        chp_name = stage_name + "_" + hashlib.md5((self.checker.__class__.__name__ + self.name).encode()).hexdigest()
+        self.checkpoint_file = fc.get_abs_path_cwd_ucagent(self.checker.workspace, f"batch_checkpoint_{chp_name}.json")
+        self.loadpoint_file()
+
+    def savepoint_file(self):
+        fpath = self.checkpoint_file
+        if not fpath:
+            return
+        fdirname = os.path.dirname(fpath)
+        if not os.path.exists(fdirname):
+            os.makedirs(fdirname, exist_ok=True)
+        fc.save_json_file(fpath, {
+            "source_task_list": self.source_task_list,
+            "gen_task_list": self.gen_task_list,
+            "tbd_task_list": self.tbd_task_list,
+            "cmp_task_list": self.cmp_task_list,
+            "checker_name": self.checker.__class__.__name__,
+            "task_name": self.name,
+            "stage_title": self.checker.get_stage().title(),
+        })
+
+    def loadpoint_file(self):
+        fpath = self.checkpoint_file
+        if not fpath:
+            warning(f"{self.name} No checkpoint file path, skip loading checkpoint.")
+            return False
+        if not os.path.isfile(fpath):
+            return False
+        try:
+            data = fc.load_json_file(fpath)
+            self.source_task_list = data.get("source_task_list", [])
+            self.gen_task_list = data.get("gen_task_list", [])
+            self.tbd_task_list = data.get("tbd_task_list", [])
+            self.cmp_task_list = data.get("cmp_task_list", [])
+        except Exception as e:
+            warning(f"{self.name} Load checkpoint file {fpath} fail: {e}")
+            return False
+        return True
 
     def get_template_data(self, total_tasks: str, completed_tasks: str, current_tasks: str) -> dict:
         """Get template data for task status reporting.
@@ -345,6 +509,16 @@ class UnityChipBatchTask:
             completed_tasks: "-" if not self.source_task_list else len(self.gen_task_list),
             current_tasks: self.tbd_task_list,
         }
+
+    def get_process_str(self) -> str:
+        """Get a string representation of the current task process.
+
+        Returns:
+            String summarizing the task progress.
+        """
+        total = "-" if not self.source_task_list else len(self.source_task_list)
+        completed = "-" if not self.source_task_list else len(self.gen_task_list)
+        return f"{completed}/{total}"
 
     def update_tbd_from_source(self) -> None:
         """Update to-be-done task list by removing tasks not in source list."""
@@ -486,17 +660,12 @@ class UnityChipBatchTask:
                 if exmsg:
                     note_msg.append(exmsg)
 
+                note_msg.append(f"Process status: {self.get_process_str()}")
                 return False, {"error": note_msg}
 
             if is_complete:
                 return True, "Complete success."
             return True, {"success": f"All {self.name} are done, call `Complete` to next stage."}
-
-        if is_complete:
-            return False, (
-                f"Not all {self.name} in this batch have been completed. "
-                f"{', '.join(self.tbd_task_list)} are still to be done.{exmsg}"
-            )
 
         # Update completed task list
         for task in self.tbd_task_list:
@@ -518,8 +687,9 @@ class UnityChipBatchTask:
 
         if remaining_tasks:
             msg = {
-                "error": f"Not all {self.name} in this batch have been completed. "
-                        f"{', '.join(remaining_tasks)} are still to be done.{exmsg}"
+                "error": f"Not all '{self.name}' in this batch have been completed ({self.get_process_str()}). "
+                         f"If the quantity meets the requirements, but still show this error, it's because the '{self.name}' you have implemented is not all essential. "
+                         f"You must implement the essential ones:  {', '.join(remaining_tasks)}.{exmsg}"
             }
             if note_msg:
                 msg["note"] = note_msg
@@ -536,16 +706,22 @@ class UnityChipBatchTask:
         # Reset batch
         self.tbd_task_list = []
         self.cmp_task_list = []
+        self.savepoint_file()
 
         # Check if all tasks are done
         if self.update_current_tbd():
-            success_msg["success"] += f" All {self.name} are done, call `Complete` to next stage."
+            if is_complete:
+                success_msg["success"] += f" All {self.name} are done, complete success."
+            else:
+                success_msg["success"] += f" All {self.name} are done, call `Complete` to next stage."
             return True, success_msg
         else:
             success_msg["success"] += (
                 f" Now the next {len(self.tbd_task_list)} {self.name}: "
                 f"{', '.join(self.tbd_task_list)} need to be completed.{exmsg}"
+                f" Process status: {self.get_process_str()}"
             )
+            self.checker.reset_continue_fail_count_with_batch_pass()
 
         return False, success_msg
 
@@ -600,9 +776,84 @@ class OrginFileMustExistChecker(Checker):
             self.stage_manager.agent.exit()
             error(f"File(s) {', '.join(file_not_exist)} do not exist in workspace {self.workspace}.")
             sys.exit(1)
-            assert False, f"File(s) {', '.join(file_not_exist)} do not exist in workspace {self.workspace}."
         return self
 
     def do_check(self, timeout=0, **kw) -> tuple[bool, object]:
         """Check if the specified file exists."""
         return True, f"File exist check passed."
+
+
+class FilesMustNotExist(Checker):
+    """Files Must not exist"""
+
+    def __init__(self, target_files, **kw):
+        self.file_maps = {}
+        target_files = target_files if isinstance(target_files, (tuple, list)) else [target_files]
+        for f,m in target_files:
+            self.file_maps[f]=m
+            info(f"{self.__class__.__name__} -> {f}")
+
+    def do_check(self, timeout=0, **kw) -> tuple[bool, object]:
+        """Check if the specified file not exists."""
+        emsg = []
+        tfile = []
+        for f, m in self.file_maps.items():
+            flist = fc.find_files_by_pattern(self.workspace, f)
+            if len(flist) > 0:
+                emsg.append({f:{"error":m, "find": flist}})
+                tfile.append(f)
+        if emsg:
+            return False, {"error": f"{self.__class__.__name__} check fail, files: {','.join(tfile)} must not exist, but find them.",
+                           "detail": emsg}
+        return True, f"File no exist check passed."
+
+
+import ucagent.util.diff_ops as diff_ops
+
+class VibeWorkSpaceInit(Checker):
+    """Increment Verification Checker for Human Input."""
+
+    def __init__(self,
+                 branch_name: str,
+                 data_key: str,
+                 repo_ignore: list = None,
+                 dut_name: str = None,
+                 init_msg: str = "",
+                 **kw):
+        self.branch_name = branch_name
+        self.data_key = data_key
+        self.init_msg = init_msg or "Init git repo for Vibe Coding Assistant"
+        default_ignore = [f"{dut_name}/*", f"!{dut_name}/__init__.py", f"!{dut_name}/{dut_name}.v", f"!{dut_name}/*.md"] + \
+                         ["data", "uc_test_report", "*.json", "*.ini", "{DUT}.ignore"] + \
+                         ["*.fst", "*.dat", "*.vcd", "*.bin", "*.log", "*.tmp", "*.pyc", ".ucagent/*"]
+        self.repo_ignore = repo_ignore or default_ignore
+        self.set_human_check_needed(True)
+
+    def on_init(self):
+        """Initialize the repo."""
+        diff_ops.init_git_repo(self.workspace, ignore_existing=True)
+        if self.branch_name != diff_ops.get_current_branch(self.workspace):
+            warning(f"Switching to branch '{self.branch_name}' for increment verification.")
+            diff_ops.new_branch(self.workspace, self.branch_name)
+            ignore_list = []
+            for ign in self.repo_ignore:
+                if isinstance(ign, str):
+                    ignore_list.append(ign)
+                elif isinstance(ign, list):
+                    ignore_list.extend(ign)
+                else:
+                    warning(f"Invalid ignore pattern: {ign}")
+            diff_ops.append_ignore_file(self.workspace, ignore_list)
+            diff_ops.git_add_and_commit(self.workspace,
+                                        f"{self.init_msg} ({fc.fmt_time_stamp(time.time())}).")
+        if diff_ops.is_dirty(self.workspace) or diff_ops.has_untracked_files(self.workspace):
+            warning(f"Workspace is dirty or has untracked files at the start of increment verification. "+
+                    "Please ensure a clean state before proceeding.")
+        return super().on_init()
+
+    def do_check(self, timeout=0, **kw) -> tuple[bool, object]:
+        """Check if human input is needed for increment verification."""
+        hm_pass, hm_message = self.get_stage().get_hmcheck_state()
+        if hm_pass is True:
+            self.smanager_set_value(self.data_key, hm_message)
+        return True, f"Human input is received, please use tool Complete to go on."

@@ -1,0 +1,6 @@
+llm_input_dump:
+  enabled: true
+  output_dir: "{OUT}/llm_input_dumps/prompt_v1"
+
+prompt_variant:
+  name: v1

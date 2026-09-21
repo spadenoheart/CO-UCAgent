@@ -16,13 +16,13 @@
 - 方式一：克隆仓库并安装依赖
 
   ```bash
-  git clone https://github.com/XS-MLVP/UCAgent.git
-  cd UCAgent
+  git clone https://github.com/spadenoheart/CO-UCAgent.git
+  cd CO-UCAgent
   pip3 install .
   ```
 
 - 方式二（pip 安装）
   ```bash
-  pip3 install git+https://git@github.com/XS-MLVP/UCAgent@main
-  ucagent --help # 确认安装成功
+  pip3 install git+https://github.com/spadenoheart/CO-UCAgent@main
+  co-ucagent --help # 确认安装成功；ucagent 为兼容别名
   ```
