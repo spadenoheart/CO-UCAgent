@@ -21,4 +21,4 @@ We value responsible disclosure. Please give us a reasonable window to investiga
 - Avoid introducing dependencies or configuration that weaken security (e.g., hard-coded credentials, insecure defaults, excessive privileges).
 - Run the existing tests (including security-focused checks if available) before opening a pull request.
 
-Thanks for helping us keep UCAgent secure for everyone.
+Thanks for helping us keep CO-UCAgent secure for everyone.

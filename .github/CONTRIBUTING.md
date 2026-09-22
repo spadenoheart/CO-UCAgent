@@ -1,9 +1,9 @@
 # Contributing Guide
 
-Thanks for your interest in contributing to UCAgent! This document explains how to get started, what we expect from contributors, and how to submit changes successfully.
+Thanks for your interest in contributing to CO-UCAgent! This document explains how to get started, what we expect from contributors, and how to submit changes successfully.
 
 ## Before You Begin
-- Review the repository documentation in `README.en.md` or `README.zh.md` to understand the project goals and setup process.
+- Review `README.md` and `TOOLKIT.md` to understand the project goals, setup process, and public tool entry points.
 - Read the [Code of Conduct](CODE_OF_CONDUCT.md); by participating you agree to follow it.
 - Ensure you can build and test the project locally before making changes.
 
@@ -34,4 +34,4 @@ Thanks for your interest in contributing to UCAgent! This document explains how 
 - Use GitHub Discussions or issues for questions that others may share.
 - Be respectful, constructive, and patient in all interactions, consistent with our Code of Conduct.
 
-We appreciate your help in improving UCAgent. Happy contributing!
+We appreciate your help in improving CO-UCAgent. Happy contributing!

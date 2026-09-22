@@ -20,7 +20,7 @@ make docs
 ```
 
 ## Checklist
-- [ ] I read and followed `CONTRIBUTING.md`.
+- [ ] I read and followed `.github/CONTRIBUTING.md`.
 - [ ] I ran all relevant tests and they pass locally.
 - [ ] I updated documentation/examples if behavior changed.
 - [ ] I agree that this contribution will be released under the project's open-source license (see `LICENSE`).
