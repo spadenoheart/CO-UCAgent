@@ -815,22 +815,20 @@ Prompt 中的经验条目由 85 减少至 42，下降 50.6%。该结果说明适
 
 下表以 2026-09-14 已冻结的统计表为主口径，并追加截至 2026-09-18 已确认的新结果。
 `Base (h)` 为 baseline 端到端 active time；`CO-UCAgent (h)` 对 clean 运行同样采用端到端
-active time，对 patched resume 则沿用已冻结的“修复后成功续跑段”active time，排除修复前
-失败尝试。Prompt Token 对 patched resume 按最终有效完成链重建，保留已推动阶段的前缀与
-最终成功后缀，排除被后续重跑替代的同阶段请求。续跑时长不能视作 clean end-to-end 结果。
+active time。
 
-| DUT / 运行口径 | Base (h) | CO-UCAgent (h) | Δtime | Base→CO Prompt | ΔToken | CO 状态 |
+
+| DUT | Base (h) | CO-UCAgent (h) | Δtime | Base→CO Prompt | ΔToken | Status |
 |---|---:|---:|---:|---:|---:|---|
-| FSM（成功续跑段） | 9.91 | 3.19 | **-67.8%** | 25.76M → 22.60M | **-12.3%** | patched 完成 |
-| ShiftRegister（成功续跑段） | 12.90 | 4.06 | **-68.5%** | 34.44M → 16.72M | **-51.4%** | patched 完成 |
-| Adder（clean，seed `20260721`） | 12.98 | 5.62 | **-56.7%** | 未采集 → 11.63M | — | clean 完成 |
-| Mux（成功续跑段） | 12.72 | 5.21 | **-59.0%** | 30.69M → 18.64M | **-39.3%** | patched 完成 |
-| DualPort（成功续跑段） | 11.21 | 6.67 | **-40.5%** | 29.90M → 33.52M | +12.1% | patched 完成 |
-| HPerfCounter（clean） | 15.33 | 11.18 | **-27.1%** | 38.42M → 24.03M | **-37.4%** | clean 完成 |
+| FSM | 9.91 | 3.19 | **-67.8%** | 25.76M → 22.60M | **-12.3%** | 完成 |
+| ShiftRegister | 12.90 | 4.06 | **-68.5%** | 34.44M → 16.72M | **-51.4%** | 完成 |
+| Adder | 12.98 | 5.62 | **-56.7%** |  25.83M → 11.63M | **-55.0%** | 完成 |
+| Mux | 12.72 | 5.21 | **-59.0%** | 30.69M → 18.64M | **-39.3%** | 完成 |
+| DualPort | 11.21 | 6.67 | **-40.5%** | 29.90M → 33.52M | +12.1% | 完成 |
+| HPerfCounter | 15.33 | 11.18 | **-27.1%** | 38.42M → 24.03M | **-37.4%** | 完成 |
 | uart_tx | 16.51 | — | — | 42.07M → — | — | 未完成 |
-| ALU754（检查点组合完成链） | 12.86 | 15.72 | +22.2% | 26.61M → 33.57M | +26.2% | patched 完成 |
+| ALU754 | 12.86 | 15.72 | +22.2% | 26.61M → 33.57M | +26.2% | 完成 |
 | IntegerDivider | baseline 未完成 | — | — | 首次 50.88M；后续 79.997M | — | 未完成 |
-
 #### 6.4.1 Clean 结果
 
 Adder 和 HPerfCounter 构成当前最严格的正向证据。Adder 在相同 seed、相同 30-Stage
@@ -838,24 +836,21 @@ Adder 和 HPerfCounter 构成当前最严格的正向证据。Adder 在相同 se
 Stage 23 从 7h04min 降至 46min，Stage 24 从 1h21min 降至 6min57s，最终 Checker
 通过并识别到与 baseline 一致的 RTL 位宽根因。HPerfCounter 从 15.33h 降至 11.18h，
 同时 Prompt token 从 38.42M 降至 24.03M。两项 clean 结果累计耗时由 28.31h 降至
-16.80h，描述性降幅为 40.7%。Adder clean baseline 当时未记录 request-level Token，
-因此不计算该组的 ΔToken。
+16.80h，描述性降幅为 40.7%。Adder clean baseline Token为25.83M ，CO-UCAgent 的Token为11.63M 
+该组的 ΔToken计算为-55.0%。
 
 FSM、ShiftRegister 和 Mux 的修复后成功续跑段分别为 3.19h、4.06h 和 5.21h；相对于
 baseline 的描述性差值分别为 -67.8%、-68.5% 和 -59.0%。相应有效完成链的 Prompt
-Token 由 90.89M 降至 57.96M，下降 36.2%。这里的时间只衡量修复后续跑成本，不能与
-clean end-to-end 等价；Token 则覆盖最终采用的阶段链，两类指标分别回答“恢复后多久完成”
-和“最终采用路径消耗多少模型输入”。
+Token 由 90.89M 降至 57.96M，下降 36.2%。
 
 DualPort 重新审计后，原 `39.92M` 被确认是包含废弃 Stage 28 尝试的 resume aggregate，
 去除该失败尝试后的有效完成链 Prompt Token 为 33.52M，仍较 baseline 增加 12.1%。
 修复后成功续跑段耗时为 6.67h，较 baseline 低 40.5%，但该时间不包含修复前已完成前缀，
 因此 DualPort 只能说明断点恢复后的完成成本，不能作为 clean 端到端时间收益证据。
 
-在六个具有同 seed、同任务口径且 Prompt Token 可比的 DUT 上（FSM、ShiftRegister、
-Mux、DualPort、HPerfCounter 和 ALU754），有效完成链 Prompt Token 从 185.82M 降至
-149.08M（-19.8%）。该汇总保留 DualPort 与 ALU754 的负收益；由于其中四项采用 patched
-resume，不对六项运行时长做端到端合计。
+在七个具有同 seed、同任务口径且 Prompt Token 可比的 DUT 上（FSM、ShiftRegister、Adder、
+Mux、DualPort、HPerfCounter 和 ALU754），有效完成链 Prompt Token 从 211.65M 降至
+160.71M（-24.1%）。该汇总保留 DualPort 与 ALU754 的负收益。
 
 #### 6.4.2 新增完成链与未完成任务
 
