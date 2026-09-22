@@ -722,7 +722,7 @@ co-trace -> co-trajectory-data -> LoRA/SFT -> co-llm-profiler -> co-bench
 
 ### 5.2 Baselines and Ablations
 
-为分别度量证据建模、上下文管理与经验复用的独立贡献，本文采用以下递进配置：
+为分别度量证据建模、上下文管理与经验复用的独立贡献，本文计划采用以下递进配置：
 
 | ID | 配置 | 研究目的 | 状态 |
 |---|---|---|---|
@@ -753,7 +753,7 @@ pollution rate、negative-transfer rate、注入 token 开销和 token ROI。
 `invalid -> progress` 等高风险混淆率。
 
 完整 DUT 实验至少采用 3 个随机种子并报告均值、标准差、配对差值与 bootstrap 95% CI；
-Episode 与 checkpoint 实验按 DUT 和时间划分训练/验证集合，避免策略泄漏。
+Episode 与 checkpoint 实验按 DUT 和时间划分训练/验证集合。
 
 ## 6. Results
 
