@@ -1,7 +1,12 @@
-# CO-UCAgent：面向本地大模型芯片验证的证据驱动 Context Engineering
+# LCO-UCAgent：面向私有化大模型芯片验证的证据驱动 Agent Harness
 
-CO-UCAgent is a verification-aware agent harness for evidence-grounded context
-engineering with local LLMs.
+**LCO-UCAgent** 全称为 **Local-LLM Context-Optimized UCAgent**，表示一套面向私有化
+部署大语言模型的芯片验证 Agent Harness。名称中的 `Local-LLM` 强调推理服务、任务状态、
+工具反馈和验证轨迹由使用者或组织控制，而不是把“本地模型”划分为一种独立模型类别。
+LCO-UCAgent 在模型之外组织状态、工具、验证、记忆和运行时控制，并将上下文管理作为
+Harness 的一个核心子系统，在模型参数保持不变的条件下提高长时验证任务的执行效率与
+证据可靠性。为兼容现有发布入口，GitHub 仓库名 `CO-UCAgent` 与命令行入口
+`co-ucagent` 暂时保持不变。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg)](pyproject.toml)
@@ -16,32 +21,33 @@ engineering with local LLMs.
 
 大语言模型 Agent 正在被用于规范理解、验证环境构建、测试生成和缺陷归因。与单轮代码
 生成不同，完整芯片验证会持续数小时，并在规范、RTL、测试、覆盖率和 Checker 反馈之间
-形成不断增长的异构上下文。本地部署进一步放大了这一问题：有限的推理吞吐使重复预填充
+形成不断增长的异构上下文。私有化部署进一步放大了这一问题：有限的推理吞吐使重复预填充
 和无效修复具有较高代价，而测试未执行、基础设施异常和验证范围变化又会使错误经验进入
 摘要或长期记忆。现有上下文压缩与相似度检索难以同时保证信息效率、证据可靠性和跨任务
 适用性。
 
-本文提出 CO-UCAgent，一个面向本地大模型芯片验证的 verification-aware agent harness。
+本文提出 LCO-UCAgent（Local-LLM Context-Optimized UCAgent），一个面向私有化大模型
+芯片验证的 verification-aware agent harness。
 其核心方法由可执行验证反馈驱动。Harness 将代码修改、测试执行、Checker 反馈和阶段
 迁移规范化为具有来源的结构化证据，并在每次模型调用前从阶段契约、近期交互、层次化
-状态和长期记忆中构造工作上下文。对于跨任务经验，CO-UCAgent 从轨迹中提取修复片段
+状态和长期记忆中构造工作上下文。对于跨任务经验，LCO-UCAgent 从轨迹中提取修复片段
 （repair episode），根据失败集合变化、阶段推进、诊断信息和回归风险评估其作用，仅在
 历史行动与当前失败具有可验证适用性时将其用于后续推理。该设计将 Prompt、memory、
-tool feedback 和运行时控制纳入同一个 Context Engineering 闭环。
+tool feedback、状态维护与执行控制纳入同一个可审计 Harness 闭环。
 
-同 seed 的 clean Adder 实验中，CO-UCAgent 将 30-Stage active time 从 12h59min 降至
+同 seed 的 clean Adder 实验中，LCO-UCAgent 将 30-Stage active time 从 12h59min 降至
 5h37min（-56.7%），Checker 失败事件由 70 次降至 41 次；HPerfCounter 的运行
 耗时下降 27.0%，Prompt token 下降 37.4%。FSM、ShiftRegister 和 Mux 的实验结果分别观察到 67.8%、68.5% 和 59.0% 的 active-time 降幅。验证差分归因在两个包含
 40 条样本的人工标注集上均取得 0.80 accuracy，经验适用性过滤使历史回放中的 Prompt
 条目减少 50.6%。ALU754 的 checkpoint-composed 完成链仍高于 baseline，说明现有机制
 已经在部分 DUT 上形成明显收益，但跨 DUT 稳定性仍需通过更多重复实验验证。
 
-**关键词：** 芯片验证智能体；本地大语言模型；Context Engineering；Agent Harness；
-过程记忆；验证反馈
+**关键词：** 芯片验证智能体；私有化大模型部署；Agent Harness；过程记忆；验证反馈；
+长时智能体
 
 ## 快速开始
 
-CO-UCAgent 支持任意 OpenAI-compatible 对话模型服务。芯片仿真示例还需要 Python 3.11、
+LCO-UCAgent 支持任意 OpenAI-compatible 对话模型服务。芯片仿真示例还需要 Python 3.11、
 Verilator、C++ 工具链和 [Picker](https://github.com/XS-MLVP/picker)；Dockerfile 基于
 Picker 官方镜像，适合希望复用完整验证环境的用户。
 
@@ -55,7 +61,7 @@ python -m pip install --upgrade pip
 python -m pip install -e .
 ```
 
-配置本地模型。下面以 Ollama 的 OpenAI-compatible 接口为例，模型名称可以替换为服务端
+配置组织内模型服务。下面以 Ollama 的 OpenAI-compatible 接口为例，模型名称可以替换为服务端
 实际提供的模型：
 
 ```bash
@@ -95,138 +101,235 @@ co-trajectory-data --help
 
 ## 1. Motivation
 
-### 1.1 本地大模型使芯片验证成为系统问题
+### 1.1 私有化部署的大模型及其系统形态
 
-现代芯片验证包含规范理解、接口建模、测试生成、仿真执行、覆盖率分析与缺陷归因等相互
-依赖的任务。基于大语言模型的智能体能够调用文件、仿真和检查工具，并在多阶段工作流中
-迭代生成验证环境与测试程序。然而，与代码补全或单轮 RTL 生成不同，完整验证任务通常
-持续数小时，包含数百次模型调用和工具交互，并反复引用规范、RTL 接口、历史修改与测试
-结果。此时，模型能力只是系统性能的一部分；上下文如何形成、验证、压缩和复用同样决定
-智能体能否完成任务。
+私有化部署的大模型，是指模型权重或推理服务运行在个人、实验室或企业能够直接管理的
+计算环境中。其实现形态可以是工作站上的单机推理、实验室多 GPU 服务器，也可以是企业
+数据中心内的推理集群。该概念描述的是模型能力的部署与治理方式，与模型参数规模、是否
+量化以及是否采用标准 API 无直接对应关系：百亿或千亿参数模型同样可以通过量化和多卡
+并行部署，并以 OpenAI-compatible 接口向上层应用提供服务。
 
-本地部署是这一场景中的重要系统约束。长时智能体可能产生百万级输入 token，商业 API
-费用会随验证轮次和重复上下文持续增长；未公开 RTL、设计规范、缺陷记录和内部验证脚本
-又通常不适合离开组织的数据边界；企业验证环境还要求模型版本、推理参数、工具接口与
-运行日志可冻结、可审计且可离线复现。因此，本地模型不仅用于降低外部服务依赖，也为
-数据治理和实验控制提供基础。
+开放权重模型和推理运行时的发展，使这种部署方式逐渐形成完整的软件基础设施。
+[llama.cpp](https://github.com/ggml-org/llama.cpp) 支持模型在 CPU、GPU 及多种硬件后端运行，
+[Ollama](https://github.com/ollama/ollama) 管理模型获取、加载和服务生命周期，
+[LocalAI](https://github.com/mudler/LocalAI) 以兼容接口统一不同推理后端。这些项目共同使
+模型版本、量化格式、上下文上限、采样参数、硬件分配和运行日志进入使用者可配置、可观测
+和可复现的范围。私有化部署由此成为一种可治理的模型运行环境，而不仅是把推理程序安装在
+某台本地计算机上。
 
-本地部署同时将计算瓶颈直接暴露给 Agent 工作流。122B 级模型在多 GPU 环境中的首
-token 延迟和解码吞吐会放大每一次无效调用；较小模型虽然推理更快，却更容易违反端口、
-API、检查点和文档 schema 等验证契约。单纯提高 TPS 只能缩短一次调用，无法消除同一
-错误上的重复修复；单纯缩短 Prompt 则可能删除决定行动正确性的证据。由此产生的核心
-系统问题是：**如何在有限的本地推理预算下，提高每个 token 和每次行动产生有效验证
-进展的概率。**
+模型运行环境之上还需要面向任务的应用与执行系统。[PrivateGPT](https://github.com/zylon-ai/private-gpt)
+展示了私有数据接入、检索和生成服务如何建立在私有化推理组件之上；代码与科研 Agent 则还
+需要文件操作、工具调用、状态持久化、错误恢复和外部验证。LCO-UCAgent 位于这一 Agent
+Harness 层，负责连接私有化部署的大模型、芯片设计资产、仿真测试工具与多阶段验证状态，
+将通用生成能力组织为能够持续执行和接受验证反馈的工程流程。
 
-### 1.2 长流程瓶颈来自上下文质量，而非上下文长度本身
+项目名称中的 `Local-LLM` 因而指向上述私有化部署前提。本文在技术叙述中统一使用
+“私有化部署的大模型”和“组织内推理服务”，并将研究重点放在模型之上的 Harness：当模型
+参数和推理资源受到既定条件约束时，执行系统如何提高其完成长时芯片验证任务的效率、
+稳定性与可审计性。
 
-给定 DUT 规范、RTL 实现、当前验证阶段和历史交互轨迹，智能体需要选择下一步修改或
-验证行动。其上下文至少包含四类信息：相对稳定的规范与接口契约、随阶段变化的验证目标、
-近期失败与修改记录，以及可能跨任务复用的历史经验。这些信息具有不同的有效期、粒度和
-可信度，不能由统一的 token 截断策略处理。
+### 1.2 私有化部署为何是芯片验证的基础条件
 
-保留完整历史会重复预填充规范、代码和工具输出，并使关键错误被大量已过期信息稀释。
-自由文本摘要虽然能够降低长度，却可能丢失端口名、函数签名、检查点层级和断言结果。
-长期记忆能够恢复跨阶段信息，但若写入条件只依赖“最终成功”，诊断步骤、偶然成功和
-回归行动也会被作为正向经验保存。语义检索能够找到文本相似的错误，却无法保证历史行动
-适用于当前阶段、文件类型和验证契约。因此，问题不在于智能体是否拥有摘要或记忆，而在
-于这些上下文是否保留了必要证据，以及是否应在当前决策中出现。
+芯片验证的工作负载同时涉及高价值设计资产、持续数小时的模型调用、内部 EDA 环境以及
+严格的结果追溯，模型的运行位置、数据边界和资源配置因而成为验证系统设计的一部分。
+私有化部署的价值由以下四项需求共同构成。
 
-这一观察将 Context Engineering 从单一压缩问题扩展为三个相互依赖的问题：
+**设计资产需要连续的数据边界。** 芯片验证向模型暴露的内容远多于一段孤立代码。一个
+完整轨迹会逐步包含微架构规范、RTL 端口、验证 API、内部脚本、波形或仿真输出、缺陷位置
+和尚未公开的修复建议。即使初始 Prompt 已脱敏，后续工具返回仍可能重新带入模块层级、
+信号命名和失败条件。LLM 隐私研究系统总结了训练数据泄漏、推理输入暴露和应用链路攻击
+等风险（[Miranda et al., 2024](https://arxiv.org/abs/2408.05212)）。
+[ChipNeMo](https://arxiv.org/abs/2311.00176) 的工业实践也显示，芯片领域能力高度依赖专有
+代码、文档和 bug 数据。将模型服务与 Harness 部署在组织治理边界内，能够减少设计资产
+经过外部服务的环节，并让访问控制、日志保留和数据清理服从现有研发制度。它不能自动
+消除内部越权、Prompt injection 或模型输出泄密，但为这些治理措施提供了可实施边界。
 
-1. **表示：** 如何用适合验证流程的结构保存规范、阶段状态、失败和修改，而不反复携带
-   原始对话？
-2. **可信度：** 如何判断测试与 Checker 观察是否真正执行、验证范围是否可比，以及
-   某次行动是否获得了有效信用？
-3. **选择：** 如何根据当前失败和风险选择摘要、近期证据与跨 DUT 经验，而不是无条件
-   注入所有相似内容？
+**长时 Agent 需要可规划的推理供给。** 单轮问答的主要成本来自一次 Prompt 和一次生成，
+验证 Agent 则会在每次文件读取、测试和 Checker 调用后再次请求模型。系统指令、工具
+schema、设计契约与历史观察因此被反复预填充，最终输入规模可能比输出高出多个数量级。
+[FrugalGPT](https://arxiv.org/abs/2305.05176) 证明模型路由和请求策略会显著改变 API 成本；
+在长时验证中，重复实验和多 seed 还会继续放大这一差异。组织内推理把逐请求费用转化为
+硬件占用、能耗和运维成本，使团队能够固定计算预算、控制并发并持续采集细粒度遥测。只有
+当设备利用率、维护成本和任务规模达到合适区间时，这种模式才具有经济优势，因此 LCO-UCAgent
+关注的目标不是宣称私有化推理天然便宜，而是提高既定推理资源产生有效验证进展的效率。
 
-### 1.3 经验性观察揭示了现有方法的失效模式
+**验证研究依赖稳定且可审计的模型环境。** Agent 策略实验需要区分模型变化与 Harness
+变化。托管服务可能调整模型版本、系统策略、上下文实现或限流方式，即使 API 名称保持
+不变，也可能改变行为分布。组织内推理允许冻结权重、量化格式、上下文上限、采样参数、
+服务引擎和 GPU 拓扑，并保存每次调用的精确输入、输出与时间指标。这样才能在相同 seed、
+相同 DUT 和相同 checkpoint 上开展成对回放，定位收益究竟来自模型、推理系统还是 Harness
+策略。对于企业验证，完整证据链还支持失败复盘、责任边界和版本审计，避免将一次不可解释
+的成功直接作为可复用结论。
 
-对 Adder、uart_tx、IntegerDivider、FSM 和 ALU754 等 DUT 的长时轨迹分析显示，性能
-损失并非均匀分布在所有阶段，而是集中于少量持续失败的修复循环。这些循环呈现四类可
-跨 DUT 观察的失效模式。
+**私有数据需要形成组织内能力闭环。** 芯片设计语言、接口约定、Checker 规则和缺陷模式
+都具有明显的组织特征。ChipNeMo 表明，领域预训练、指令对齐与领域检索能够让模型在工程
+问答、EDA 脚本和 bug 总结等任务上获得显著收益。对验证 Agent 而言，价值还来自执行后
+产生的轨迹：哪些修改被测试证实、哪些诊断缩小了问题、哪些操作造成回归。私有化部署使
+这些数据可以在内部经过脱敏、归因和质量筛选后用于检索、LoRA 或策略学习，从而建立
+“执行、验证、积累、再利用”的长期闭环，而无需把原始 RTL 与内部缺陷记录移出组织。
 
-**无效验证污染上下文。** `tests_total=0`、collection error、进程崩溃或超时曾可能被
-聚合为“全部测试通过”。一旦这种观察进入摘要或长期记忆，后续系统就可能将未被验证的
-修改作为成功经验复用。
+### 1.3 私有化推理环境下的长时验证 Agent 挑战
 
-**终局成功掩盖行动差异。** 一个最终成功的轨迹通常混合了定位根因、错误修改、回退、
-最小测试和真正修复。将整条轨迹赋予统一正信用，无法区分产生进展的行动与仅增加成本的
-行动。
+组织内推理解决了数据和运行控制权问题，却不会自动产生可靠 Agent。模型能力必须通过
+Harness 的观察、状态、控制、行动和验证机制转化为连续任务行为。芯片验证轨迹暴露出四个
+相互耦合、同时可以由 Harness 直接干预的系统挑战。
 
-**相似错误需要不同修复对象。** Checker 消息可能具有相似措辞，但错误可能分别来自
-测试代码、API 封装、bug 文档 schema 或未读取的规范。只依赖文本相似度会把一种修复
-策略迁移到另一种错误，造成 negative transfer。
+**C1：有限推理预算会被无进展循环持续放大。** 私有化部署通常以固定 GPU 数量服务一个
+大模型。权重加载、量化、多卡切分和 KV cache 已占用大部分资源，Agent 请求又具有长
+Prompt、低并发和强串行依赖等特征。[LLM in a Flash](https://arxiv.org/abs/2312.11514)、
+[FlexGen](https://arxiv.org/abs/2303.06865)、[PowerInfer](https://arxiv.org/abs/2312.12456)
+和 [AWQ](https://arxiv.org/abs/2306.00978) 分别从存储分层、张量调度、稀疏激活和低比特
+量化降低单次推理成本，但这些优化无法判断一次模型调用是否推动了验证任务。如果 Harness
+在相同 Checker 失败下继续允许近似修改、全量测试和再次推理，TTFT、decode 与测试时间会
+按循环次数累积。最终瓶颈表现为“模型一直在工作但阶段没有推进”，而非单一 TPS 指标偏低。
 
-**更多记忆不必然带来更高效率。** 历史实验中，单独启用长期记忆可能增加输入 token，
-而过严的经验过滤虽然减少注入，也没有自动改善端到端耗时。这说明优化目标不能是记忆
-数量或命中率，而应是注入后产生验证进展且不引入回归的条件概率。
+**C2：持续演化的执行状态难以压缩为一个可靠 Prompt。** 验证流程同时维护长期稳定的
+RTL/API 契约、阶段级完成条件、近期失败集合、当前修改差分和跨任务经验。这些状态具有
+不同生命周期和可信度。完整保留对话会重复预填充大量过期日志，并让关键失败被历史内容
+稀释；按 token 截断可能删除仍然有效的端口或 schema；自由文本摘要则可能合并冲突观察
+或丢失精确标识符。PagedAttention、StreamingLLM 和 SnapKV 能改善 KV cache 与长序列
+执行效率，但 [Lost in the Middle](https://doi.org/10.1162/tacl_a_00638) 和
+[RULER](https://arxiv.org/abs/2404.06654) 表明，更长窗口并不等价于更可靠的信息使用。
+因此，挑战不只是让更多文本进入模型，而是由 Harness 判断哪些状态仍然有效、如何表达其
+来源，以及哪一部分应参与当前决策。
 
-### 1.4 Research Gap 与设计要求
+**C3：工具返回不能直接视为可信验证证据。** 长时 Agent 的环境观察来自文件系统、pytest、
+仿真器、Checker 和阶段管理器，其语义并不统一。`tests_total=0`、collection error、timeout、
+crash 和真正的断言失败可能具有相似日志外观；局部测试通过也不能证明阶段契约已经满足。
+如果 Harness 仅把 stdout 拼回对话，模型可能把“命令执行结束”理解成“验证成功”，随后
+推进阶段、改写 bug 文档或把该行动写入记忆。[INFERCEPT](https://arxiv.org/abs/2402.01869)
+与 [Prompt Cache](https://arxiv.org/abs/2311.04934) 关注工具中断后的计算复用，但并不负责
+判定观察是否有效。通用反思方法同样通常假设环境反馈已经可用。芯片验证需要额外的反馈
+契约，把执行状态、测试范围、失败集合和 Checker 结论转化为模型与控制器均可消费的证据。
 
-现有长上下文压缩方法主要优化通用问答中的 token 保留，通用 Agent memory 主要关注
-信息召回或工作流复用，而 Agent credit assignment 则通常依赖训练阶段的终局奖励。
-芯片验证需要把三者连接到可执行的验证器信号：上下文项应当具有来源，历史行动需要由
-测试或 Checker 证据归因，跨任务记忆必须在修改对象和验证契约上与当前失败兼容。
+**C4：历史轨迹缺少局部信用与迁移边界。** 一条最终成功的轨迹往往混合规范阅读、错误
+尝试、诊断测试、回退和真正修复。按终局成功给整条轨迹赋正信用，会把无效或有害行动一并
+保存；按语义相似度检索，又可能把相似 Checker 文本下的不同根因混合。例如同样的“检查点
+未覆盖”可能来自测试未执行、标签拼写、API 驱动错误或 DUT 行为异常，其正确修改对象并不
+相同。Reflexion、ExpeL、A-MEM 和 Mem0 已证明反思、经验提取和结构化记忆的价值，但其
+主要指标集中于记忆召回或最终任务表现，难以直接回答某个 HDL 修复是否减少失败、推动阶段
+且没有引入回归。跨 DUT 复用若缺少这一边界，记忆越丰富，negative transfer 的机会也可能
+越多。
 
-据此，CO-UCAgent 遵循四项设计要求：
+### 1.4 LCO-UCAgent 的 Harness 响应
 
-- **Evidence grounding：** 所有可复用成功与修复经验都必须连接到有效测试、Checker
-  观察或阶段迁移，未执行验证不能获得正信用。
-- **Task-aware compression：** 压缩必须区分稳定契约、阶段摘要、近期失败和工具噪声，
-  而不是只依据文本位置或长度。
-- **Utility-aware reuse：** 经验选择不仅考虑相似度，还应考虑验证收益、动作成本、回归风险
-  和当前修改对象的兼容性。
-- **End-to-end measurability：** 系统必须同时观测 token、推理延迟、失败循环、阶段推进
-  和回归，避免用单一检索命中率代替任务收益。
+近期 Harness 研究将 Agent 描述为基础模型与执行系统的组合，并将 Harness 分解为 observation、
+context、control、action、state 和 verification 等相互依赖的职责
+（[Guo et al., 2026](https://arxiv.org/abs/2606.20683)）。LCO-UCAgent 延续这一系统视角，
+把上下文构造放回 Harness 内部，与工具协议、状态持久化、验证门控和循环控制共同设计。
+其四组机制分别对应前述 C1–C4。
 
-本文围绕以下研究问题展开：
+**H1：预算与进展联合控制。** Harness 在 request 和 stage 两个层级记录 Prompt
+token、TTFT、decode、工具时间、Checker 签名和阶段推进。进展控制器不以“模型产生了新
+文本”或“某个局部测试通过”作为清零条件，而是比较失败集合、Checker 状态和阶段转换。
+当同一失败签名持续出现时，控制器触发策略 pivot；当同一决策区间的修改次数超过预算时，
+工具层可以拒绝继续无差异 mutation。该机制不能提高模型本身的 TPS，但能阻止低收益调用
+无限累积，并把推理成本与任务进展放在同一观测空间中。
 
-- **RQ1：** 任务感知的 Context Engineering 能否在保留验证契约的同时减少重复 token
-  与失败循环？
-- **RQ2：** 验证结果归一化和局部差分能否可靠识别有效修复、诊断、无进展与回归行动？
-- **RQ3：** 风险约束的跨 DUT 经验复用能否提高有效注入率并降低 negative transfer？
-- **RQ4：** 上述机制能否在固定本地模型与硬件条件下提高完成率并降低端到端成本？
+**H2：类型化状态基座与阶段化输入编译。** Harness 将原始对话拆分为稳定契约、
+Stage/Batch 状态、近期失败、修改摘要、验证证据和候选经验。阶段状态包显式保存当前任务、
+允许修改对象、尚未满足的 Checker 条件和剩余预算；observation masking 隐藏已经失效的
+重复日志，同时保留最新失败和不可丢失的接口标识。结构化摘要、层次化摘要、近期窗口和
+阶段预取分别服务于不同时间尺度。这里的上下文管理是一项运行时编译过程，其目标是从
+Harness 状态生成当前行动所需的最小充分输入，而不是独立于执行状态压缩一段聊天记录。
 
+**H3：验证器驱动的反馈契约。** 工具层将测试结果规范化为 `pass`、
+`test_failure`、`infrastructure_error`、`timeout`、`crash` 和 `no_tests_collected` 六类
+互斥终态，并把代码修改、测试范围、Checker 反馈和阶段转换记录为结构化事件。只有实际
+执行且范围可比较的验证结果才能形成正向证据；无测试、基础设施错误和异常退出均不能被
+汇总为成功。阶段契约进一步约束允许修改的文件、bug 文档 schema 和完成条件，使语言模型
+判断与确定性控制逻辑共享同一事实来源，也为后续记忆归因提供可信观察。
+
+**H4：验证条件化的轨迹记忆与风险门控。** Harness 将轨迹切分为具有
+`failure_before`、`action_sequence` 和 `observation_after` 的 repair episode，并根据失败
+集合变化、阶段推进、信息增益、动作成本和回归数量标记 `progress`、`diagnostic`、
+`no_progress`、`regression` 或 `invalid`。检索阶段在语义相关性之外检查失败类型、阶段职责、
+修改对象、历史支持度和风险；高风险策略需在冻结 checkpoint 上进行注入/不注入成对回放，
+只有真实 Checker 收益为正且未引入回归时才具备入库依据。这一流程把“记住相似经验”转换
+为“复用经过验证且适用于当前状态的行动证据”。
+
+| 挑战 | Harness 响应 | 主要可观测量 |
+|---|---|---|
+| C1 推理预算被无进展循环放大 | H1 进展控制、pivot、修改预算和成本遥测 | stage wall time、Prompt token、重复失败签名、有效推进率 |
+| C2 执行状态超出单一 Prompt 的可靠承载范围 | H2 阶段状态包、多时间尺度状态与 observation masking | 输入 token、状态覆盖率、摘要触发、Checker 条件保留率 |
+| C3 工具返回缺乏统一可信语义 | H3 六类测试终态、结构化事件与阶段契约 | invalid rate、测试范围、Checker 收益、错误分类 |
+| C4 成功轨迹存在信用混淆和跨 DUT 负迁移 | H4 episode 归因、适用性门控与成对回放 | progress/regression、注入收益、negative transfer、action cost |
+
+LCO-UCAgent 因而优化的是完整 Harness 将模型能力转化为可验证进展的效率。上下文管理仍然
+重要，但它与观察规范化、状态维护、工具治理、循环控制和验证门控共同决定最终行为，不能
+单独代表整个系统。
+
+### 1.5 研究命题与可证伪问题
+
+现有 Harness 与 Agent memory 工作已经说明，模型外的执行系统和历史经验能够改变任务表现；尚不充分的是这些改变能否被归因于可靠的中间状态，
+以及它们在跨任务迁移时能否持续产生正收益。芯片验证提供了测试、Checker 和阶段迁移等外部信号，使这一问题能够从最终成功率分析下沉到具体行动转移。
+
+因此本文的中心假设是：**在模型、硬件、任务和执行预算保持一致时，以验证状态为条件选择控制
+动作与历史经验，可以提高单位推理成本产生的有效进展，并且不增加回归与无效验证。** 这里
+的“有效进展”由失败集合减少、Checker 条件满足或阶段推进定义；“推理成本”同时包括 Prompt
+token、模型请求和 wall time；回归与无效验证作为独立风险结果保留，不能被平均耗时下降
+掩盖。
+
+为检验这一假设，实验以一次可比较的 **状态—行动—观察转移** 为基本分析单元。状态包含
+当前失败、验证范围、阶段契约和已确认修改；行动包括模型决策、工具使用和经验注入；观察
+由后续测试、Checker 或阶段迁移给出。局部研究在冻结 checkpoint、相同 seed 和相同输入
+条件下进行注入/不注入或控制器关闭/开启的成对回放，完整 DUT 实验则检验局部收益能否累积
+为完成率、时间和 token 的端到端改善。该设计区分了系统检索到的相关内容与检索实际改变
+的验证结果。
+
+本文据此回答三个可证伪问题：
+
+- **RQ1：局部有效性。** 验证状态条件化的 Harness 干预，相比无干预和仅按语义相似度选择经验，
+是否提高失败净减少量与阶段推进率，并降低达到相同 Checker 结果所需的 token 和时间？
+
+- **RQ2：迁移可靠性。** 在 held-out DUT 上，历史轨迹能否保持正向 Checker 收益，同时不提高 regression、
+invalid 和 negative-transfer rate？若收益只存在于同 DUT 或相同错误文本中，则跨 DUT 策略库的泛化假设不成立。
+
+- **RQ3：端到端效应。** 局部控制收益能否在完整验证链中转化为更高完成率或更低总成本，
+  并在多个随机种子上保持方向一致？若局部指标改善但完整运行没有收益，则方法应被限定为诊断与过程治理工具，
+  而不能宣称提升 Agent 整体性能。
+
+上述命题也明确了方法边界。Harness 可以减少状态丢失、无效循环和错误经验迁移，但不能补足基础模型尚未具备的 RTL 推理能力，也不能以内部 Checker 通过替代独立功能正确性。
+因此，本文在结论部分同时报告完成了状态、外部缺陷证据、成本、回归和无效运行。
 ## 2. Contributions
 
-本文作出以下贡献：
+本项目作出以下贡献：
 
-1. **提出验证反馈驱动的 Context Engineering Harness。** CO-UCAgent 将 Prompt 构造、
-   状态压缩、长期记忆和跨任务经验复用统一到可执行验证闭环中，使 Context Engineering
-   不再依赖未经校验的自然语言历史。
-2. **设计多时间尺度、可追踪的验证状态。** 结构化事件和六类测试终态为上下文提供可靠
-   证据；近期窗口、结构化摘要、Batch/Stage 状态、failure-aware context 和阶段预取在
-   不同时间尺度上维护模型工作状态。
-3. **提出验证条件化的跨 DUT 过程记忆。** 系统根据前后验证差分对 repair episode 进行
-   角色化归因，并联合失败签名、阶段职责、修改对象、跨任务支持度、历史效用与回归风险
-   判断经验是否适用于当前失败。
-4. **建立面向长时本地 Agent 的评测与复现基础。** 指标体系同时覆盖任务完成、推理成本、
-   行动质量、归因准确率和记忆污染；配套工具支持精确 Prompt dump、性能采集、checkpoint
-   replay 和实验配置冻结。
+1. **提出面向私有化大模型芯片验证的证据驱动 Agent Harness。** LCO-UCAgent 将观察
+   规范化、状态维护、输入编译、工具治理、阶段控制和验证门控组织为统一执行闭环，使模型
+   行动始终关联到可审计的任务状态与外部验证结果。
+2. **设计类型化、多时间尺度的验证状态基座。** 结构化事件和六类测试终态提供统一事实
+   来源；稳定契约、Stage/Batch 状态、近期失败、修改摘要和 observation masking 按不同
+   生命周期维护模型决策所需信息。
+3. **提出验证器条件化的跨 DUT 轨迹记忆。** 系统依据前后验证差分对 repair episode 进行
+   角色化归因，并联合失败签名、阶段职责、修改对象、跨任务支持、历史效用与回归风险判断
+   经验的适用范围。
+4. **建立 Harness 级的评测与复现基础。** 指标体系同时覆盖任务完成、推理成本、行动质量、
+   归因准确率和记忆污染；配套工具支持精确模型输入记录、性能采集、checkpoint 成对回放、
+   运行类型标注与实验配置冻结。
 
 ## 3. System Design
 
 ### 3.1 框架概述
 
-CO-UCAgent 将语言模型与其运行基础设施明确分离。模型负责基于当前输入进行推理并选择
-工具；Agent Harness 则负责维护任务状态、暴露文件与验证工具、执行阶段转换、构造每轮
-模型输入并记录运行证据。CO-UCAgent 在保持模型参数不变的条件下扩展 Harness，因此
-同一套方法可以作用于不同规模或不同部署方式的本地模型。
+LCO-UCAgent 将语言模型与其运行基础设施明确分离。模型负责基于当前输入进行推理并选择
+工具；Agent Harness 负责维护任务状态、暴露文件与验证工具、执行阶段转换、构造每轮
+模型输入并记录运行证据。LCO-UCAgent 在保持模型参数不变的条件下扩展 Harness，因此
+同一套方法可以作用于不同规模、量化方式或服务后端的私有化模型。
 
 <p align="center">
-  <img src=".github/assets/co-ucagent-framework.svg" width="100%" alt="CO-UCAgent 系统架构图">
+  <img src=".github/assets/co-ucagent-framework.svg" width="100%" alt="LCO-UCAgent 系统架构图">
   <br>
-  <strong>图 1：CO-UCAgent 的系统架构。</strong>实线表示在线的上下文构建与验证闭环，
+  <strong>图 1：LCO-UCAgent 的系统架构。</strong>实线表示在线的上下文构建与验证闭环，
   虚线表示运行后的经验归因、过程记忆更新与后续检索。
 </p>
 
 图 1 左侧给出三类原始证据。设计契约描述 DUT 规范、RTL 端口和验证 API；阶段目标规定
 当前步骤允许修改的对象与完成条件；运行时轨迹保存模型行动及测试、Checker 返回的环境
-观察。Context Engine 不直接拼接这些原始内容，而是依次完成证据规范化、多时间尺度状态
-维护和验证条件化的经验选择，最终在给定 token 预算内形成模型工作上下文。模型据此生成
-工具调用，Harness 执行修改或验证，并把新的可执行结果送回 Context Engine，形成在线
-闭环。
+观察。Harness 内部的状态与输入编译器不会直接拼接这些原始内容，而是依次完成证据规范化、
+多时间尺度状态维护和验证条件化的经验选择，最终在给定 token 预算内形成模型工作上下文。
+模型据此生成工具调用，Harness 执行修改或验证，并把新的可执行结果写回状态基座，形成
+在线闭环。
 
 图中的跨 DUT 过程记忆位于在线循环之外。一次运行结束后，系统把“失败观察—行动序列—
 后续验证”切分为可审计的修复片段，并根据验证差分评估其作用。通过质量筛选的片段被合并
@@ -234,15 +337,16 @@ CO-UCAgent 将语言模型与其运行基础设施明确分离。模型负责基
 该模块区别于保存用户事实或对话片段的通用记忆，更接近由验证器反馈监督的 procedural
 memory。
 
-这一架构包含两个相互补充的研究对象。**Context Engineering** 研究每次推理前应向模型
-提供哪些信息、如何转换这些信息以及如何控制其规模；**Agent Harness** 提供工具接口、
-持久状态、验证反馈和执行控制，使 Context Engineering 能够获得可靠信号并影响后续行动。
+在该架构中，**Agent Harness 是上层研究对象**：它规定模型能够观察什么、可以执行什么、
+环境如何反馈、状态如何持久化以及何时允许任务推进。上下文构造属于其中的状态呈现机制，
+负责把 Harness 已确认的事实编译成一次模型调用可消费的输入；它与工具协议、循环控制和
+验证器共同工作，而不是一条独立于执行系统的优化链。
 
 ### 3.2 验证感知的结构化事件
 
-Context Engineering 的可靠性首先取决于输入证据是否可信。自然语言运行日志通常混合
+Harness 决策的可靠性首先取决于输入证据是否可信。自然语言运行日志通常混合
 模型解释、工具输出和控制信息，难以判断某段文本对应哪一次修改，也无法区分功能失败与
-测试进程异常。CO-UCAgent 因此在 Harness 内建立独立的事件流，将行动和观察记录到
+测试进程异常。LCO-UCAgent 因此在 Harness 内建立独立的事件流，将行动和观察记录到
 `structured_events.jsonl`。每条事件包含 DUT、线程、模型轮次、阶段编号、时间戳和事件
 类型，并使用这些字段恢复局部的行动—观察关系。
 
@@ -298,7 +402,7 @@ Harness 会尝试规范化字段，并从最近的 Stage/Batch/Check 观察中�
 
 #### 3.3.2 Batch、Stage 与失败状态的分层表示
 
-单轮摘要解决消息长度问题，但不足以表达验证任务的层次结构。CO-UCAgent 进一步维护
+单轮摘要解决消息长度问题，但不足以表达验证任务的层次结构。LCO-UCAgent 进一步维护
 Batch 和 Stage 两种聚合状态。Batch 状态对应一次测试批次，保留测试总数、失败用例、
 失败检查点和报告位置；Stage 状态汇总同一阶段内的多个 Batch，记录阶段完成度以及尚未
 解除的阻塞项。当工作流进入新阶段时，上一阶段的低层工具输出可被 Stage 状态替代，而
@@ -338,7 +442,7 @@ schema，并把最近 Checker 阻塞项压缩为可执行的 blocker summary。�
 
 语言模型 Agent 以“行动—观察”循环运行：模型修改文件或调用工具，环境返回新的测试或
 Checker 结果，模型再据此决定下一步。完整 DUT 轨迹可能包含数百个循环，无法作为一个
-整体直接写入记忆。CO-UCAgent 将其中具有局部因果边界的片段定义为 **repair episode**。
+整体直接写入记忆。LCO-UCAgent 将其中具有局部因果边界的片段定义为 **repair episode**。
 
 一个 episode 从可信失败观察开始。例如，观察 $o_i^-$ 表示当前测试集合中 A、B 两个
 用例失败；随后模型读取 API、修改测试并运行最小目标，这些连续行动构成
@@ -410,297 +514,128 @@ $e_i=(o_i^-, a_{i:j}, o_i^+)$。上标 “-” 和 “+” 分别表示行动序
 
 每次查询都会记录候选、分数分解、适用性拒绝原因、最终注入内容和下一次验证结果。若后续
 失败减少或原签名消失，相关 episode 增加 useful 统计；若失败持续或出现新回归，则增加
-pollution/risk 统计。该反馈不会立即改变模型权重，而是更新后续 Context Engineering 的
-经验选择先验。
+pollution/risk 统计。该反馈不会立即改变模型权重，而是更新 Harness 后续检索、注入与
+风险门控的经验选择先验。
 
 ### 3.6 性能观测与可复现实验支持
 
-CO-UCAgent 同时观测模型推理与 Harness 行为，避免把端到端性能变化简单归因于模型 TPS。
+LCO-UCAgent 同时观测模型推理与 Harness 行为，避免把端到端性能变化简单归因于模型 TPS。
 推理侧记录每次调用的输入/输出 token、首 token 延迟、prompt evaluation 时间、decode
 时间和估计吞吐；Harness 侧记录阶段耗时、工具调用、失败循环、摘要调用、memory query、
 episode injection 及其后验结果。两类指标通过模型轮次和阶段编号关联，可以区分“单次
 推理变慢”“Prompt 变长”和“Agent 采取了更多无效行动”等不同原因。
 
 精确 `llm_input_messages` dump 保存实际发送给模型的消息序列，用于把长流程中的代表性
-调用重放为独立延迟测试，也支持 Prompt v0/v1 和不同 Context Engineering 组件的受控
+调用重放为独立延迟测试，也支持 Prompt v0/v1 和不同 Harness 组件的受控
 比较。实验冻结工具进一步保存配置、过程记忆快照和关键代码文件哈希，使一次运行能够追溯
 到具体模型服务、Prompt 与检索策略。该机制既服务于性能分析，也为后续 checkpoint replay
 和跨 DUT 消融提供一致输入。
 
 ## 4. Open-Source Toolkit
 
-CO-UCAgent Toolkit 是在 UCAgent 基础上构建的一组芯片验证 Agent 工具，覆盖本地大模型
-长时间运行时的性能分析、上下文管理、经验复用、执行审计和实验评测。七个模块从一次
-模型请求延伸到完整多 DUT 实验，既可独立使用，也可组合成验证反馈驱动的闭环。
+LCO-UCAgent Toolkit 将长时芯片验证 Agent 中反复出现的性能、上下文、记忆、轨迹、策略、
+实验和数据问题拆分为七项可独立使用的工具。本节重点说明各工具解决的问题和采用的
+技术类别，并给出它们在完整验证流程中的职责。工具可以单独处理已有日志与实验产物，
+也可以组合为完整的验证反馈闭环。
 
 ### 4.1 七项工具概览
 
-| 工具 | 解决的问题 | 核心能力 | 已形成的代表性结果 |
-|---|---|---|---|
-| `co-llm-profiler` | 长耗时是否主要来自模型推理 | 真实上下文 TTFT/TPS 采集与回放 | 建立 10 个 843–102K token 的轨迹用例 |
-| `co-context` | 长对话重复携带无效信息 | Verifier-aware 摘要、状态包和 observation masking | 被选中旧观察的字符量减少 97.0% |
-| `co-memory-cache` | 历史经验难以持续复用 | 结构化记忆、阶段缓存、预取和质量反馈 | 区分命中、有效、陈旧和污染四类指标 |
-| `co-trace` | Agent 执行过程不可解释 | 六类测试终态、轨迹树和实时可视化 | 阻止空测试和执行异常形成成功证据 |
-| `co-strategy` | 相似轨迹可能产生负迁移 | 状态条件策略、动作归因和成对准入 | 构建 36 条结构去重的策略候选 |
-| `co-bench` | 长实验难复现、难比较 | 冻结配置、断点回放、多 DUT 与 Token 统计 | 建立 8 个 DUT 的 clean baseline 结果 |
-| `co-trajectory-data` | 真实 Agent 训练数据缺少来源审计 | 轨迹筛选、数据切分和 LLaMA-Factory 导出 | 生成 2,196 条带 provenance 的 SFT 样本 |
-
-安装 `co-ucagent` 后，上表中的工具名就是可直接调用的命令。每个命令采用稳定的
-“工具名 + 子命令”形式，并继续兼容 `python scripts/<name>.py` 的源码调用方式：
-
-| 公开命令 | 子命令 | 典型输入与产物 |
+| 工具 | 解决的问题 | 采用的技术 |
 |---|---|---|
-| `co-llm-profiler` | `analyze`, `extract`, `replay` | Agent 日志、精确 Prompt dump、延迟结果 |
-| `co-context` | `events`, `runtime` | 结构化事件、Stage/Token/耗时报告 |
-| `co-memory-cache` | `inspect` | memory JSONL、缓存命中与污染统计 |
-| `co-trace` | `build`, `visualize` | trace tree JSON、交互式 HTML/实时页面 |
-| `co-strategy` | `build`, `curate`, `analyze`, `gate` | Repair Episode、策略库和成对准入报告 |
-| `co-bench` | `run`, `freeze`, `stage` | 冻结 manifest、多 DUT ledger、阶段回放结果 |
-| `co-trajectory-data` | `build`, `export` | 带 provenance 的 SFT JSONL 与 LLaMA-Factory 数据 |
+| `co-llm-profiler` | 识别长时 Agent 的模型推理瓶颈 | 请求级性能遥测、真实上下文回放和阶段聚合分析 |
+| `co-context` | 降低重复、过期和无关上下文造成的推理成本 | 验证感知的分层状态、结构化压缩和观察选择 |
+| `co-memory-cache` | 在跨阶段和跨运行场景中保留可复用信息 | 带来源的结构化记忆、阶段感知缓存和反馈更新 |
+| `co-trace` | 使 Agent 的执行过程可观察、可解释和可比较 | 事件规范化、类型化验证结果、轨迹编译和增量可视化 |
+| `co-strategy` | 降低历史经验复用产生的负迁移 | 验证器约束的经验抽象、条件化检索和风险控制 |
+| `co-bench` | 提高长实验的可复现性和比较一致性 | 配置冻结、环境预检、运行账本、断点恢复和多 DUT 编排 |
+| `co-trajectory-data` | 从真实运行中构建可审计的训练与研究数据 | 轨迹筛选、来源记录、质量控制和数据集导出 |
 
-命令参数、源码映射和端到端组合示例统一维护在 [TOOLKIT.md](TOOLKIT.md)，避免 README、
-Python 脚本和安装后的命令入口发生偏移。
+安装项目后，七项工具分别提供同名命令行入口。公开参数以各命令的 `--help` 为准；
+[TOOLKIT.md](TOOLKIT.md) 说明输入、输出和基本组合方式。
 
-### 4.2 `co-llm-profiler`：真实 Agent 上下文性能分析
+### 4.2 `co-llm-profiler`：真实 Agent 推理性能分析
 
-芯片验证 Agent 的输入包含规范、RTL 摘要、Python 测试、Checker 结果和历史工具输出。
-短 Prompt 测得的吞吐不能代表真实运行成本。`co-llm-profiler` 在 Agent 内部记录主模型
-与摘要模型的请求级指标，并将生产轨迹转换为独立推理用例。
+短 Prompt 上测得的 tokens/s 无法代表芯片验证 Agent 的实际负载，因为上下文长度、摘要
+请求、工具中断和阶段分布都会改变 TTFT、prefill 与 decode 成本。`co-llm-profiler` 将
+请求级遥测与真实上下文回放结合，按请求角色和验证阶段汇总延迟、Token 与吞吐指标，
+用于区分模型服务瓶颈和 Agent 行为造成的额外成本，并支持在固定工作负载下比较推理后端
+与部署配置。
 
-**主要能力**
+### 4.3 `co-context`：面向验证状态的上下文编译
 
-- 记录 latency、TTFT、Prompt/Completion token；
-- 分别估算 prefill TPS 和 decode TPS；
-- 区分主模型、fallback 和 summary 请求；
-- 导出精确 LLM 输入消息和模型参数；
-- 在 Ollama 兼容接口上重放相同类型的长上下文请求；
-- 按请求、Stage 和完整运行统计性能分布。
+长流程会持续积累重复背景、过期测试输出和相互覆盖的中间结论。完整携带历史会反复支付
+预填充成本，统一按长度截断又可能删除当前阶段的接口契约、未解决失败或最近一次有效
+验证。对本地模型而言，这种上下文失配会同时降低推理效率和行动正确率。
 
-当前基准包含 10 个来自真实 Adder 轨迹的上下文，覆盖约 843、10K、30K、50K 和 100K
-token 等输入规模。测试揭示了接近上下文上限时 TTFT 和 decode 性能的显著退化，使
-“模型慢”可以进一步分解为上下文长度、请求轮次和服务长尾问题。该工具可用于比较
-Ollama、llama.cpp、vLLM 等推理后端，以及量化等级、GPU 数量和上下文长度。
+`co-context` 将对话历史转换为面向验证决策的分层工作状态。相对稳定的规范和接口约束、
+当前阶段目标、近期行动及其观察、跨阶段历史信息分别管理；结构化压缩保留路径、检查点和
+失败状态等可执行信息，观察选择则减少已被新结果取代的工具输出。上下文预算控制负责限制
+输入规模，消息完整性保护避免工具调用与返回结果在压缩过程中失去对应关系。
 
-**实现入口**
+该工具的重点是提高上下文的**决策有效密度**。输入缩短只是结果之一，更重要的是让本地
+模型在有限窗口和推理吞吐下优先看到当前阶段真正能够改变下一步行动的证据。
 
-- `ucagent/abackend/langchain/message/performance.py`
-- `scripts/analyze_llm_performance.py`
-- `scripts/extract_llm_latency_cases.py`
-- `scripts/run_llm_latency_cases.py`
-- `tests/test_llm_performance.py`
+### 4.4 `co-memory-cache`：面向长时任务的过程记忆
 
-### 4.3 `co-context`：面向验证状态的上下文编译器
+Agent 需要跨阶段保留接口知识、失败线索和已经验证过的结论，但把所有历史消息直接作为
+长期记忆，会同时积累重复内容、过期状态和未经验证的猜测。`co-memory-cache` 因此采用
+带来源的结构化记忆和阶段感知缓存，将可长期保留的信息与仅在当前阶段有效的状态分开。
 
-长流程 Agent 会积累大量已经失效的测试输出和重复背景信息。完整携带历史会持续增加
-推理成本；仅按长度截断则可能删除当前 Checker 契约或关键失败证据。`co-context` 将
-对话历史转换为面向当前验证阶段的紧凑输入。
+记忆检索结合当前验证状态、条目来源和历史使用反馈，候选信息可以提前准备，但只有与当前
+任务相关的少量内容进入工作上下文。运行后的验证结果继续更新记忆质量，使系统能够逐步
+区分稳定经验、暂时线索和可能造成污染的历史内容，从而形成能够随验证过程持续修正的
+记忆治理机制。
 
-**主要能力**
+### 4.5 `co-trace`：验证轨迹编译与可视化
 
-- 结构化摘要：保留 Stage、待办、测试状态、根因假设和下一步动作；
-- 分层摘要：分别维护全局、Stage 和测试 Batch 信息；
-- 失败感知上下文：区分失败、成功和恢复期信息；
-- 双阈值 Token 控制：高水位触发摘要，hard cap 保证最终请求不超过预算；
-- Stage state package：集中保存当前契约、未决失败、最近验证和剩余动作预算；
-- Observation masking：压缩已被最新状态取代的旧测试和 Checker 输出；
-- 独立 summary model 与失败回退机制。
+最终完成状态无法解释 Agent 在何处停滞、测试是否真实执行，以及失败后是否改变了行动
+方向。`co-trace` 通过统一事件表示和类型化验证结果，将模型、文件、测试、Checker 与
+阶段日志编译为可查询轨迹；可视化呈现阶段驻留、工程区域切换、失败事件和资源消耗，并
+通过增量更新支持长时间运行的实时监督。它为上下文分析、策略抽取和实验复盘提供共同的
+过程证据。
 
-Observation masking 依据验证事件的新旧关系选择压缩对象。在已有轨迹中，573 次 masking
-覆盖 3,250 条旧观察，被选择内容从 23.38M 字符压缩为 0.70M 字符，局部压缩率达到
-97.0%，同时保留最近验证结果和当前 Stage 约束。状态包也为策略检索和控制器提供稳定
-输入，降低不同模块重复解析自然语言日志的成本。
+### 4.6 `co-strategy`：验证器约束的策略工程
 
-**实现入口**
+历史轨迹不能直接等价为可复用策略。一条最终成功的轨迹中可能同时包含有效修复、诊断、
+回退和无效尝试；两个 Checker 消息在文本上接近，也可能因为阶段职责或修改对象不同而
+需要完全不同的行动。直接使用语义相似度检索，容易把表面相关但行动不兼容的经验带入
+当前任务。
 
-- `ucagent/abackend/langchain/message/conversation.py`
-- `ucagent/abackend/langchain/agent.py`
-- `ucagent/stage/vmanager.py`
+`co-strategy` 以验证前后的状态变化为基础抽取经验，将历史行动与其适用条件和验证后果
+关联起来。在线选择不仅考虑错误描述，还结合当前任务状态、失败语义和行动对象，避免把
+某一类修复无条件迁移到其他场景。对于影响范围较大或证据不足的候选，系统采用更保守的
+风险控制。
 
-### 4.4 `co-memory-cache`：Cache-like 长期记忆
-
-芯片验证经验具有明显的阶段性和重复性，例如接口绑定错误、测试集合错误、覆盖标记缺失
-和 Bug 文档契约冲突。简单保存历史对话会产生大量重复与过期信息。`co-memory-cache`
-将经验组织为结构化 memory line，并引入缓存系统中的准入、命中、晋级、预取和失效思想。
-
-**主要能力**
-
-- 从 Stage、测试和 Checker 事件生成结构化记忆条目；
-- 依据内容哈希、失败集合和根因信息合并近似条目；
-- 根据支持次数将记忆从 candidate 晋级为 episode 或 semantic memory；
-- 组合词法、Embedding、Stage 接近度与历史支持度进行检索；
-- 在进入下一 Stage 前预取，并在 Stage 内复用查询结果；
-- 记录 useful、stale 和 pollution 反馈并调整后续排序；
-- 将已完成运行中的记忆归档并预热到后续任务。
-
-该工具建立了区别于普通 hit rate 的评价体系：`retrieval_hit_rate` 记录候选命中，
-`useful_hit_rate` 记录注入后的有效推进，`stale_hit_rate` 记录过期信息，
-`memory_pollution_rate` 记录负面影响，`stage_first_turn_hit_rate` 则衡量阶段预取效果。
-这些指标使长期记忆能够被调试和消融，并为学习式 memory policy 提供监督信号。
-
-**实现入口**
-
-- `ucagent/memory/long_term.py`
-- `ucagent/stage/vmanager.py`
-
-### 4.5 `co-trace`：验证状态轨迹编译与可视化
-
-一次运行可能包含上千次模型和工具交互。最终完成状态无法解释 Agent 在哪个阶段反复
-读取或修改了哪些对象、测试是否真实执行，以及失败后是否改变策略。`co-trace` 将原始
-日志编译为结构化执行轨迹，并提供面向实验运行的可视化。
-
-**主要能力**
-
-- 记录文件读取、搜索、写入、删除和移动；
-- 记录 `RunTestCases`、`Check`、`Complete` 及 Stage 转移；
-- 将测试执行统一分类为六种终态；
-- 使用摘要哈希记录修改规模，避免在事件流中复制完整代码；
-- 构建 action-observation-stage trace tree；
-- 按实验、运行、DUT 和 Stage 筛选轨迹；
-- 首次加载历史实验，随后增量解析新日志；
-- 展示失败事件、区域切换、重复动作和策略转折。
-
-测试终态统一为：
-
-```text
-pass / test_failure / infrastructure_error /
-timeout / crash / no_tests_collected
-```
-
-该分类保证 `tests_total=0`、pytest collection error、超时和进程异常不会被解释为成功，
-从数据源头保护轨迹分析、策略抽取和微调样本。轨迹图进一步将“未完成”分解为过度调查、
-过早修改、测试范围过宽、Checker 契约阻塞和同一失败下的重复写入等可研究行为。
-
-**实现入口**
-
-- `ucagent/util/test_result.py`
-- `scripts/build_trace_tree.py`
-- `scripts/analyze_structured_events.py`
-- `scripts/visualize_agent_trajectory.py`
-- `tests/test_test_result_classification.py`
-- `tests/test_agent_trajectory_visualizer.py`
-
-### 4.6 `co-strategy`：Verifier-grounded 策略工程
-
-不同 DUT 可能出现相似错误，但错误文本相似不代表修复动作可以直接迁移。例如两个 Bug
-文档都出现 Checker failure，其根因可能分别是标签层级错误和错误引用已通过测试。
-`co-strategy` 使用当前验证状态约束历史轨迹的检索、注入和执行。
-
-**主要能力**
-
-- 标准化动作前后的测试集合、Checker 状态和 Stage 转移；
-- 将动作收益划分为 `progress`、`diagnostic`、`no_progress`、`regression` 和 `invalid`；
-- 把有效轨迹编译为包含前置条件、动作边界、预期转移和安全约束的 strategy contract；
-- 根据 Stage role、失败模式、失败签名、修改对象和动作类别执行硬门控；
-- 对低支持度写入、删除和移动操作使用更严格的签名约束；
-- 使用 off、shadow 和 enforce 三种模式评估策略；
-- 在冻结 checkpoint 上进行同 seed 的注入/不注入成对回放；
-- 使用进展控制器限制同一失败状态下的连续修改，并在停滞时触发诊断或策略转向。
-
-策略检索与策略准入是两个独立步骤。检索发现可能相关的历史经验；准入依据真实 Checker
-状态迁移判断候选是否具有收益。生产策略具有 candidate、held、admitted、quarantined
-和 archived 生命周期，为跨 DUT 经验复用提供可追踪、可撤销的治理机制。当前策略包
-包含 36 条结构去重候选，来源覆盖 Adder、uart_tx、FSM 和 ALU754。
-
-**实现入口**
-
-- `ucagent/memory/context_reuse.py`
-- `ucagent/control/progress.py`
-- `scripts/build_context_reuse_pack.py`
-- `scripts/curate_context_reuse_pack.py`
-- `scripts/replay_context_reuse_gate.py`
-- `scripts/run_adder_stage_benchmarks.py`
-- `tests/test_context_reuse_curation.py`
-- `tests/test_episode_credit.py`
-- `tests/test_progress_controller.py`
+策略是否能够进入稳定复用范围，还需要在受控条件下比较使用与不使用该策略时的真实验证
+结果。这使策略库的更新依据外部 Checker 收益，而不是模型自我评价或检索分数本身。具体
+实现将策略抽取、适用性判断和运行后验证组织为统一流程，使每次策略更新都能够追溯到对应
+的执行状态与验证结果。
 
 ### 4.7 `co-bench`：可复现的多 DUT 实验 Harness
 
-芯片验证 Agent 的完整实验成本高，单次运行可持续十小时以上。配置、随机种子、恢复位置
-或模型服务发生变化，都可能使结果失去可比性。`co-bench` 为 UCAgent 与 CO-UCAgent
-提供统一实验入口和运行账本。
-
-**主要能力**
-
-- 冻结模型、Prompt、上下文、策略库和 Checker 配置；
-- 运行前检查模型端点、Embedding 服务、DUT 和依赖环境；
-- 支持单 DUT、多 DUT 和多 seed 队列；
-- 保存 ledger、Stage 结果、Token、LLM 请求、测试和 Checker 指标；
-- 支持失败重试、断点恢复和 Stage checkpoint 回放；
-- 显式标记 clean、interrupted、patched-resume 和 invalid；
-- 为原版 UCAgent 注入独立 Token meter，使 baseline 与候选使用相同统计口径；
-- 接入通知和轨迹可视化。
-
-实验有效性属于账本的一部分。恢复运行可用于完成链验证、阶段研究和故障定位，但不会被
-自动改写为 clean end-to-end 结果。当前已建立八个 DUT 的 clean baseline；代表性的
-同 seed Adder 实验中，30-Stage active time 从 12 h 59 min 降至 5 h 37 min，Checker
-失败事件从 70 次降至 41 次。
-
-**实现入口**
-
-- `scripts/run_adder_experiments.py`
-- `scripts/run_multi_dut_experiments.py`
-- `scripts/run_upstream_baseline_multi_dut.py`
-- `scripts/prepare_multi_dut_stage_resume.py`
-- `scripts/freeze_experiment_baseline.py`
-- `scripts/analyze_ucagent_runtime.py`
-- `tests/test_multi_dut_experiment_runner.py`
+完整验证实验通常持续数小时，模型服务、随机种子、恢复位置和环境依赖的变化都会影响
+结果。`co-bench` 通过配置冻结、环境预检、结构化运行账本和统一指标采集组织多 DUT、
+多 seed 与阶段检查点实验，并显式区分 clean run、恢复运行、Agent 失败和基础设施异常，
+为 baseline 与候选系统提供一致的比较口径。
 
 ### 4.8 `co-trajectory-data`：可审计的 Agent 轨迹数据构建
 
-芯片验证 Agent 的微调数据需要同时包含 Stage 任务、工具输出、Checker 反馈和下一步动作。
-`co-trajectory-data` 从真实运行中提取多轮决策样本，并保留完整来源信息。
+真实轨迹适合用于领域微调和策略学习，但原始消息中包含无效验证、重复循环与近重复样本。
+`co-trajectory-data` 通过模型可见上下文恢复、验证反馈筛选、来源记录和分组切分，将长时
+运行整理为可审计的多轮决策数据；导出格式与具体训练框架解耦，并保留运行、DUT、阶段和
+质量信息，便于后续追溯。
 
-**主要能力**
+### 4.9 工具组合方式
 
-- 优先读取精确 `llm_input_messages` dump；
-- 对历史日志重建可见上下文并标记重建来源；
-- 根据完成状态、验证反馈、工具类型和错误信息筛选候选；
-- 控制每个 run 和 Stage 的样本数量，减少高频阶段垄断数据；
-- 按 train/validation/test 和 held-out DUT 划分；
-- 输出 chat-SFT JSONL；
-- 转换为 LLaMA-Factory Alpaca 格式并生成 LoRA 训练配置；
-- 汇总 RTL debug、VerilogEval、RTLLM 和 CircuitNet 等公开数据源。
+七项工具可以组成三类工作流：
 
-每条样本保留 run、DUT、Stage、选择分数、选择原因、输入是否精确和是否截断等 provenance
-字段。当前数据管线从 118 个历史运行目录中识别 92 个完成运行，生成 2,196 条轨迹样本，
-其中训练集 1,974 条，验证集和测试集各 111 条。该工具可用于监督微调、轨迹蒸馏、动作
-分类和 memory policy 学习，并允许研究者追溯样本对应的原始验证过程。
+- **性能与上下文优化：** 推理分析、上下文编译、轨迹复盘和冻结实验；
+- **经验与策略复用：** 轨迹构建、过程记忆、策略选择和受控验证；
+- **模型适配：** 轨迹数据构建、领域训练、推理评测和端到端实验。
 
-**实现入口**
-
-- `scripts/build_ucagent_finetune_dataset.py`
-- `scripts/prepare_llamafactory_ucagent_dataset.py`
-- `benchmark/ucagent_finetune_dataset/manifest.json`
-- `benchmark/ucagent_finetune_dataset/public_dataset_catalog.json`
-
-### 4.9 组合使用方式
-
-**性能诊断闭环**
-
-```text
-co-llm-profiler -> co-context -> co-trace -> co-bench
-```
-
-先区分输入长度、生成速度和请求数量，再通过上下文编译减少重复内容，使用轨迹检查行为
-变化，最后在冻结实验中比较 wall time、Token 和完成率。
-
-**跨 DUT 经验复用闭环**
-
-```text
-co-trace -> co-memory-cache -> co-strategy -> co-bench
-```
-
-将运行日志转化为验证状态，沉淀候选经验，对动作收益和适用范围进行归因，通过 checkpoint
-pair 验证后进入策略库，再使用 held-out DUT 检查泛化效果。
-
-**模型适配闭环**
-
-```text
-co-trace -> co-trajectory-data -> LoRA/SFT -> co-llm-profiler -> co-bench
-```
-
-从真实执行中构建训练样本，完成模型适配后先测试推理性能与局部任务，再进入完整 DUT
-评测，避免仅依据训练 loss 判断模型是否改善 Agent 行为。
+README 从系统视角介绍各工具的研究问题、技术路线与协作关系。具体命令、输入输出格式和
+配置方式由各工具的 `--help` 与 [TOOLKIT.md](TOOLKIT.md) 统一维护，实验协议与复现口径
+见后续 Evaluation 和 Artifact 章节。
 
 ## 5. Evaluation
 
@@ -809,16 +744,16 @@ Prompt 中的经验条目由 85 减少至 42，下降 50.6%。该结果说明适
 > **版本口径说明：** 本节采用以
 > [UCAgent v26.06.24](https://github.com/XS-MLVP/UCAgent/releases/tag/v26.06.24)
 > 为上游基线、并完成必要兼容性修补的 30-Stage 工作流。相较 6.1 节的旧版流程，
-> 该版本增加了阶段任务、Checker 检查与交付约束，baseline 和 CO-UCAgent 均需完成
+> 该版本增加了阶段任务、Checker 检查与交付约束，baseline 和 LCO-UCAgent 均需完成
 > 更长的验证链，因此耗时与 Prompt token 总量整体更高。下表的时间和 token 变化只在
 > 相同 30-Stage 任务口径内比较，不与 6.1 节的绝对数值交叉比较。
 
 下表以 2026-09-14 已冻结的统计表为主口径，并追加截至 2026-09-18 已确认的新结果。
-`Base (h)` 为 baseline 端到端 active time；`CO-UCAgent (h)` 对 clean 运行同样采用端到端
+`Base (h)` 为 baseline 端到端 active time；`LCO-UCAgent (h)` 对 clean 运行同样采用端到端
 active time。
 
 
-| DUT | Base (h) | CO-UCAgent (h) | Δtime | Base→CO Prompt | ΔToken | Status |
+| DUT | Base (h) | LCO-UCAgent (h) | Δtime | Base→LCO Prompt | ΔToken | Status |
 |---|---:|---:|---:|---:|---:|---|
 | FSM | 9.91 | 3.19 | **-67.8%** | 25.76M → 22.60M | **-12.3%** | 完成 |
 | ShiftRegister | 12.90 | 4.06 | **-68.5%** | 34.44M → 16.72M | **-51.4%** | 完成 |
@@ -836,7 +771,7 @@ Adder 和 HPerfCounter 构成当前最严格的正向证据。Adder 在相同 se
 Stage 23 从 7h04min 降至 46min，Stage 24 从 1h21min 降至 6min57s，最终 Checker
 通过并识别到与 baseline 一致的 RTL 位宽根因。HPerfCounter 从 15.33h 降至 11.18h，
 同时 Prompt token 从 38.42M 降至 24.03M。两项 clean 结果累计耗时由 28.31h 降至
-16.80h，描述性降幅为 40.7%。Adder clean baseline Token为25.83M ，CO-UCAgent 的Token为11.63M 
+16.80h，描述性降幅为 40.7%。Adder clean baseline Token 为 25.83M，LCO-UCAgent 的 Token 为 11.63M，
 该组的 ΔToken计算为-55.0%。
 
 FSM、ShiftRegister 和 Mux 的修复后成功续跑段分别为 3.19h、4.06h 和 5.21h；相对于
@@ -860,7 +795,7 @@ ALU754 已由三个可追溯片段形成完整验证链：Stage 0–22 的有效
 高于 baseline 22.2% 和 26.2%。该结果证明复杂 DUT 可以借助检查点恢复完成全部阶段，
 同时也定位出 Stage 23 与后半程的显著成本，当前版本尚未在 ALU754 上取得性能优势。
 
-uart_tx 的近期 clean 尝试分别在 Stage 24 和 Stage 25 停滞，尚无可用于主表的 CO 完成
+uart_tx 的近期 clean 尝试分别在 Stage 24 和 Stage 25 停滞，尚无可用于主表的 LCO-UCAgent 完成
 结果。IntegerDivider baseline 首次在 22.89h 后失败，后续 35.98h 尝试超时并消耗
 79.997M Prompt token；截至本文更新时，新一轮 baseline 重试仍在运行。因此这两个 DUT
 只报告完成状态和已观测成本，不计算性能提升。
@@ -885,36 +820,52 @@ risk。模型训练和评价必须采用 held-out DUT，才能检验跨设计泛
 
 领域微调可用于提高接口理解、测试断言生成和错误归因能力，但微调数据必须来源于可信
 repair episode，避免将无效测试与回归行动固化到模型参数中。模型量化、推理并行和
-KV cache 优化主要改变单次调用成本，而 Context Engineering 改变调用长度与修复轮次；
-二者构成互补的系统级优化维度。
+KV cache 优化主要改变单次调用成本，而 Harness 的状态编译、行动控制和验证反馈会改变
+调用长度、工具使用与修复轮次；两类机制共同决定端到端吞吐和任务完成质量。
 
 ## 8. Related Work
 
-**Context Engineering。** [近期综述](https://arxiv.org/abs/2507.13334)将 Context
-Engineering 定义为对推理时信息负载的系统性优化，并将其分解为 context
-retrieval/generation、processing 和 management。
-CO-UCAgent 采用这一问题边界，但面向芯片验证进一步要求摘要保留端口、API、检查点和
-验证范围等可执行契约。[Agentic Context Engineering](https://arxiv.org/abs/2510.04618)
-将上下文视为通过 generation、reflection 与 curation 持续演化的 playbook；本文与其
-共同关注 execution feedback 和增量更新，但使用测试与 Checker 差分约束上下文写入，
-而不是依赖自然语言反思判断经验是否有效。
+**Agent Harness 与可执行智能体系统。** SWE-agent 说明 Agent-Computer Interface 会显著
+改变同一模型的软件工程行为；OpenHands 进一步将代码编辑、终端、浏览器、沙箱与评测
+组织为可复现的平台。近期 Harness 综述把 observation、context、control、action、state
+和 verification 视为相互依赖的系统职责，From Model Scaling to System Scaling 则强调
+可审计、持久化、模块化和可验证的 Agent 基础设施。Natural-Language Agent Harnesses 与
+Code as Agent Harness 探索显式契约和可执行 Harness 表达；JIT-Agent 尝试按任务即时生成
+Harness；HarnessBank 以受验证门控的组件复用支持 Harness 演化。这些工作表明，Agent
+性能由模型与执行系统共同产生。LCO-UCAgent 将该观点落实到芯片验证，研究固定模型条件下
+状态、工具、验证器和历史轨迹如何共同影响长时任务。
 
-**Agent Harness 与交互接口。** [SWE-agent](https://arxiv.org/abs/2405.15793) 表明，为
-语言模型设计专用 Agent-Computer Interface 能显著改变其软件工程行为。2026 年的
-[Natural-Language Agent Harnesses](https://arxiv.org/abs/2603.25723) 进一步把显式契约、
-持久化 artifact 和运行时 adapter 作为可迁移 Harness 的核心组成；
-[Code as Agent Harness](https://arxiv.org/abs/2605.18747) 则强调代码在行动、状态维护、
-环境建模和 execution-based verification 中的基础设施作用。CO-UCAgent 延续这一视角，
-但研究对象是包含多阶段 Checker、覆盖率和 bug 文档契约的芯片验证 Harness，其 Context
-Engine 是 Harness 内负责推理时信息构造的一个模块，而非 Harness 的同义词。
+**私有化与资源受限的大模型推理。** llama.cpp、Ollama、LocalAI 和 PrivateGPT 分别从
+跨硬件运行、模型服务、兼容 API 和私有应用栈推动开放权重模型进入使用者可治理的环境。
+On-device LLM 综述将数据控制、低延迟和个性化列为设备侧推理的重要动机，并总结量化、
+剪枝、知识蒸馏和硬件协同方法。MobileLLM 与 Phi-3 从模型架构和数据质量提高小模型能力；
+LLM in a Flash、FlexGen 和 PowerInfer 研究存储分层、张量 offload 与消费级 GPU/CPU 协同；
+AWQ 通过低比特量化降低权重内存。LCO-UCAgent 不替代这些推理优化，而是在冻结模型与
+服务配置后，减少 Harness 层的无效调用、重复状态和低收益行动。
 
-**过程记忆与行动归因。** Agent Workflow Memory 通过复用历史 workflow 改善后续任务，
-CO-UCAgent 则将工作流切分为具有前后验证观察的 repair episode。角色化归因借鉴 TRIAGE
-对中间行动差异化分配信用的思想，但不复现其强化学习过程，而是使用无需训练的验证器差分。
-经验选择与 Beyond Similarity/MemGate 的“相似性不足以判断记忆价值”结论一致，并加入
-阶段职责、修改对象和文档契约约束。TRACE 对 trace node 进行 rollout 预算分配，为后续
-不确定性感知搜索提供了参考；当前方法只构建其所需的 trace、成本与局部收益信号，尚未
-实现学习式预算分配。
+**长上下文与 Agent 推理服务。** Lost in the Middle 与 RULER 说明标称窗口长度不能直接
+代表长上下文利用能力。LLMLingua 从 Prompt 压缩降低输入成本，StreamingLLM 与 SnapKV
+从注意力或 KV 保留控制长序列内存，PagedAttention 进一步优化服务端 KV cache 管理。
+Prompt Cache 利用跨请求重复模块复用 attention state；INFERCEPT 则专门分析工具或环境
+交互造成的上下文中断和重复计算。上述方法主要优化 token、attention state 或服务调度，
+LCO-UCAgent 进一步处理验证语义，包括哪些内容仍然有效、哪些观察可信，以及哪些历史
+行动适合当前失败。
+
+**Harness 内的状态管理与过程记忆。** 长上下文和上下文工程研究为 Harness 提供输入层
+基础：相关综述将推理时信息优化划分为 retrieval/generation、processing 和 management，
+Agentic Context Engineering 将可演化 playbook 作为模型外策略载体。MemGPT、Reflexion、
+ExpeL、A-MEM、Mem0 和 Agent Workflow Memory 分别探索虚拟上下文、语言反思、经验提取、
+动态记忆和工作流复用。LCO-UCAgent 采用“历史经验可改善后续决策”的基本假设，同时把
+记忆置于 Harness 的验证边界内：每个 repair episode 必须具有有效测试或 Checker 形成的
+前后观察。角色化归因借鉴 TRIAGE 对中间行动差异化分配信用的思想，经验选择吸收 Beyond
+Similarity/MemGate 对纯相似度检索的批评，TRACE 为预算感知的轨迹搜索提供参考。
+
+**芯片领域适配。** ChipNeMo 证明领域语料、指令与检索适配能够提高工业芯片设计任务的
+模型能力，UCAgent 则提供从需求分析到测试、覆盖率和 bug 归因的多阶段验证流程。领域模型
+适配主要改善模型对术语、代码和任务的理解，完整验证流程仍要求 Harness 管理可执行环境、
+阶段契约、测试证据和长期状态。LCO-UCAgent 以 UCAgent 为执行基础，在其上加入私有化
+推理预算观测、验证状态编译、过程记忆和风险约束复用，研究重点由单次生成质量扩展到完整
+验证轨迹的效率与可靠性。
 
 ## 9. Artifact and Reproducibility
 
@@ -1015,6 +966,36 @@ PYTHONPATH="$PWD" python -m pytest -q \
 11. [SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering](https://arxiv.org/abs/2405.15793)
 12. [Natural-Language Agent Harnesses](https://arxiv.org/abs/2603.25723)
 13. [Code as Agent Harness](https://arxiv.org/abs/2605.18747)
+14. [On-Device Language Models: A Comprehensive Review](https://arxiv.org/abs/2409.00088)
+15. [Position: On-Premises LLM Deployment Demands a Middle Path](https://arxiv.org/abs/2410.11182)
+16. [Preserving Privacy in Large Language Models: A Survey on Current Threats and Solutions](https://arxiv.org/abs/2408.05212)
+17. [MobileLLM: Optimizing Sub-billion Parameter Language Models for On-Device Use Cases](https://arxiv.org/abs/2402.14905)
+18. [Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone](https://arxiv.org/abs/2404.14219)
+19. [LLM in a Flash: Efficient Large Language Model Inference with Limited Memory](https://arxiv.org/abs/2312.11514)
+20. [FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU](https://arxiv.org/abs/2303.06865)
+21. [PowerInfer: Fast Large Language Model Serving with a Consumer-grade GPU](https://arxiv.org/abs/2312.12456)
+22. [AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration](https://arxiv.org/abs/2306.00978)
+23. [Efficient Memory Management for Large Language Model Serving with PagedAttention](https://arxiv.org/abs/2309.06180)
+24. [Prompt Cache: Modular Attention Reuse for Low-Latency Inference](https://arxiv.org/abs/2311.04934)
+25. [INFERCEPT: Efficient Intercept Support for Augmented Large Language Model Inference](https://arxiv.org/abs/2402.01869)
+26. [RULER: What's the Real Context Size of Your Long-Context Language Models?](https://arxiv.org/abs/2404.06654)
+27. [Efficient Streaming Language Models with Attention Sinks](https://arxiv.org/abs/2309.17453)
+28. [SnapKV: LLM Knows What You are Looking for Before Generation](https://arxiv.org/abs/2404.14469)
+29. [FrugalGPT: How to Use Large Language Models While Reducing Cost and Improving Performance](https://arxiv.org/abs/2305.05176)
+30. [ChipNeMo: Domain-Adapted LLMs for Chip Design](https://arxiv.org/abs/2311.00176)
+31. [Reflexion: Language Agents with Verbal Reinforcement Learning](https://arxiv.org/abs/2303.11366)
+32. [ExpeL: LLM Agents Are Experiential Learners](https://arxiv.org/abs/2308.10144)
+33. [A-MEM: Agentic Memory for LLM Agents](https://arxiv.org/abs/2502.12110)
+34. [Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory](https://arxiv.org/abs/2504.19413)
+35. [llama.cpp: LLM Inference in C/C++](https://github.com/ggml-org/llama.cpp)
+36. [Ollama: Get Up and Running with Open Models](https://github.com/ollama/ollama)
+37. [LocalAI: The Free, Open Source Alternative to OpenAI](https://github.com/mudler/LocalAI)
+38. [PrivateGPT: Interact with Your Documents Using the Power of Generative AI, 100% Privately](https://github.com/zylon-ai/private-gpt)
+39. [OpenHands: An Open Platform for AI Software Developers as Generalist Agents](https://arxiv.org/abs/2407.16741)
+40. [From Question Answering to Task Completion: A Survey on Agent System and Harness Design](https://arxiv.org/abs/2606.20683)
+41. [From Model Scaling to System Scaling: The Rise of Agentic Infrastructure](https://arxiv.org/abs/2605.26112)
+42. [HarnessBank: Gated Verification for Harness Evolution](https://arxiv.org/abs/2607.13683)
+43. [JIT-Agent: Enabling Task-Adaptive Agentic Systems through Just-in-Time Harness Generation](https://arxiv.org/abs/2608.25593)
 
 ## 12. Authors and License
 
