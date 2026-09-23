@@ -655,6 +655,12 @@ README 从系统视角介绍各工具的研究问题、技术路线与协作关�
 和随机种子。主结果只采用能够追溯到日志、账本和冻结配置的记录。`clean end-to-end`、
 `resume aggregate` 与 `checkpoint-composed` 分别报告，不用恢复链替代 clean 证据。
 
+主实验最终采用 Qwen3.5-Coder-122B：在未经工具约束和上下文协议优化的 UCAgent 中，
+Qwen3.5 可在约 1.8–2.8 分钟内完成 Adder Stage 0，而 Qwen3.8 因过度读取目录、阶段详情
+和工具回包，在约 12.3 分钟后超过 65,536 token 上限并终止。该结果说明 Qwen3.5 在当前
+Harness 下具有更稳定的阶段推进能力，但由于两组实验的推理后端等条件并未完全一致，本文
+仅将其作为主实验的模型选择依据，不将其解释为通用模型能力排名。
+
 ### 5.2 Baselines and Ablations
 
 为分别度量证据建模、上下文管理与经验复用的独立贡献，本文计划采用以下递进配置：
@@ -999,8 +1005,10 @@ PYTHONPATH="$PWD" python -m pytest -q \
 
 ## 12. Authors and License
 
-- Jiabao Wang，北京邮电大学
-- Yuzhong Sun，中国科学院计算技术研究所
+- Jiabao Wang，北京邮电大学，[wangjiabao@bupt.edu.cn](mailto:wangjiabao@bupt.edu.cn)
+- Yuzhong Sun，中国科学院计算技术研究所，[yuzhongsun@ict.ac.cn](mailto:yuzhongsun@ict.ac.cn)
 - Li Xiao，北京邮电大学
+
+**Release date:** Sep. 23, 2026
 
 本项目基于 UCAgent 开发并遵循 MIT License。发布与再分发时应保留上游版权及 NOTICE。
